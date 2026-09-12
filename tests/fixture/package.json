@@ -1,0 +1,11 @@
+{
+  "name": "repo-companion-test-chat", "publisher": "local-tools", "version": "0.0.0",
+  "engines": { "vscode": "^1.96.0" }, "main": "./extension.cjs", "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "viewsContainers": { "secondarySidebar": [{ "id": "repoCompanion.fixture", "title": "Fixture Codex", "icon": "icon.svg" }] },
+    "views": { "repoCompanion.fixture": [{ "id": "repoCompanion.testSidebar", "name": "Fixture Codex Sidebar", "type": "webview" }] },
+    "customEditors": [{
+    "viewType": "chatgpt.conversationEditor", "displayName": "Fixture Codex Chat",
+    "selector": [{ "filenamePattern": "openai-codex:/**/*" }], "priority": "default"
+  }] }
+}

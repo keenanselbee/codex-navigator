@@ -1,0 +1,283 @@
+{
+  "name": "codex-repo-companion",
+  "displayName": "Codex Repo Companion",
+  "description": "Label Codex chats with the latest project being discussed.",
+  "version": "1.0.9",
+  "publisher": "local-tools",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexRepoCompanion.setUp",
+        "title": "Set Up Repo Companion",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.restoreCodex",
+        "title": "Restore Codex",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.setUpAgentHelper",
+        "title": "Set Up Routing",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.scopeMenu",
+        "title": "Manage Chat Repository Scope",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.useAutomaticScope",
+        "title": "Use Automatic Chat Scope",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.openSavedChat",
+        "title": "Open Saved Codex Chat",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.assignRepository",
+        "title": "Assign Repository to Chat",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.clearRepository",
+        "title": "Clear Chat Repository",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.diagnostics",
+        "title": "Show Integration Status",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.chooseHistoryRepository",
+        "title": "Choose Repository...",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.autoHistoryScope",
+        "title": "Use Automatic Labels",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.clearHistoryLabels",
+        "title": "Clear Labels",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.setCustomLabel",
+        "title": "Custom Label...",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.customHistoryLabel",
+        "title": "Custom Label...",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.setRepositoryAlias",
+        "title": "Set Repository Alias",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.associateLabelRepository",
+        "title": "Associate Custom Label with Repository",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.toggleStar",
+        "title": "Star / Unstar Chat",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.starHistoryChat",
+        "title": "Star / Unstar Chat",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.openStarredChats",
+        "title": "Open Starred Chats",
+        "category": "Codex Repo Companion"
+      }
+    ],
+    "menus": {
+      "editor/title/context": [
+        {
+          "command": "codexRepoCompanion.assignRepository",
+          "when": "resourceScheme == openai-codex",
+          "group": "codexRepoCompanion"
+        },
+        {
+          "command": "codexRepoCompanion.setCustomLabel",
+          "when": "resourceScheme == openai-codex",
+          "group": "codexRepoCompanion"
+        },
+        {
+          "command": "codexRepoCompanion.clearRepository",
+          "when": "resourceScheme == openai-codex",
+          "group": "codexRepoCompanion"
+        },
+        {
+          "command": "codexRepoCompanion.toggleStar",
+          "when": "resourceScheme == openai-codex",
+          "group": "codexRepoCompanion"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "codexRepoCompanion.chooseHistoryRepository",
+          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
+          "group": "repoCompanion@1"
+        },
+        {
+          "command": "codexRepoCompanion.customHistoryLabel",
+          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
+          "group": "repoCompanion@1a"
+        },
+        {
+          "command": "codexRepoCompanion.autoHistoryScope",
+          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
+          "group": "repoCompanion@2"
+        },
+        {
+          "command": "codexRepoCompanion.clearHistoryLabels",
+          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
+          "group": "repoCompanion@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codexRepoCompanion.chooseHistoryRepository",
+          "when": "false"
+        },
+        {
+          "command": "codexRepoCompanion.autoHistoryScope",
+          "when": "false"
+        },
+        {
+          "command": "codexRepoCompanion.clearHistoryLabels",
+          "when": "false"
+        },
+        {
+          "command": "codexRepoCompanion.customHistoryLabel",
+          "when": "false"
+        },
+        {
+          "command": "codexRepoCompanion.starHistoryChat",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Codex Repo Companion",
+      "properties": {
+        "codexRepoCompanion.detectChatFocus": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Try to spot clear project changes in your messages. When off, wait for Codex to report the project. Open editor tabs do not choose the project."
+        },
+        "codexRepoCompanion.silentMode": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Keep background warnings in the Output panel instead of showing popups. Commands you run still show errors."
+        },
+        "codexRepoCompanion.showTabPrefix": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show project labels on Codex chats. [Set Up Repo Companion](command:codexRepoCompanion.setUp) installs the optional chat integration. Turning this off hides labels; stars remain available."
+        },
+        "codexRepoCompanion.pinManualLabels": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Keep labels you choose until you change them. Turn off to let later project changes update new labels you choose."
+        },
+        "codexRepoCompanion.repositoryAliases": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "markdownDescription": "Friendly names for your repositories. Use the Set Repository Alias command to add or change a name."
+        },
+        "codexRepoCompanion.hideRedundantRepositoryLabels": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Hide an automatic label when it only repeats the one repository open here. Keep custom labels and labels you choose."
+        },
+        "codexRepoCompanion.instructionRouting": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Help Codex read the right rules when you switch projects. [Set Up Repo Companion](command:codexRepoCompanion.setUp) to choose a shared rules file, pick your project folders, and turn this on.\n\nSetup adds a section to your global instructions and keeps your other rules. Turning this off also turns off the backup routing method."
+        },
+        "codexRepoCompanion.mainInstructionsFile": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional shared rules file to read before each project's own rules. Leave blank to use project rules only. This file is read, not changed.\n\n[Set Up Repo Companion](command:codexRepoCompanion.setUp) lets you choose the file. It should be separate from your global Codex instructions."
+        },
+        "codexRepoCompanion.instructionScope": {
+          "type": "array",
+          "default": [],
+          "maxItems": 64,
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "Project folders that use these rules. Leave empty to use the folders in this workspace. Choose a parent folder to include all projects inside it.\n\n[Set Up Repo Companion](command:codexRepoCompanion.setUp) can help you choose. Saved choices still work after this window closes."
+        },
+        "codexRepoCompanion.instructionFallbackNames": {
+          "type": "array",
+          "default": [],
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "markdownDescription": "Extra rules filenames to check if a folder has no AGENTS.override.md or AGENTS.md. For example: TEAM_GUIDE.md. Enter filenames only, in the order to check them. Most users can leave this empty."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "test": "npm run compile && node --test tests/*.test.cjs",
+    "test:integration": "npm run compile && node tools/run-integration.cjs",
+    "package": "vsce package --no-dependencies --allow-missing-repository --no-rewrite-relative-links --skip-license --out dist/codex-repo-companion-1.0.9.vsix",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "@types/vscode": "1.96.0",
+    "@vscode/vsce": "3.9.2",
+    "typescript": "5.9.3"
+  }
+}

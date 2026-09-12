@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{csp}}; script-src 'nonce-{{nonce}}';">
+<link rel="stylesheet" href="{{style}}"><title>Set Up Repo Companion</title>
+</head>
+<body>
+<main>
+<header><p class="eyebrow">CODEX REPO COMPANION</p><h1>Make your chats easier to follow</h1><p>Set up either feature, or both. You can change your choices here anytime.</p></header>
+<div id="message" role="status" aria-live="polite"></div>
+<div id="stale" hidden>Settings changed elsewhere. <button data-action="refresh" class="secondary">Refresh choices</button><span> This replaces unsaved choices.</span></div>
+<section aria-labelledby="labels-title">
+<div class="heading"><h2 id="labels-title">Chat labels and stars</h2><span id="labels-status" class="badge">Checking...</span></div>
+<p>See which project a chat belongs to and save favourites.</p>
+<p id="labels-detail" class="muted"></p>
+<p class="disclosure">Enabling this modifies your installed Codex extension. Original files are backed up so you can restore them here. This integration is unofficial; Codex updates may need a newer Companion version.</p>
+<div class="actions"><button id="enable-labels" data-action="enableLabels" disabled>Enable Chat Labels</button><button id="extensions" class="secondary" data-action="extensions" hidden>Open Extensions</button><button id="reload" data-action="reload" hidden>Reload Window</button></div>
+<details id="restore-section" hidden><summary>Remove chat integration</summary><p>Restore the original Codex files before uninstalling Companion. Your chats, saved labels and project instructions are kept. Reload afterward.</p><button class="secondary" data-action="restoreLabels">Restore Codex</button></details>
+</section>
+<section aria-labelledby="routing-title">
+<div class="heading"><h2 id="routing-title">Project instructions</h2><span id="routing-status" class="badge">Checking...</span></div>
+<p>Automatically find the right AGENTS.md as you switch between projects.<br>
+Optionally add a shared AGENTS.md for workspace-wide instructions.</p>
+<div class="workspace-note"><strong id="scope-title">Automatically follow this workspace</strong><p id="scope-detail">Uses the folders in this VS Code workspace and their project instructions. This updates as you add or remove workspace folders.</p>
+<details><summary id="repo-count">Repositories currently found</summary><ul id="repositories"></ul><p class="muted">This is a live preview, not a list you need to configure.</p></details></div>
+<label for="main">Shared instructions <span class="muted">(optional)</span></label>
+<p class="hint" id="main-help">Choose a separate AGENTS.md to read before each project's own instructions. Leave blank to use project instructions only.</p>
+<div class="file-field"><input id="main" type="text" aria-describedby="main-help" placeholder="Use project instructions only" maxlength="4096"><button class="secondary" data-action="browseMain">Browse...</button><button class="secondary" id="clear-main">Clear</button></div>
+<details id="advanced"><summary>Advanced options</summary>
+<label for="scope-mode">Project folders</label><select id="scope-mode"><option value="workspace">Follow this workspace automatically</option><option value="custom">Use custom folders</option></select>
+<div id="custom-scopes" hidden><label for="scopes">Custom folders, one per line</label><textarea id="scopes" rows="3" maxlength="262144"></textarea><button class="secondary" data-action="browseScope">Add Folder...</button></div>
+<label for="fallback">Extra instruction filenames <span class="muted">(optional)</span></label><p class="hint">Checked when AGENTS.override.md and AGENTS.md are absent. One filename per line.</p><textarea id="fallback" rows="2" maxlength="4096"></textarea>
+</details>
+<p class="disclosure">Enabling adds a small section to your global Codex instructions and keeps your other rules. Your shared file is only read, never changed.</p><details><summary>Global instructions file</summary><p id="global-file" class="path"></p></details>
+<div class="actions"><button id="save-routing" data-action="saveRouting" disabled>Enable Project Instructions</button><button id="disable-routing" class="secondary" data-action="disableRouting" hidden>Turn Off</button></div>
+</section>
+<footer><button class="secondary" data-action="refresh">Refresh</button><span class="muted">Changes apply only when you click an action.</span><button data-action="done">Done</button></footer>
+</main>
+<script nonce="{{nonce}}" src="{{script}}"></script>
+</body></html>
