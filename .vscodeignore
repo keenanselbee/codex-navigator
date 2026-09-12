@@ -2,6 +2,7 @@
 .codex-temp/**
 .vscode/**
 .vscode-test/**
+docs/marketplace-release.md
 node_modules/**
 src/**
 tests/**

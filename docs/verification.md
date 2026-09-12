@@ -313,3 +313,94 @@ restoring chat integration records the user's choice for subsequent startups.
 No unsupported version is patched automatically. Project instruction routing
 remains independent. The integration tests use fixture conversations, not an
 authenticated Codex conversation or a live third-party extension update.
+
+
+Version 1.1.0 verification
+--------------------------
+
+All 90 unit tests passed. New coverage checks prior opt-in, recognized legacy
+patches, automatic application, unsupported versions/checksums, partial setup,
+failed-attempt persistence, manual retry, explicit restoration, per-version
+reminder limits, Silent Mode, focused-window and setup-page suppression, and
+unanswered notifications not blocking subsequent supported updates.
+
+A real installed-helper subprocess resolved shared, ancestor, repository and nested
+instructions with no display bridge or live routing records. Separate routing
+status checks detected missing helper files and kept an explicit off choice.
+These checks do not prove that an authenticated model has read the instructions.
+
+Both isolated VS Code 1.137.0 integration phases passed in
+`.codex-temp/integration-6jCsPm`. Disposable Codex 26.908.40401 copies passed the
+existing patch apply/restore, lock, interruption, rollback, unsupported-version,
+external-edit and Electron execution checks. Automatic update decisions and popup
+choices were exercised with controlled extension API fixtures; no real Codex
+update or destructive failure was performed in the user's installed extension.
+
+Version 1.1.0 follows 1.0.9 under the shared single-digit version policy. The Codex
+patch payload and managed AGENTS.md instructions are unchanged. The extension now
+uses a previous chat-integration opt-in to reapply supported patches after updates.
+Restore disables that maintenance. Existing Silent Mode continues to suppress
+background popups. Previously saved instruction-routing choices are preserved.
+
+
+Version 1.1.1 verification
+--------------------------
+
+A fresh isolated npm ci completed and TypeScript compilation plus all 91 tests
+passed in `.codex-temp/release-clean-2u7um0so`. Eleven dependency records corrupted
+by earlier broad version replacements were restored using installed metadata with
+matching integrity hashes. The new release metadata check compares root versions,
+package output names and dependency versions/constraints with installed manifests.
+
+The listing is shortened, with the previous technical guide retained in
+advanced.md. Free-use licensing, privacy information and support metadata are
+included. Packaging now targets Windows x64 and retains normal license/repository
+checks. Runtime code and patch payloads are unchanged from 1.1.0; its integration
+and disposable-copy patch results remain applicable. No minimum-version or
+additional platform support is claimed as verified. Public submission remains
+pending the separate release-preparation decisions.
+
+
+Version 1.1.2 verification
+--------------------------
+
+All 92 unit tests passed. Update searches now use the installed extension ID;
+coverage checks both keenanselbee and the earlier local-tools identity. The package
+guard rejects mismatched root versions and preserves an existing release artifact.
+The publisher is keenanselbee and the original chat/branch PNG icon is included.
+
+Both isolated VS Code 1.137.0 phases passed in `.codex-temp/integration-SWHSP3`,
+including startup and restart persistence under the new identity. An isolated
+VS Code 1.96.2 run in `.codex-temp/integration-aYS3pM` failed by timing out on the
+custom chat-label check. The released engine requirement is consequently raised
+to the tested 1.137.0 minimum; no claim is made about the earliest version that
+could work. Integration still uses fixture conversations, not authenticated Codex.
+
+Disposable Codex 26.908.40401 copies passed apply, idempotence, missing-bridge
+repair, exact restore, lock refusal, interrupted temporary recovery, failed-write
+rollback, external-edit refusal, unsupported-version refusal and Electron Node
+execution. The npm dependency audit reported zero known vulnerabilities. The
+prior clean-install result remains applicable; dependency versions are unchanged.
+
+The new identity has not been installed into the user's working profile. Local
+state-transition instructions describe backups and disabling the old build;
+the product does not overwrite or migrate private VS Code databases. Screenshots,
+publisher account registration and patch permission remain release-preparation
+items. The earlier 1.1.1 artifact is preserved unchanged.
+
+
+Version 1.1.3 verification
+--------------------------
+
+All 94 unit tests passed. Focused regressions cover restoring already-original
+Codex without subsequent automatic patching, including restart; displaying error
+and reload explanations after rollback while keeping ordinary Off text hidden;
+and validating a more specific profile's missing, empty, directory or readable
+shared file. Disabled profiles remain reported as off.
+
+The privacy heading now uses eight equals signs. Release whitespace/conflict checks
+include complete working files so newly added documents are checked before a
+version is packaged. Privacy wording, settings and storage formats are unchanged.
+No installed Codex files or global/shared instructions were changed. The existing
+1.1.2 artifact is preserved. Prior integration and patch recovery results remain
+applicable to their unchanged code; this patch uses the focused regressions above.

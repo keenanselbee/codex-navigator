@@ -480,9 +480,10 @@ Existing routing setup/off choices remain excluded from startup onboarding.
 The VSIX includes only the display installer and its four bridge assets from the
 development tooling. display-setup.ts discovers openai.chatgpt through the VS Code
 extension API and invokes the installer asynchronously using Electron as Node.
-Every mutation follows a modal review, rechecks the selected installation, and
-requires a user-triggered reload. Checks run on opening setup; updates are never
-automatically patched. Remote and untrusted windows are excluded.
+Initial setup requires the user to enable chat labels. Version 1.1.0 also reapplies
+a previously enabled integration after a supported Codex or Companion update.
+Every mutation rechecks the selected installation and exact file checksums, and
+requires a user-triggered reload. Remote and untrusted windows are excluded.
 
 Mutations use an exclusive per-installation lock and revalidate after acquiring
 it. Backups and bridge files cannot be symlinks or non-files. A missing bridge is
@@ -534,3 +535,31 @@ and the missing-main-file policy are retained in that guide. A missing Node bina
 or routing.js does not prevent reading it; deleting the entire helper directory
 also removes the recovery guide. Setup recreates it without changing unchanged
 global instructions or replacing the original backup.
+
+
+Automatic patch maintenance (1.1.0)
+----------------------------------
+
+The existing chatLabelsEnabled choice gates automatic reapplication. A recognized
+older patch can establish opt-in if no explicit choice was saved; an explicit
+restore remains off, including a restore request when Codex already has original
+files. A compatible original or recognized older patch is eligible.
+Unknown versions/checksums and partial installations require attention. Attempts
+are saved before mutation and keyed by installation path, Codex version and
+Companion version; the latest 16 are retained. Failure does not loop on restart.
+A manual retry or a new Companion release provides another opportunity.
+
+Notifications never hold up compatibility processing. Previously enabled users
+can receive at most two failure reminders per Codex version on separate startups;
+Don't Ask Again for This Version ends them immediately. Dismissal suppresses
+notifications, not a future supported repair. Silent Mode, an unfocused window,
+manual actions and an open setup page suppress background popups. Reload stays a
+user action. Notifications and retry records use VS Code global extension state;
+the existing filesystem setup lock prevents concurrent patch writes across windows.
+
+Routing status independently checks installed helper readability and JavaScript
+syntax, shared-file readability for the workspace and each selected profile,
+saved scope/configuration and matching-profile
+conflicts. It does not load the chat bridge or assert model adherence. Automatic
+chat repair never enables, disables or installs routing. Managed AGENTS.md guidance
+is unchanged by this release.

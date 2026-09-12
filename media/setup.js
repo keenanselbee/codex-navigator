@@ -31,7 +31,7 @@ function controls() {
 function showLabels(labels) {
   el('labels-status').textContent = labels.label;
   el('labels-detail').textContent = labels.detail;
-  el('labels-detail').hidden = labels.status === 'compatible';
+  el('labels-detail').hidden = labels.label === 'Off';
   el('enable-labels').hidden = labels.status === 'patched' || labels.label === 'Reload needed';
   el('restore-section').hidden = !['patched', 'partial', 'upgrade-available'].includes(labels.status);
   el('reload').hidden = labels.label !== 'Reload needed';
@@ -68,7 +68,8 @@ window.addEventListener('message', event => {
     }
     el('global-file').textContent = message.globalFile;
     showLabels(message.labels);
-    el('routing-status').textContent = message.choices.enabled ? (message.routingReady ? 'Enabled' : 'Needs setup') : 'Off';
+    el('routing-status').textContent = message.routing.label;
+    el('routing-detail').textContent = message.routing.detail;
     el('save-routing').textContent = message.choices.enabled ? 'Save Project Instructions' : 'Enable Project Instructions';
     el('disable-routing').hidden = !message.choices.enabled;
     list(message.repositories); scopeText(); controls(); notice(message.routingError || '', !!message.routingError);

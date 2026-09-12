@@ -30,7 +30,7 @@ function fixture(options = {}) {
     require: name => {
       if (name === 'vscode') return api;
       if (name === './agent-helper') return { prepareAgentHelper: () => ({ instructions: 'C:/global/AGENTS.md', before: '', helper: 'missing', destination: 'missing' }) };
-      if (name === './display-setup') return { watchChatLabels: (_context, fn) => { labelsChanged = fn; return disposable(); }, chatLabelsStatus: async () => ({ label: 'Off', root: 'C:/codex', status: 'compatible', detail: 'Ready' }), applyChatLabels: async (...args) => { writes.push(['labels', ...args.slice(1)]); await options.onApply?.(); } };
+      if (name === './display-setup') return { setChatSetupVisible() {}, checkForCompanionUpdates: async () => writes.push(['updates']), watchChatLabels: (_context, fn) => { labelsChanged = fn; return disposable(); }, chatLabelsStatus: async () => ({ label: 'Off', root: 'C:/codex', status: 'compatible', detail: 'Ready' }), applyChatLabels: async (...args) => { writes.push(['labels', ...args.slice(1)]); await options.onApply?.(); } };
       if (name === './routing-setup') return { routingChoices: () => ({ ...choices }), saveRoutingChoices: async value => writes.push(['routing', value]) };
       return name.startsWith('./') ? require('../dist/' + name.slice(2)) : require(name);
     },
@@ -124,11 +124,18 @@ test('setup view updates compatibility without replacing a draft or hiding its c
   });
   receive({ type: 'state', replaceChoices: true, revision: 1,
     choices: { main: 'Saved file', scopes: [], fallbackNames: [], enabled: false },
-    labels: { label: 'Enabled', status: 'patched', root: 'C:/codex' }, repositories: [] });
+    labels: { label: 'Enabled', status: 'patched', root: 'C:/codex' }, routing: { label: 'Off', detail: 'Independent' }, repositories: [] });
   node('main').value = 'Unsaved file'; receive({ type: 'stale' });
   receive({ type: 'labels', labels: { label: 'Waiting for support', detail: 'Update Companion', extensions: true } });
   assert.equal(node('main').value, 'Unsaved file'); assert.equal(node('stale').hidden, false);
   assert.equal(node('labels-status').textContent, 'Waiting for support');
   assert.equal(node('enable-labels').disabled, true); assert.equal(node('extensions').hidden, false);
   assert.equal(node('save-routing').disabled, false);
+  for (const [label, hidden] of [['Needs attention', false], ['Reload needed', false], ['Off', true]]) {
+    receive({ type: 'labels', labels: { label, status: 'compatible', root: 'C:/codex', detail: 'Status explanation' } });
+    assert.equal(node('labels-detail').hidden, hidden, label);
+    assert.equal(node('labels-detail').textContent, 'Status explanation');
+    assert.equal(node('main').value, 'Unsaved file');
+    assert.equal(node('stale').hidden, false);
+  }
 });

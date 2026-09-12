@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import * as path from 'node:path';
 import { prepareAgentHelper } from './agent-helper';
-import { chatLabelsStatus, applyChatLabels, watchChatLabels } from './display-setup';
+import { chatLabelsStatus, applyChatLabels, watchChatLabels, setChatSetupVisible, checkForCompanionUpdates } from './display-setup';
 import { routingChoices, saveRoutingChoices } from './routing-setup';
+import { routingStatus } from './routing-status';
 import { containsPath } from './routing-config';
 
 let currentPanel: vscode.WebviewPanel | undefined;
@@ -15,6 +16,7 @@ export async function openSetupPage(context: vscode.ExtensionContext): Promise<v
   const panel = vscode.window.createWebviewPanel('codexRepoCompanion.setup', 'Set Up Repo Companion', vscode.ViewColumn.Active,
     { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [media] });
   currentPanel = panel;
+  setChatSetupVisible(true);
   const nonce = randomBytes(24).toString('hex');
   const asset = (name: string) => panel.webview.asWebviewUri(vscode.Uri.joinPath(media, name)).toString();
   panel.webview.html = readFileSync(path.join(context.extensionPath, 'media', 'setup.html'), 'utf8')
@@ -44,10 +46,13 @@ export async function openSetupPage(context: vscode.ExtensionContext): Promise<v
     choices = routingChoices();
     let routingError = '';
     try { plan = prepareAgentHelper(); } catch (error) { plan = undefined; routingError = String(error); }
+    const workspace = vscode.workspace.workspaceFile?.scheme === 'file' ? vscode.workspace.workspaceFile.fsPath
+      : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+    const scopes = choices.scopes.length ? choices.scopes : (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath);
+    const routing = await routingStatus(plan, choices, workspace, scopes, repositories().map((repo: { path: string }) => repo.path));
     labels = await chatLabelsStatus(context);
-    send({ type: 'state', replaceChoices, revision: ++revision, choices, labels, globalFile: plan?.instructions ?? '', routingError,
-      routingReady: !!plan && plan.before.includes('<!-- codex-repo-companion:start -->') && existsSync(plan.helper)
-        && existsSync(path.join(plan.destination, 'routing.js')), repositories: repositories() });
+    send({ type: 'state', routing, replaceChoices, revision: ++revision, choices, labels, globalFile: plan?.instructions ?? '', routingError,
+      repositories: repositories() });
     if (JSON.stringify(routingChoices()) !== JSON.stringify(choices)) { send({ type: 'stale' }); }
   }
   const listChanged = () => send({ type: 'repositories', repositories: repositories() });
@@ -76,7 +81,7 @@ export async function openSetupPage(context: vscode.ExtensionContext): Promise<v
           ...(file ? { filters: { 'Rules files': ['md', 'txt'] } } : {}) });
         if (!disposed && selected?.[0]?.scheme === 'file') { send({ type: file ? 'main' : 'scope', path: selected[0].fsPath }); }
       } else if (message.type === 'reload') { await vscode.commands.executeCommand('workbench.action.reloadWindow'); }
-      else if (message.type === 'extensions') { await vscode.commands.executeCommand('workbench.extensions.search', '@id:local-tools.codex-repo-companion @id:openai.chatgpt'); }
+      else if (message.type === 'extensions') { await checkForCompanionUpdates(context); }
       else {
         if (message.revision !== revision || JSON.stringify(routingChoices()) !== JSON.stringify(choices)) {
           throw new Error('Settings changed. Refresh this page before applying your choices.');
@@ -100,6 +105,6 @@ export async function openSetupPage(context: vscode.ExtensionContext): Promise<v
       send({ type: 'error', text: error instanceof Error ? error.message : String(error) }); }
     finally { busy = false; send({ type: 'busy', busy: false }); }
   }));
-  panel.onDidDispose(() => { disposed = true; currentPanel = undefined; subscriptions.forEach(item => item.dispose()); });
+  panel.onDidDispose(() => { disposed = true; setChatSetupVisible(false); currentPanel = undefined; subscriptions.forEach(item => item.dispose()); });
   context.subscriptions.push(panel);
 }

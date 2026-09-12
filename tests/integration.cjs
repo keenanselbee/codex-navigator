@@ -100,7 +100,8 @@ async function run() {
   const nested = git.repositories.find(repo => repo.rootUri.toString() === nestedUri.toString());
   const selections = [];
   for (const repo of git.repositories) { subscriptions.push(repo.ui.onDidChange(() => selections.push({ time: Date.now(), root: repo.rootUri.fsPath, selected: repo.ui.selected }))); }
-  const extension = vscode.extensions.getExtension('local-tools.codex-repo-companion');
+  const manifest = require('../package.json');
+  const extension = vscode.extensions.getExtension(`${manifest.publisher}.${manifest.name}`);
   assert.ok(extension, 'development extension is available');
   await extension.activate();
   for (const name of ['setUp', 'setUpAgentHelper', 'restoreCodex']) {

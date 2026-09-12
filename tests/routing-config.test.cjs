@@ -126,3 +126,47 @@ test('managed guidance and readable saved settings survive a missing routing hel
   await saveProfile(home, profile);
   await assert.rejects(resolveRouting(['--target', repo], home, id), /ENOENT/);
 });
+
+
+test('routing readiness validates the shared file of a more specific selected profile', async t => {
+  const { home, repo, main, profile } = await fixture(t);
+  const { routingStatus } = require('../dist/routing-status');
+  const specific = { ...profile, workspace: path.join(home, 'specific.code-workspace'), scopes: [repo], main: path.join(home, 'specific.md') };
+  await saveProfile(home, profile); await saveProfile(home, specific);
+  installAgentHelper(prepareAgentHelper(home));
+  const plan = prepareAgentHelper(home);
+  const choices = { enabled: true, main, scopes: profile.scopes, fallbackNames: profile.fallbackNames };
+  const status = () => routingStatus(plan, choices, profile.workspace, profile.scopes, [repo]);
+  assert.equal((await status()).label, 'Needs attention'); // Missing selected shared file.
+  await fs.writeFile(specific.main, '');
+  assert.equal((await status()).label, 'Needs attention');
+  await fs.writeFile(specific.main, 'Specific shared rules');
+  assert.equal((await status()).label, 'Ready');
+  await saveProfile(home, { ...specific, main: repo });
+  assert.equal((await status()).label, 'Needs attention'); // A directory is not a rules file.
+  await saveProfile(home, { ...specific, enabled: false });
+  assert.match((await status()).detail, /Routing is off/);
+});
+
+test('installed routing resolves shared and nested instructions with no bridge or live chat association', async t => {
+  const { home, repo, main, profile } = await fixture(t);
+  await saveProfile(home, profile);
+  installAgentHelper(prepareAgentHelper(home));
+  const nested = path.join(repo, 'src'); await fs.mkdir(nested);
+  const projectRules = path.join(repo, 'AGENTS.md'), nestedRules = path.join(nested, 'AGENTS.override.md');
+  await fs.writeFile(projectRules, 'Project rules'); await fs.writeFile(nestedRules, 'Nested rules');
+  const result = JSON.parse(execFileSync(process.execPath, [path.join(home, 'repo-companion', 'routing.js'),
+    '--target', repo, '--file', path.join(nested, 'index.ts')], {
+    env: { ...process.env, CODEX_HOME: home, CODEX_THREAD_ID: id }, windowsHide: true, encoding: 'utf8',
+  }));
+  assert.equal(result.status, 'enabled');
+  assert.deepEqual(result.instructions, [main, path.join(home, 'AGENTS.md'), projectRules, nestedRules]);
+  await assert.rejects(fs.access(path.join(home, 'repo-companion', 'routing')));
+  const { routingStatus } = require('../dist/routing-status');
+  const plan = prepareAgentHelper(home);
+  const choices = { enabled: true, main, scopes: profile.scopes, fallbackNames: profile.fallbackNames };
+  assert.equal((await routingStatus(plan, choices, profile.workspace, profile.scopes, [repo])).label, 'Ready');
+  await fs.unlink(path.join(home, 'repo-companion', 'model.js'));
+  assert.equal((await routingStatus(plan, choices, profile.workspace, profile.scopes, [repo])).label, 'Needs attention');
+  assert.equal((await routingStatus(plan, { ...choices, enabled: false }, profile.workspace, profile.scopes, [repo])).label, 'Off');
+});
