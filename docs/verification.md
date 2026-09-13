@@ -27,6 +27,12 @@ Automated checks
   trial is refused. Installed file hashes and the manifest (apart from VS Code's
   added installation metadata) match the archive. The fixture removes
   its extension afterward and does not change the normal VS Code installation.
+- Private test preparation also verifies a sandbox-configured VSIX through the
+  same installed/reset/reinstall workflow. Only the compiled configuration differs
+  from normal runtime modules; its receipt records that substitution, source
+  revisions/status and archive hashes. Sandbox and production protected records
+  remain separate. This check makes no provider requests and does not prove paid
+  activation through the licence UI.
 - Authenticated Polar sandbox tests pass activation, repeated validation,
   wrong-product denial, second-install refusal, deactivation, rejection of the
   old activation and transfer. The final test activation was released. This tests

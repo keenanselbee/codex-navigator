@@ -3,9 +3,13 @@ const fs = require('node:fs'), path = require('node:path');
 const { execFileSync, spawn } = require('node:child_process');
 const { createTestPackage } = require('./test-package.cjs');
 
-async function main() {
+async function testInstalledPackage(prepared) {
   const root = path.resolve(__dirname, '..'), scratch = path.join(root, '.codex-temp');
-  const { fixture, archive, receipt } = await createTestPackage();
+  const { fixture, archive, receipt } = prepared ?? await createTestPackage();
+  const environment = receipt.environment ?? 'production';
+  if (!['production', 'sandbox'].includes(environment)) throw new Error('Unknown fixture environment.');
+  if (!fs.realpathSync(fixture).startsWith(fs.realpathSync(scratch) + path.sep)
+      || path.dirname(fs.realpathSync(archive)) !== fs.realpathSync(fixture)) throw new Error('Prepared package escaped scratch.');
   const testRoot = fs.mkdtempSync(path.join(scratch, 'installed-acceptance-'));
   const profile = path.join(testRoot, 'profile'), extensions = path.join(testRoot, 'extensions');
   for (const directory of [profile, extensions]) {
@@ -46,7 +50,8 @@ async function main() {
     }
     console.log(command(['--install-extension', archive, '--force']));
     const env = { ...process.env, CODEX_HOME: codexHome, REPO_COMPANION_ISOLATED_HOST: '1',
-      REPO_COMPANION_TEST_ROOT: testRoot, REPO_COMPANION_TEST_SUITE: 'installed', REPO_COMPANION_TEST_PHASE: phase };
+      REPO_COMPANION_TEST_ROOT: testRoot, REPO_COMPANION_TEST_SUITE: 'installed', REPO_COMPANION_TEST_PHASE: phase,
+      REPO_COMPANION_TEST_LICENSE_ENVIRONMENT: environment };
     delete env.ELECTRON_RUN_AS_NODE;
     const child = spawn(executable, [workspace, ...scoped, '--extensionDevelopmentPath=' + path.join(root, 'tests', 'fixture'),
       '--disable-telemetry', '--disable-updates', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--new-window'],
@@ -65,5 +70,7 @@ async function main() {
   }
   console.log(command(['--uninstall-extension', 'keenanselbee.codex-navigator']));
   console.log('Disposable installed extension removed. Normal VS Code profile was not changed.');
+  return testRoot;
 }
-main().catch(error => { console.error(error.message); process.exitCode = 1; });
+module.exports = { testInstalledPackage };
+if (require.main === module) testInstalledPackage().catch(error => { console.error(error.message); process.exitCode = 1; });

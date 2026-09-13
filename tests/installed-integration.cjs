@@ -40,7 +40,13 @@ exports.run = async function (_fixtureContext, vscode) {
     };
     await until(() => context && license);
     assert.equal(context.extensionMode, vscode.ExtensionMode.Production, 'loaded installed package, not development source');
-    const secretKey = 'license.production.v1';
+    const environment = process.env.REPO_COMPANION_TEST_LICENSE_ENVIRONMENT ?? 'production';
+    assert.ok(['production', 'sandbox'].includes(environment));
+    assert.equal(license.snapshot().sandbox, environment === 'sandbox', 'compiled composition matches the test package');
+    if (environment === 'sandbox') assert.equal(license.snapshot().configured, true);
+    const secretKey = 'license.' + environment + '.v1';
+    assert.equal(await context.secrets.get('license.' + (environment === 'sandbox' ? 'production' : 'sandbox') + '.v1'), undefined,
+      'the other environment has no protected record in this isolated profile');
     const star = { 'local/00000000-0000-0000-0000-000000000001': true };
     let record;
     if (phase === 'installed') {
@@ -64,7 +70,7 @@ exports.run = async function (_fixtureContext, vscode) {
       assert.deepEqual(context.workspaceState.get('starredChats.v1'), star, 'saved Navigator data survives reinstall');
     }
     fs.writeFileSync(path.join(root, 'result-' + phase + '.json'), JSON.stringify({ phase, passed: true, vscode: vscode.version,
-      verifiedFiles, manifestVerified: true, installedVersion: '0.0.0', mode: 'Production', expired: !license.allowed(),
+      verifiedFiles, manifestVerified: true, environment, installedVersion: '0.0.0', mode: 'Production', expired: !license.allowed(),
       scope: 'Disposable VSIX and isolated profile only. Trial state is deliberately expired by the fixture; no paid provider requests or normal installation changes.' }, null, 2));
   } catch (error) {
     fs.writeFileSync(path.join(root, 'failure.txt'), error.stack || String(error)); throw error;

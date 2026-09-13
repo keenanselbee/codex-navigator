@@ -202,10 +202,24 @@ Context Suite's seven-day duration, original-start migration and policy copy are
 committed as `02bee64`. All 2,403 foundation contract checks and the repository
 check passed on 2026-09-13. An earlier run was stopped at unrelated native I/O
 cleanup; the rerun passed after that test was fixed separately in `fc26cf6`.
-This run did not include private-worker integration or desktop acceptance.
+Follow-up verification built fresh production staging
+`6e4b804aa66445d8ab0264ed7212b9e0` and passed 2,650 contracts against the real
+private worker and WPF activation entry point. Engine/dependency/payload checks
+also passed. No Explorer installation was changed. The local receipt records
+tested binary hashes; concurrent unrelated work prevents treating that staging
+as clean release provenance. Installed licensing acceptance remains pending.
 
 Navigator setup tests also verify that expired access blocks enabling hooks,
 automatic labels and routing while preserving their removal actions.
 Private recovery milestone `bf49517` adds explicit, portal-confirmed recovery
 from a damaged protected record without granting another trial. Valid records
 and unavailable keychains are not overwritten. All 20 commercial tests pass.
+
+The public sidebar/commercial integration is committed as `5e38607`. Private
+test preparation now builds a complete disposable sandbox VSIX by substituting
+only fixed sandbox configuration in the copied runtime. Its receipt records both
+source revisions/status, the substitution and archive/file hashes. The sandbox
+installed/reset/reinstall check passes (`installed-acceptance-palTG6`), including
+separate protected environment records. This makes no paid provider requests;
+customer activation in the licence UI and production release evidence remain
+separate outstanding checks.
