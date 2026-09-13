@@ -314,3 +314,13 @@ not live activation, authenticated Codex goal/hook acceptance, portal recovery,
 refund/revocation or customer download delivery. No release was published and no
 production purchase or refund was made. Context Suite's separate release and
 remaining owner-run checks are still required for the combined goal.
+
+Context Suite follow-up: the owner confirms its separate live product is also
+CAD 5.00 one-time. Clean public `c1be58074d936f4eb9868ab009cbf444caaec4b6`
+and private `c9fc230ab05f6596e998b97a9961e52ebbd2489b` worktrees now produce
+an unsigned internal archive with 42 inventoried files and SHA-256
+`9FE32749D6F9932807236C3949019791B9432E7A9D54179B75CA50DD4584CE45`.
+All 17 packaging checks and 2,665 contracts against its packaged app/worker pass.
+Context Suite's `docs/licensing-verification.md` records the paths and limited
+scope: normal image/DDS production composition, no optional audio/PDF adoption,
+final release identity/version, signing, installation or live commerce clearance.
