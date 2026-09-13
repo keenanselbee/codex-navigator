@@ -8,7 +8,9 @@ const events=['userPromptSubmit','stop','interrupt','sessionEnd'];
 test('chat admission requires all readiness checks and retains delivery evidence during idle time',()=>{
  const valid={enabled:true,installed:true,nodeAvailable:true,trusted:true,observed:'2026-01-01T00:00:00Z',detail:'',nextStep:'Verified'};
  assert.equal(exportsFixture.hookReadiness(valid).ready,true,'old successful evidence is valid while idle');
- for(const change of [{enabled:false},{installed:false},{nodeAvailable:false},{trusted:false},{trusted:undefined},{observed:undefined},{detail:'Cannot read hooks'}]){
+ assert.equal(exportsFixture.hookReadiness({...valid,observed:undefined}).ready,true,'no event is needed to browse');
+ assert.equal(exportsFixture.hookReadiness({...valid,observed:undefined,deliveryDetail:'Write failed'}).ready,true,'delivery diagnostics never block chats');
+ for(const change of [{enabled:false},{installed:false},{nodeAvailable:false},{trusted:false},{trusted:undefined},{detail:'Cannot read hooks'}]){
   const result=exportsFixture.hookReadiness({...valid,...change,nextStep:'Repair this issue'});
   assert.equal(result.ready,false);assert.equal(result.message,'Repair this issue');
  }
@@ -56,6 +58,10 @@ test('missing installation memento uses a stable file cutoff across status check
   assert.equal(result.observed,time);assert.equal(result.installed,true);
   assert.ok(Number.isFinite(result.checkedAt));assert.equal(result.trusted,undefined);
  }
+ fs.appendFileSync(path.join(directory,'codex-navigator/activity-diagnostics.jsonl'),JSON.stringify({time:new Date().toISOString(),event:'Stop',outcome:'write-failed'})+'\n');
+ const failedDelivery=await exportsFixture.hookSetupStatus(context,directory);
+ assert.equal(failedDelivery.detail,'','delivery failures are separate from setup errors');
+ assert.match(failedDelivery.deliveryDetail,/could not save/);assert.equal(failedDelivery.observed,undefined);
  state.set('activityHooks.installedAt',Date.now());
  assert.equal((await exportsFixture.hookSetupStatus(context,directory)).observed,undefined,'reinstallation excludes earlier events');
  const cached=await exportsFixture.hookSetupStatus(context,directory,true);

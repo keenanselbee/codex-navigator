@@ -72,6 +72,41 @@ test('hidden and disposed sidebar views stop history reads', async () => {
   f.sidebar.dispose(); await f.sidebar.refresh(); assert.equal(f.sent.length, 1);
 });
 
+test('Navigator renames keep the Codex title and can be inspected and reset from native menu actions', async () => {
+  const f=fixture();await f.sidebar.refresh();
+  const target={webviewSection:'navigatorChat',navigatorChatId:f.id};
+  f.vscode.window.showInputBox=async options=>{assert.equal(options.value,'A');assert.match(options.prompt,/Codex name: A/);return 'My chat';};
+  await f.commands.get('codexNavigator.sidebar.rename')(target);
+  let row=f.sent.at(-1).rows[0];
+  assert.equal(row.title,'My chat');assert.equal(row.originalTitle,'A');assert.equal(row.hasCustomName,true);
+  assert.match(row.tooltip,/Codex name: A/);assert.equal(f.sidebar.rows[0].title,'A');
+  await f.commands.get('codexNavigator.sidebar.originalName')(target);
+  assert.deepEqual(f.calls.at(-1),['info','A']);
+  f.sidebar.readChats=async()=>[{id:f.id,title:'New Codex title',label:'Repo',tooltip:'Details',starred:false}];
+  await f.sidebar.refresh();row=f.sent.at(-1).rows[0];
+  assert.equal(row.title,'My chat');assert.equal(row.originalTitle,'New Codex title');
+  await f.commands.get('codexNavigator.sidebar.resetName')(target);
+  row=f.sent.at(-1).rows[0];assert.equal(row.title,'New Codex title');assert.equal(row.hasCustomName,false);
+  assert.equal(f.calls.some(call=>call[0]==='vscode.open'),false,'renaming never opens or modifies Codex');
+  f.sidebar.dispose();
+});
+
+test('cancelled, invalid and expired rename dialogs preserve saved names', async () => {
+  const f=fixture();await f.sidebar.refresh();
+  const target={webviewSection:'navigatorChat',navigatorChatId:f.id};
+  for(const result of [undefined,'x'.repeat(201),'bad\nname']) {
+    f.vscode.window.showInputBox=async()=>result;
+    await f.commands.get('codexNavigator.sidebar.rename')(target);
+    assert.equal(f.stored.has('chatNames.v1'),false);
+  }
+  let allowed=true;
+  f.sidebar.license={allowed:()=>allowed,requireAccess:async()=>allowed};
+  f.vscode.window.showInputBox=async()=>{allowed=false;return 'Too late';};
+  await f.commands.get('codexNavigator.sidebar.rename')(target);
+  assert.equal(f.stored.has('chatNames.v1'),false);
+  f.sidebar.dispose();
+});
+
 
 test('in-panel colour results are token-bound, validated and cancelled without saving', async () => {
  const f=fixture(); const options={title:'Chat',initial:'#123456',resetLabel:'Automatic',recent:[],repositories:[]};

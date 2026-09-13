@@ -44,17 +44,17 @@ function showLabels(labels) {
 function showActivity(activity) {
   if (!activity) return;
   const installed = activity.installed && activity.enabled;
-  const ready = installed && activity.trusted === true && !!activity.observed;
+  const ready = installed && activity.nodeAvailable && activity.trusted === true && !activity.detail;
   el('install-hooks').hidden = !!installed;
   el('review-hooks').hidden = !installed || activity.trusted === true;
   el('reload-hooks').hidden = !installed || ready;
   el('verify-hooks').hidden = !installed;
-  el('activity-next').textContent = !activity.nodeAvailable ? 'Install Node.js and restart VS Code to enable activity indicators.' : ready ? 'Activity is connected.' : !installed
+  el('activity-next').textContent = !activity.nodeAvailable ? 'Install Node.js and restart VS Code to enable activity indicators.' : ready ? activity.nextStep : !installed
     ? 'Install hooks, then review them in Codex.' : activity.trusted !== true
       ? 'Open Hook Review, type /hooks, and trust all Navigator hooks. Then reload and send a chat message.'
       : 'Reload this window and send a normal chat message to verify activity.';
   el('activity-status').textContent = activity.label;
-  el('activity-detail').textContent = activity.detail;
+  el('activity-detail').textContent = activity.detail || activity.deliveryDetail || '';
   el('activity-checked').textContent = 'Last checked: ' + new Date(activity.checkedAt).toLocaleTimeString();
   el('install-detail').textContent = !activity.nodeAvailable ? 'Install Node.js and restart VS Code so Codex can run the collector.' : activity.installed && activity.enabled ? 'Navigator hooks and collector are installed.' : 'Install four small hooks for activity updates.';
   el('install-hooks').textContent = activity.installed && activity.enabled ? 'Reinstall Hooks' : 'Install Hooks';

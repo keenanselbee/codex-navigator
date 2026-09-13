@@ -4,7 +4,9 @@ Release Notes
 Unreleased
 ----------
 
-- Require verified activity hooks before showing chats. Remove setup bypasses,
+- Add Navigator-only chat names with original-title lookup, search and reset.
+- Keep event delivery verification diagnostic so new or idle chats never block Navigator.
+- Require installed, enabled and trusted activity hooks before showing chats. Remove setup bypasses,
   put hooks first in setup, and explain missing or broken setup on return.
 
 - Add explicit seven-day trial admission and a licence screen for the planned $5 CAD one-time release. Gate Navigator actions on access while preserving data, Codex tasks and setup removal.

@@ -50,8 +50,8 @@ exports.run=async function(context,vscode,until){
  await until(async()=>Number.isFinite(context.globalState.get('activityHooks.installedAt'))&&(await probe()).status==='Review needed','installed differs from trusted');
  const config=JSON.parse(fs.readFileSync(path.join(home,'hooks.json'),'utf8'));assert.ok(config.hooks.UserPromptSubmit[0].hooks[0].command.includes('codex-navigator'));
  await click('reviewHooks');await until(()=>reviews===1,'review requires explicit click');
- trusted=true;await click('verifyHooks');await until(async()=>(await probe()).status==='Waiting for a chat turn','trust differs from actual delivery');
- await until(async()=>(await probe()).notice.includes('All Navigator hooks are trusted, but no recorded hook event'),'explicit no-event result');
+ trusted=true;await click('verifyHooks');await until(async()=>(await probe()).status==='Ready','trusted hooks admit Navigator before delivery');
+ await until(async()=>(await probe()).notice.includes('Navigator is ready.'),'delivery check is optional');
  const eventFile=path.join(home,'codex-navigator/activity-diagnostics.jsonl');
  fs.appendFileSync(eventFile,JSON.stringify({time:new Date().toISOString(),event:'UserPromptSubmit',outcome:'recorded'})+'\n');
  await click('verifyHooks');await until(async()=>(await probe()).status==='Event received','actual event evidence');

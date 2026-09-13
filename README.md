@@ -21,6 +21,8 @@ What it does
   Open Repository Colours from the top menu to edit
   repository colours in Navigator. Hover or focus beside a label to reveal its star. Hide Chat removes
   a chat from Navigator; Restore Hidden Chats in the overflow menu brings it back.
+- **Your own chat names.** Right-click for Rename Chat. Original Chat Name shows
+  the Codex title; Use Codex Name restores it. Search finds either name.
 - **Pinned chats.** Hover beside a label to reveal the pin control.
   Pins hold its list position and bypass the 24-hour filter. Unpin to return
   it to normal ordering. Fixed labels are a separate preference.
@@ -48,13 +50,13 @@ Get started
    Then choose **Set Up Codex Navigator**. Setup is also available from the Command Palette.
 3. Set up the required activity hooks: select **Install Hooks**, then **Open Hook Review**.
    Type `/hooks` in the Codex terminal and review and trust all Navigator hooks.
-4. Reload the window and send a normal chat message. Setup confirms when it
-   receives an activity event.
+4. Open Navigator once hooks are installed, enabled and trusted. Delivery is
+   checked separately when a chat runs; it does not block the chat list.
 
 The review terminal opens in the right workspace and Codex home automatically;
 no separate Codex CLI installation or directory command is needed. Activity hooks
 require Node.js on PATH. Navigator shows chats once hooks are installed, enabled,
-trusted and have delivered an event. If those checks fail later, setup returns
+and trusted. If those checks fail later, setup returns
 with the next step. Automatic labels and project instructions are optional.
 
 Choose **Arrange Navigator** in setup, then drag its heading above Codex and resize

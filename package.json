@@ -204,6 +204,21 @@
         "command": "codexNavigator.sidebar.repositoryColour",
         "title": "Change Colour...",
         "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.rename",
+        "title": "Rename Chat...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.originalName",
+        "title": "Original Chat Name...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.resetName",
+        "title": "Use Codex Name",
+        "category": "Codex Navigator"
       }
     ],
     "menus": {
@@ -274,6 +289,21 @@
           "command": "codexNavigator.sidebar.repositoryColour",
           "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorRepository",
           "group": "2_navigator@1"
+        },
+        {
+          "command": "codexNavigator.sidebar.rename",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "1_navigator_name@1"
+        },
+        {
+          "command": "codexNavigator.sidebar.originalName",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "1_navigator_name@2"
+        },
+        {
+          "command": "codexNavigator.sidebar.resetName",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat && navigatorHasCustomName",
+          "group": "1_navigator_name@3"
         }
       ],
       "commandPalette": [
@@ -311,6 +341,18 @@
         },
         {
           "command": "codexNavigator.sidebar.repositoryColour",
+          "when": "false"
+        },
+        {
+          "command": "codexNavigator.sidebar.rename",
+          "when": "false"
+        },
+        {
+          "command": "codexNavigator.sidebar.originalName",
+          "when": "false"
+        },
+        {
+          "command": "codexNavigator.sidebar.resetName",
           "when": "false"
         }
       ],

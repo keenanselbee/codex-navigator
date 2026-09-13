@@ -75,12 +75,11 @@ Setup webview
 One reusable page puts required activity hooks first, with optional automatic
 labels and project instructions. Each shows its next action, with diagnostics
 and options under Details. Arrangement instructions appear only after the action.
-The sidebar requires installed, enabled, trusted hooks and successful delivery
-since installation. Missing readiness replaces chats with setup and a relevant
+The sidebar requires installed, enabled and trusted hooks. Missing readiness replaces chats with setup and a relevant
 next step; prior dismissal flags cannot bypass it. Background checks reuse results
-for up to 15 seconds, while explicit setup checks refresh immediately. A recent
-collector write failure supersedes older success until delivery recovers. Idle
-time alone does not invalidate delivery. Activation does not show an invitation toast.
+for up to 15 seconds, while explicit setup checks refresh immediately. Delivery
+verification and collector failures are activity diagnostics, not chat admission
+requirements. Activation does not show an invitation toast.
 Automatic labels have a separate managed global instruction block and an
 application-level preference. Disabling reports retains existing assignments;
 explicit corrections and focus detection remain independent. It uses a restrictive

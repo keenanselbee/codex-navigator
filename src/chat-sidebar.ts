@@ -16,6 +16,8 @@ export interface SidebarChat extends RecentConversation {
   starred: boolean;
   pinned?: boolean;
   hasCustomLabel?: boolean;
+  originalTitle?: string;
+  hasCustomName?: boolean;
   tooltip: string;
   activity?: ChatActivity;
   activityDetail?: string;
@@ -27,6 +29,13 @@ const actions: Record<string, string> = {
   scope: 'scopeMenu', hide: 'hideChat', star: 'toggleStar', label: 'setCustomLabel', repositories: 'assignRepository', colour: 'setChatColour',
   automatic: 'useAutomaticScope', clear: 'clearRepository', associate: 'associateLabelRepository',
 };
+const nameActions = ['rename', 'originalName', 'resetName'];
+
+function chatNames(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([id, name]) => threadIdPattern.test(id)
+    && typeof name === 'string' && name.trim().length > 0 && name.length <= 200 && !/[\x00-\x1f\x7f]/.test(name)).slice(0, 2000));
+}
 
 // Uses Codex's existing URI handler. No file patch or private command is needed.
 export async function openSidebarChat(id: string): Promise<void> {
@@ -62,7 +71,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     private readRepositories: () => { root: string; label: string; colour?: string }[] = () => [],
     private activityReady: () => Promise<{ ready: boolean; message: string }> = async () => ({ ready: false, message: 'Install and verify Navigator hooks to show your chats.' }),
     private readStartup?: () => Promise<SidebarChat[]>, private license?: LicenseAccess) {
-    for (const action of Object.keys(actions).filter(action => action !== 'star')) {
+    for (const action of [...Object.keys(actions).filter(action => action !== 'star'), ...nameActions]) {
       this.subscriptions.push(vscode.commands.registerCommand('codexNavigator.sidebar.' + action, async (value: unknown) => {
         if (!value || typeof value !== 'object') { return; }
         const target = value as Record<string, unknown>;
@@ -131,7 +140,11 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     const hidden = this.context.globalState.get<Record<string, string>>('hiddenChats.v1', {});
     const recentOnly = vscode.workspace.getConfiguration('codexNavigator').get('recentChatsOnly', true);
     const seen = this.context.globalState.get<Record<string, number>>('activitySeen.v1', {});
-    const visible = placePinnedChats(this.rows.filter(row => !Object.hasOwn(hidden, row.id) && (pins[row.id] || !recentOnly || row.recencyAt === undefined || Math.max(row.recencyAt, seen[row.id] || 0) >= Date.now() - 86400000)), pins).map(row => ({ ...row, pinned: !!pins[row.id] }));
+    const names = chatNames(this.context.globalState.get('chatNames.v1'));
+    const visible = placePinnedChats(this.rows.filter(row => !Object.hasOwn(hidden, row.id) && (pins[row.id] || !recentOnly || row.recencyAt === undefined || Math.max(row.recencyAt, seen[row.id] || 0) >= Date.now() - 86400000)), pins).map(row => ({ ...row, pinned: !!pins[row.id],
+      title: names[row.id] || row.title, originalTitle: row.title, hasCustomName: !!names[row.id],
+      tooltip: names[row.id] ? [names[row.id], 'Codex name: ' + row.title,
+        ...(row.tooltip || '').split('\n').filter(line => line !== row.title)].filter(Boolean).join('\n') : row.tooltip }));
     let readiness = { ready: false, message: 'Hook status could not be checked. Open setup and choose Check Status.' };
     try { readiness = await this.activityReady(); } catch { /* Keep setup accessible if diagnostics fail. */ }
     const welcome = this.setupRequired = !readiness.ready;
@@ -183,7 +196,8 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
   async restoreHidden(): Promise<void> {
     if (this.license && !await this.license.requireAccess()) return;
     const hidden = this.context.globalState.get<Record<string, string>>('hiddenChats.v1', {});
-    const choices = Object.entries(hidden).filter(([id]) => threadIdPattern.test(id)).map(([id, title]) => ({ label: title || 'Untitled chat', id }));
+    const names = chatNames(this.context.globalState.get('chatNames.v1'));
+    const choices = Object.entries(hidden).filter(([id]) => threadIdPattern.test(id)).map(([id, title]) => ({ label: names[id] || title || 'Untitled chat', id }));
     if (!choices.length) { void vscode.window.showInformationMessage('No hidden chats to restore.'); return; }
     const selected = await vscode.window.showQuickPick(choices, { title: 'Restore Hidden Chats', canPickMany: true, placeHolder: 'Choose chats to restore. The 24-hour filter still applies.' });
     if (!selected?.length || this.license && !this.license.allowed()) return;
@@ -242,6 +256,30 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       await this.refresh(); return;
     }
     if (typeof id !== 'string' || !threadIdPattern.test(id) || !this.rows.some(row => row.id === id)) { return; }
+    if (type === 'action' && typeof action === 'string' && nameActions.includes(action)) {
+      const row = this.rows.find(row => row.id === id)!;
+      if (action === 'originalName') {
+        await vscode.window.showInformationMessage(row.title, { modal: true, detail: 'Original Codex chat name. Navigator renames do not change it.' });
+        return;
+      }
+      const names = chatNames(this.context.globalState.get('chatNames.v1'));
+      const value = action === 'resetName' ? '' : await vscode.window.showInputBox({ title: 'Rename Chat in Navigator',
+        value: names[id] || row.title, prompt: 'Codex name: ' + row.title,
+        placeHolder: 'Leave blank to use the Codex name',
+        validateInput: value => value.trim().length > 200 || /[\x00-\x1f\x7f]/.test(value) ? 'Use up to 200 characters on one line.' : undefined });
+      if (value === undefined || this.disposed || this.setupRequired || this.license && !this.license.allowed()) return;
+      const name = value.trim();
+      if (name.length > 200 || /[\x00-\x1f\x7f]/.test(name)) return;
+      // Re-read after the input dialog so another rename is not overwritten.
+      const current = chatNames(this.context.globalState.get('chatNames.v1'));
+      if (!name || name === row.title) delete current[id];
+      else {
+        if (!current[id] && Object.keys(current).length >= 2000) throw new Error('Clear a renamed chat before adding another name.');
+        current[id] = name;
+      }
+      await this.context.globalState.update('chatNames.v1', current);
+      await this.refresh(); return;
+    }
     if (type === 'goal') {
       const expected = this.goals[id];
       const requested = (message as { goal?: Partial<ChatGoal> }).goal;

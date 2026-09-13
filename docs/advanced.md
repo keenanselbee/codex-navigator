@@ -9,8 +9,8 @@ Setup
 
 Start a trial or activate a licence in Navigator, then run **Codex Navigator:
 Set Up Codex Navigator**. **Open Navigator** opens the view. First use after
-admission shows a setup button until hooks are installed, enabled, trusted and
-have delivered an event since installation. There is no skip or permanent dismissal.
+admission shows a setup button until hooks are installed, enabled and trusted.
+Delivery verification is diagnostic and never blocks the chat list. There is no skip or permanent dismissal.
 If readiness fails later, Navigator replaces chats with setup and the relevant next
 step. Previously started setup is identified as needing attention. Saved chats,
 labels and other preferences remain intact. There is no separate startup popup.
@@ -43,8 +43,9 @@ Activity setup has three checks:
    collector when chats start, finish, stop or close. Trust is tied to the exact
    hook definition; a changed definition needs review again. You can close the
    review terminal afterward. Setup refreshes the trust check automatically.
-3. Reload VS Code, send a normal message in a chat, then check setup. A fresh real
-   collector event confirms delivery. No synthetic test prompt is submitted.
+3. Optionally reload VS Code, send a normal message in a chat, then check setup.
+   A fresh collector event confirms delivery. This check does not block Navigator,
+   and no synthetic test prompt is submitted.
 
 The page checks for Node.js on PATH, matching collector bytes and hook entries,
 Codex-reported enabled/trusted states for each workspace folder, and an event since
@@ -56,9 +57,9 @@ lifecycle delivery, not every hook, every chat, or a successful task result.
 The visible Navigator reuses status results for up to 15 seconds; Check Status
 forces a fresh check. A quiet chat does not invalidate earlier delivery evidence.
 Missing, disabled, changed or untrusted hooks, unavailable Node.js, and unknown
-trust status all require setup. A recent collector write failure also requires
-attention until a successful event arrives. Older dismissal flags no longer bypass
-these checks.
+trust status all require setup. Missing event evidence and collector write failures
+are shown only as activity diagnostics; neither hides chats. Older dismissal flags
+no longer bypass installation and trust checks.
 
 If setup says Node.js needed, install Node.js and restart VS Code. If trust is
 unverified, inspect `/hooks` in the provided terminal. If trusted but no event
@@ -346,6 +347,12 @@ nested repositories. The action targets the captured chat, independently of
 which Codex chat is visible. Repository names are no longer listed directly in
 the menu: the supported native menu contributions have static command titles.
 See [VS Code webview context menus](https://code.visualstudio.com/api/extension-guides/webview#context-menus).
+
+Rename Chat saves a Navigator-only name for that chat ID in this VS Code profile.
+It does not change the Codex title or repository label. Original Chat Name opens
+the current Codex title, which also appears in the rename dialog and hover tooltip.
+Search matches either name. Use Codex Name (or a blank rename) removes the override.
+The native menu cannot put a different title directly in its text for each chat.
 
 Associate Custom Label with Repository is available only for custom text labels.
 It preserves that text while linking it to a repository for routing and inherited

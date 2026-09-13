@@ -28,7 +28,7 @@ Codex's trust state and recent collector diagnostics. The page launches a Codex
 terminal only when you choose Open Hook Review. Trust is granted in Codex, never
 by Navigator; setup does not submit test prompts.
 
-Labels, stars, chat colours, modes, readiness acknowledgements and setup choices
+Custom chat names, labels, stars, chat colours, modes, readiness acknowledgements and setup choices
 are stored in VS Code extension state. A startup cache retains up to 200 chat IDs,
 titles, ordering and recency timestamps in workspace state; it contains no messages
 or live activity/goal status. Automatic repository colours retain

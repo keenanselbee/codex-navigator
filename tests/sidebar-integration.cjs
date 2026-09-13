@@ -291,6 +291,23 @@ exports.run = async function (context, fixtureVscode) {
     const clickedContext=(await probe()).menuContext;
     assert.equal(clickedContext.navigatorChatId,id(11),'right-click resolves nested title to its own row');
     assert.equal(clickedContext.preventDefaultContextMenuItems,true);
+    const navigatorUi=require.cache[require.resolve('../dist/chat-sidebar')].require('vscode');
+    const renameInput=navigatorUi.window.showInputBox, nameNotice=navigatorUi.window.showInformationMessage;
+    let originalNameShown;
+    try {
+      navigatorUi.window.showInputBox=async options=>{assert.match(options.prompt,/Fixture chat 11/);return 'My named chat';};
+      navigatorUi.window.showInformationMessage=async text=>{originalNameShown=text;};
+      await vscode.commands.executeCommand('codexNavigator.sidebar.rename',clickedContext);
+      await until(async()=>(await probe()).text.includes('My named chat'),'Navigator displays custom chat name');
+      await vscode.commands.executeCommand('codexNavigator.sidebar.originalName',clickedContext);
+      assert.equal(originalNameShown,'Fixture chat 11','native action displays unchanged Codex title');
+      await companion.webview.postMessage({type:'fixture:search',value:'Fixture chat 11'});
+      await until(async()=>{const p=await probe();return p.rows===1&&p.text.includes('My named chat');},'original title remains searchable');
+      await companion.webview.postMessage({type:'fixture:search',value:''});
+      await vscode.commands.executeCommand('codexNavigator.sidebar.resetName',clickedContext);
+      await until(async()=>{const p=await probe();return !p.text.includes('My named chat')&&p.rows>2;},'reset restores Codex title');
+    } finally {navigatorUi.window.showInputBox=renameInput;navigatorUi.window.showInformationMessage=nameNotice;}
+
     await companion.webview.postMessage({type:'fixture:click',selector:'.chat:nth-child(2) .star'});
     assert.equal((await probe()).stars,'\u2605','background menu action preserves first row star');
     await companion.webview.postMessage({type:'fixture:key',selector:'.chat:nth-child(3) .open',key:'F10',shiftKey:true});
@@ -522,7 +539,7 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#licenseBack'});
     await until(async()=>!(await probe()).licenseVisible&&(await probe()).rows>0,'regaining access restores unchanged chats');
     const result = { phase: 'initial', passed: true, vscode: vscode.version,
-      verified: [...setupChecks, 'mandatory setup despite old dismissal flags', 'hook readiness controls chat admission', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
+      verified: [...setupChecks, 'mandatory setup despite old dismissal flags', 'hook readiness controls chat admission', 'Navigator rename and original-title lookup/search/reset', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
         'native recency order independent of activity', 'recency outage preserves order', 'whole-panel pointer ordering hold', 'safe title text', 'coloured label text', 'automatic distinct repository colours', 'multi-repo Auto default', 'Automatic versus No colour picker', 'star control', 'search',
         'height-driven layouts', 'width-dependent columns', 'resize preserves focus', 'column and fitted row counts survive webview reload', 'native header search',
         'native extension URI dispatch', 'both sidebar views visible', 'no patch bridge',

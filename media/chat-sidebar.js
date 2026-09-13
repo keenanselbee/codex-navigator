@@ -30,7 +30,7 @@ function render() {
   for (const [id, at] of selectedChats) if (Date.now() - at >= highlightDurationMs) selectedChats.delete(id);
   const lastViewedChat = [...selectedChats.keys()].at(-1);
   const query = el('search').value.trim().toLocaleLowerCase();
-  const matches = rows.filter(row => (mode !== 'starred' || row.starred) && (row.title + ' ' + row.label).toLocaleLowerCase().includes(query));
+  const matches = rows.filter(row => (mode !== 'starred' || row.starred) && (row.title + ' ' + (row.originalTitle || '') + ' ' + row.label).toLocaleLowerCase().includes(query));
   if (heldOrder) for (const row of rows) if (!heldOrder.has(row.id)) heldOrder.set(row.id, heldOrder.size);
   if (heldOrder) matches.sort((left, right) => (heldOrder.get(left.id) ?? Infinity) - (heldOrder.get(right.id) ?? Infinity));
   const focus = document.activeElement?.matches(':focus-visible') ? document.activeElement.dataset?.focus : undefined;
@@ -45,7 +45,7 @@ function render() {
       if (age < highlightDurationMs) { item.classList.add('selected'); item.style.animationDuration = highlightDurationMs + 'ms'; item.style.animationDelay = '-' + age + 'ms'; }
     }
     item.dataset.vscodeContext = JSON.stringify({ webviewSection: 'navigatorChat', navigatorChatId: row.id,
-      preventDefaultContextMenuItems: true, navigatorHasCustomLabel: !!row.hasCustomLabel });
+      preventDefaultContextMenuItems: true, navigatorHasCustomLabel: !!row.hasCustomLabel, navigatorHasCustomName: !!row.hasCustomName });
     if (/^#[0-9a-f]{6}$/i.test(row.colour ?? '')) item.style.setProperty('--chat-colour', row.colour);
     const activityText = row.activityDetail || ({ working: 'Working', ready: 'Finished since last viewed', waiting: 'Waiting for your input', error: 'Turn failed', unknown: 'Activity status unavailable' }[row.activity] || '');
     item.title = [row.tooltip || row.title, activityText, item.classList.contains('selected') ? 'Recently viewed through Navigator' : ''].filter(Boolean).join('\n');

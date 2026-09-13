@@ -246,3 +246,11 @@ success. Isolated VS Code acceptance (`integration-B0wePX`) passes the mandatory
 setup view, removal diagnosis, preserved chats, licensing gates, restart and
 two-window checks. Hook trust and events in that acceptance remain fixtures;
 this does not satisfy the separate authenticated Codex acceptance gate.
+
+The follow-up setup decision removes delivery from chat admission: installed,
+enabled and trusted hooks are sufficient. Missing events and collector failures
+remain diagnostics without hiding chats. Navigator-only chat names now preserve
+the original Codex title for lookup, search and reset. The 123 public tests and
+isolated VS Code run `integration-F5cpx8` pass, including native command dispatch
+for rename, original-title lookup and reset. Menu titles remain static; the
+Original Chat Name action displays the title in a native dialog.

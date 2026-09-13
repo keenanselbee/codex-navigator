@@ -69,8 +69,9 @@ Automated checks
   still reveals controls and both hit areas are 18px tall.
 - Required hook setup, obsolete dismissal flags, missing-hook diagnosis and
   restoration of saved chats are exercised in the owned sidebar. The current
-  121 public unit tests include the readiness matrix, cached versus explicit
-  checks, recent delivery failures and cancellation of an open colour picker.
+  123 public unit tests include the readiness matrix, cached versus explicit
+  checks, nonblocking delivery diagnostics, local chat renaming, original-title
+  lookup/reset and cancellation of an open colour picker.
   Automatic label setup, report enable/disable behavior, independent routing state
   and collapsed setup details are checked in the real webview.
 - The actual setup webview is exercised through install, review dispatch,

@@ -58,7 +58,7 @@ export function hookSetupStatus(context: vscode.ExtensionContext, home: string, 
 }
 
 export function hookReadiness(status: HookStatus): { ready: boolean; message: string } {
-  return { ready: status.enabled && status.installed && status.nodeAvailable && status.trusted === true && !!status.observed && !status.detail,
+  return { ready: status.enabled && status.installed && status.nodeAvailable && status.trusted === true && !status.detail,
     message: status.nextStep };
 }
 
@@ -89,19 +89,20 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
     const reader = new ChatGoals(path.join(codex.extensionPath, 'bin', 'windows-x86_64', 'codex.exe'), home, () => {});
     try { trusted = parseHookTrust(await reader.readHooks(cwds), home, cwds); } finally { reader.dispose(); }
   }
-  let observed: string | undefined;
+  let observed: string | undefined, deliveryDetail = '';
   if (installed && enabled) {
     try { observed = await lastHookEvent(home, since); }
-    catch (error) { detail = error instanceof Error ? error.message : String(error); }
+    catch (error) { deliveryDetail = error instanceof Error ? error.message : String(error); }
   }
   const nextStep = !nodeAvailable ? 'Install Node.js and restart VS Code.' : detail ? detail
     : !installed || !enabled ? 'Install Navigator hooks first.'
     : trusted === false ? 'Open Hook Review, type /hooks, and trust all Navigator hooks.'
     : trusted === undefined ? 'Trust could not be verified. Open Hook Review and check Navigator hooks in /hooks.'
+    : deliveryDetail ? 'Navigator is ready. Activity needs attention: ' + deliveryDetail
     : observed ? 'Hook delivery is verified. No further setup is needed.'
-    : 'All Navigator hooks are trusted, but no recorded hook event was found since installation. Reload Window, send a new message in Codex, then check again.';
-  return { enabled, installed, nodeAvailable, trusted, observed, home, detail, nextStep, checkedAt: Date.now(),
-    label: !nodeAvailable ? 'Node.js needed' : detail ? 'Needs attention' : !installed || !enabled ? 'Not installed' : trusted === false ? 'Review needed' : trusted === undefined ? 'Trust not verified' : observed ? 'Event received' : 'Waiting for a chat turn' };
+    : 'Navigator is ready. Activity indicators will update when a Codex chat runs. You can optionally reload and send a message to check delivery.';
+  return { enabled, installed, nodeAvailable, trusted, observed, home, detail, deliveryDetail, nextStep, checkedAt: Date.now(),
+    label: !nodeAvailable ? 'Node.js needed' : detail ? 'Needs attention' : !installed || !enabled ? 'Not installed' : trusted === false ? 'Review needed' : trusted === undefined ? 'Trust not verified' : deliveryDetail ? 'Activity needs attention' : observed ? 'Event received' : 'Ready' };
 }
 
 export function openHookReview(home: string): void {
