@@ -32,6 +32,7 @@ function fixture(options = {}) {
       if (name === './agent-helper') return { prepareAgentHelper: () => ({ instructions: 'C:/global/AGENTS.md', before: '', helper: 'missing', destination: 'missing' }) };
       if (name === './display-setup') return { setChatSetupVisible() {}, checkForCompanionUpdates: async () => writes.push(['updates']), watchChatLabels: (_context, fn) => { labelsChanged = fn; return disposable(); }, chatLabelsStatus: async () => ({ label: 'Off', root: 'C:/codex', status: 'compatible', detail: 'Ready' }), applyChatLabels: async (...args) => { writes.push(['labels', ...args.slice(1)]); await options.onApply?.(); } };
       if (name === './routing-setup') return { routingChoices: () => ({ ...choices }), saveRoutingChoices: async value => writes.push(['routing', value]) };
+      if (name === './routing-status' && options.routing) return { routingStatus: async () => options.routing };
       return name.startsWith('./') ? require('../dist/' + name.slice(2)) : require(name);
     },
   });
@@ -137,5 +138,23 @@ test('setup view updates compatibility without replacing a draft or hiding its c
     assert.equal(node('labels-detail').textContent, 'Status explanation');
     assert.equal(node('main').value, 'Unsaved file');
     assert.equal(node('stale').hidden, false);
+  }
+});
+
+
+test('saving routing reports the checked readiness and explains remaining problems', async () => {
+  for (const label of ['Ready', 'Needs attention', 'Needs setup', 'Off']) {
+    const routing = { label, detail: 'Checked routing details.' };
+    const f = fixture({ routing }); await f.open(); await f.send({ type: 'ready' });
+    await f.send({ type: 'saveRouting', revision: 1, choices: f.choices });
+    assert.equal(f.writes.filter(write => write[0] === 'routing').length, 1);
+    assert.equal(f.messages.filter(message => message.type === 'state').at(-1).routing.label, label);
+    const result = f.messages.filter(message => ['notice', 'error'].includes(message.type)).at(-1);
+    if (label === 'Ready') {
+      assert.equal(result.type, 'notice'); assert.match(result.text, /Project instructions are ready/);
+    } else {
+      assert.equal(result.type, 'error'); assert.match(result.text, /Settings saved. Routing needs attention/);
+      assert.ok(result.text.includes(routing.detail)); assert.doesNotMatch(result.text, /instructions are ready/);
+    }
   }
 });

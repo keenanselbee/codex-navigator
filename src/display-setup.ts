@@ -10,7 +10,11 @@ let setupVisible = false;
 const manualVersions = new Set<string>();
 const automaticErrors = new Map<string, string>();
 
-export function setChatSetupVisible(visible: boolean): void { setupVisible = visible; }
+export function setChatSetupVisible(visible: boolean): void {
+  const closed = setupVisible && !visible;
+  setupVisible = visible;
+  if (closed) { labelsChanged.fire(); }
+}
 
 export async function checkForCompanionUpdates(context: vscode.ExtensionContext): Promise<void> {
   await vscode.commands.executeCommand('workbench.extensions.action.checkForUpdates');

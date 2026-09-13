@@ -54,6 +54,7 @@ export async function openSetupPage(context: vscode.ExtensionContext): Promise<v
     send({ type: 'state', routing, replaceChoices, revision: ++revision, choices, labels, globalFile: plan?.instructions ?? '', routingError,
       repositories: repositories() });
     if (JSON.stringify(routingChoices()) !== JSON.stringify(choices)) { send({ type: 'stale' }); }
+    return routing;
   }
   const listChanged = () => send({ type: 'repositories', repositories: repositories() });
   subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(listChanged),
@@ -95,16 +96,18 @@ export async function openSetupPage(context: vscode.ExtensionContext): Promise<v
           if (!labels?.root || !labels.status) { throw new Error('Chat setup is unavailable. Refresh to check Codex again.'); }
           await applyChatLabels(context, message.type === 'enableLabels' ? 'apply' : 'restore', labels.root);
         }
-        await refresh(message.type === 'saveRouting' || message.type === 'disableRouting');
-        send({ type: 'notice', text: message.type === 'saveRouting' ? 'Project instructions are ready. Start a new Codex chat to use them.'
+        const routing = await refresh(message.type === 'saveRouting' || message.type === 'disableRouting');
+        if (message.type === 'saveRouting' && routing?.label !== 'Ready') {
+          send({ type: 'error', text: `Settings saved. Routing needs attention. ${routing?.detail ?? ''}`.trim() });
+        } else { send({ type: 'notice', text: message.type === 'saveRouting' ? 'Project instructions are ready. Start a new Codex chat to use them.'
           : message.type === 'disableRouting' ? 'Routing is off for this workspace. Your other Codex instructions still apply.'
-          : 'Codex files updated. Reload this window when you are ready.' });
+          : 'Codex files updated. Reload this window when you are ready.' }); }
       }
     } catch (error) {
       if (message.type === 'enableLabels' || message.type === 'restoreLabels') { await refresh(false); }
       send({ type: 'error', text: error instanceof Error ? error.message : String(error) }); }
     finally { busy = false; send({ type: 'busy', busy: false }); }
   }));
-  panel.onDidDispose(() => { disposed = true; setChatSetupVisible(false); currentPanel = undefined; subscriptions.forEach(item => item.dispose()); });
+  panel.onDidDispose(() => { disposed = true; currentPanel = undefined; subscriptions.forEach(item => item.dispose()); setChatSetupVisible(false); });
   context.subscriptions.push(panel);
 }

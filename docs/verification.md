@@ -404,3 +404,18 @@ version is packaged. Privacy wording, settings and storage formats are unchanged
 No installed Codex files or global/shared instructions were changed. The existing
 1.1.2 artifact is preserved. Prior integration and patch recovery results remain
 applicable to their unchanged code; this patch uses the focused regressions above.
+
+
+Version 1.1.4 verification
+--------------------------
+
+All 96 unit tests passed. The new regressions cover a supported Codex update while
+setup is open: repair waits for closure and runs once. Closing setup still respects
+opt-out, unsupported versions, failed checks, partial installs and failed-attempt
+limits. Save-result tests cover Ready, Needs attention, Needs setup and Off, checking
+that only Ready produces the ready message and other results include their details.
+
+These are controller and monitor fixtures, not a new live UI acceptance run. No
+installed Codex files or global/shared instructions were changed. Prior integration
+and patch recovery results remain applicable to their unchanged code. Dependencies,
+privacy wording and storage formats are unchanged.

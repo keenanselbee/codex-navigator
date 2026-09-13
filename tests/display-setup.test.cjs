@@ -146,6 +146,7 @@ test('reload status does not follow an old installation into a newer Codex versi
 test('automatic repair needs opt-in and supported bytes, and never enables routing', async () => {
   for (const options of [{ enabled: false }, { enabled: true, version: '99.0.0' }, { enabled: true, failure: true }, { enabled: true, status: 'partial' }]) {
     const f = fixture(options); f.monitor(); await settle();
+    f.visible(true); f.visible(false); await settle();
     assert.equal(f.calls.filter(call => call.args[1] === 'apply').length, 0);
     assert.equal(f.settings.instructionRouting, undefined); f.dispose();
   }
@@ -159,6 +160,7 @@ test('failed automatic patches do not loop across restarts; a Companion update p
   const stored = { chatLabelsEnabled: true };
   for (const version of ['1.1.0', '1.1.0', '1.1.1']) {
     const f = fixture({ stored, companionVersion: version, applyFailure: true }); f.monitor(); await settle();
+    f.visible(true); f.visible(false); await settle();
     assert.equal(f.calls.filter(call => call.args[1] === 'apply').length, version === '1.1.0' && stored.visited ? 0 : 1);
     stored.visited = true; assert.equal(f.bar.visible, true); f.dispose();
   }
@@ -241,4 +243,17 @@ test('recognized existing patches preserve opt-in for older users, but explicit 
     assert.equal(f.calls.filter(call => call.args[1] === 'apply').length, enabled === undefined ? 1 : 0);
     assert.equal(f.stored.chatLabelsEnabled, enabled === undefined); f.dispose();
   }
+});
+
+
+test('closing setup resumes an eligible repair once after a supported Codex update', async () => {
+  const f = fixture({ enabled: true, version: '99.0.0' }); f.monitor(); await settle();
+  f.visible(true); f.change(supportedVersion); await settle();
+  assert.equal(f.calls.filter(call => call.args[1] === 'apply').length, 0);
+  f.visible(false); await settle();
+  assert.equal(f.calls.filter(call => call.args[1] === 'apply').length, 1);
+  assert.equal((await f.status()).label, 'Reload needed');
+  f.visible(true); f.visible(false); await settle();
+  assert.equal(f.calls.filter(call => call.args[1] === 'apply').length, 1);
+  f.dispose();
 });

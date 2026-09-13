@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.1.4
+--------
+
+- Resume eligible automatic chat integration repairs when setup closes.
+- Report routing readiness accurately after saving project instructions, with details when attention is needed.
+
+
 1.1.3
 --------
 

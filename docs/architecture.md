@@ -547,7 +547,9 @@ files. A compatible original or recognized older patch is eligible.
 Unknown versions/checksums and partial installations require attention. Attempts
 are saved before mutation and keyed by installation path, Codex version and
 Companion version; the latest 16 are retained. Failure does not loop on restart.
-A manual retry or a new Companion release provides another opportunity.
+A manual retry or a new Companion release provides another opportunity. Closing
+setup triggers the existing compatibility watcher after page listeners are disposed,
+so deferred repairs resume under the same opt-in and attempt guards.
 
 Notifications never hold up compatibility processing. Previously enabled users
 can receive at most two failure reminders per Codex version on separate startups;
@@ -562,4 +564,5 @@ syntax, shared-file readability for the workspace and each selected profile,
 saved scope/configuration and matching-profile
 conflicts. It does not load the chat bridge or assert model adherence. Automatic
 chat repair never enables, disables or installs routing. Managed AGENTS.md guidance
-is unchanged by this release.
+is unchanged by this release. The setup save message follows the refreshed routing
+status and includes its explanation when checks do not report Ready.

@@ -3,7 +3,7 @@ Advanced Use and Development
 
 A local VS Code extension that labels Codex chats with the latest project being
 discussed. Labels appear in chat history, sidebar headers, and editor tabs.
-Version 1.1.3 provides display labels and stars: it does not select repositories, move
+Version 1.1.4 provides display labels and stars: it does not select repositories, move
 Source Control, or change the saved chat title, working directory, or permissions.
 It is not an official OpenAI product.
 
@@ -142,12 +142,14 @@ project instructions remain independently available. This integration is unoffic
 and Codex updates may need a newer Companion version. Once enabled, Companion
 reapplies the integration after updates only when the installed Codex version and
 file checksums are supported. It never reloads your window automatically.
-Compatibility is checked at startup and when Codex changes. Setup updates its
+Compatibility is checked at startup and when Codex changes. Closing setup also
+rechecks any eligible automatic repair. Setup updates its
 status without replacing your unsaved choices. A status-bar warning opens setup
 when chat labels need attention; **Check for Updates** helps you check for updates.
 Project instructions remain available when the chat integration is unsupported.
 Routing has a separate status that checks helper files and saved settings. Ready
 means those checks passed; it cannot prove that an agent has read the instructions.
+After saving, any remaining routing problem is shown with its details.
 
 An automatic patch attempt runs at most once per installation and Companion
 version. Failed or partial setups offer manual repair. With Silent Mode off,
@@ -261,7 +263,7 @@ Build with Node.js 22+ and npm:
 npm ci
 npm test
 npm run package
-code --install-extension .\dist\codex-repo-companion-1.1.3.vsix
+code --install-extension .\dist\codex-repo-companion-1.1.4.vsix
 ```
 
 The release targets Windows x64 and requires VS Code 1.137 or later. The package
@@ -298,7 +300,7 @@ It preserves byte-for-byte originals and rejects unknown versions or edits.
 The v0.12.0 display patch adds direct repository menus to history rows and chat titles and upgrades recognized
 older patches while preserving their originals. Previously enabled integrations are
 reapplied automatically after supported updates.
-Version 1.1.3 bundles the existing v0.12.0 display patch; existing patched users
+Version 1.1.4 bundles the existing v0.12.0 display patch; existing patched users
 do not need to apply a different patch.
 Upgrade removes unpinned tentative directory labels before publishing labels or
 routing metadata. Manual labels and pins remain intact. The version advances from
