@@ -14,10 +14,11 @@ exports.run = async function (_fixtureContext, vscode) {
       assert.equal(createHash('sha256').update(fs.readFileSync(path.join(extension.extensionPath, name.slice(10)))).digest('hex'), hash, 'installed ' + name);
       verifiedFiles++;
     }
-    assert.equal(extension.packageJSON.version, '0.0.0');
+    const expectedManifest = JSON.parse(fs.readFileSync(path.join(root, 'expected-package.json'), 'utf8'));
+    assert.equal(extension.packageJSON.version, expected.version ?? '0.0.0');
     const installedManifest=JSON.parse(fs.readFileSync(path.join(extension.extensionPath, 'package.json'), 'utf8'));
     delete installedManifest.__metadata; // Added by VS Code's installer.
-    assert.deepEqual(installedManifest, JSON.parse(fs.readFileSync(path.join(root, 'expected-package.json'), 'utf8')));
+    assert.deepEqual(installedManifest, expectedManifest);
     // VS Code loads the entry point from its URI fsPath (lowercase drive on Windows).
     // Matching that spelling avoids observing a second CommonJS module instance.
     const { ChatSidebar } = require(path.join(extension.extensionUri.fsPath, 'dist/chat-sidebar'));
@@ -43,7 +44,7 @@ exports.run = async function (_fixtureContext, vscode) {
     const environment = process.env.REPO_COMPANION_TEST_LICENSE_ENVIRONMENT ?? 'production';
     assert.ok(['production', 'sandbox'].includes(environment));
     assert.equal(license.snapshot().sandbox, environment === 'sandbox', 'compiled composition matches the test package');
-    if (environment === 'sandbox') assert.equal(license.snapshot().configured, true);
+    if (environment === 'sandbox' || expected.version) assert.equal(license.snapshot().configured, true);
     const secretKey = 'license.' + environment + '.v1';
     assert.equal(await context.secrets.get('license.' + (environment === 'sandbox' ? 'production' : 'sandbox') + '.v1'), undefined,
       'the other environment has no protected record in this isolated profile');
@@ -70,8 +71,8 @@ exports.run = async function (_fixtureContext, vscode) {
       assert.deepEqual(context.workspaceState.get('starredChats.v1'), star, 'saved Navigator data survives reinstall');
     }
     fs.writeFileSync(path.join(root, 'result-' + phase + '.json'), JSON.stringify({ phase, passed: true, vscode: vscode.version,
-      verifiedFiles, manifestVerified: true, environment, installedVersion: '0.0.0', mode: 'Production', expired: !license.allowed(),
-      scope: 'Disposable VSIX and isolated profile only. Trial state is deliberately expired by the fixture; no paid provider requests or normal installation changes.' }, null, 2));
+      verifiedFiles, manifestVerified: true, environment, installedVersion: installedManifest.version, mode: 'Production', expired: !license.allowed(),
+      scope: 'Receipt-verified VSIX in an isolated profile only. Trial state is deliberately expired by the fixture; no paid provider requests or normal installation changes.' }, null, 2));
   } catch (error) {
     fs.writeFileSync(path.join(root, 'failure.txt'), error.stack || String(error)); throw error;
   }

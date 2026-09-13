@@ -129,7 +129,7 @@ Work and evidence
   into the private repository, with separate repository instructions.
 - [x] Separate public checks from full production builds; verify missing-private
   failure without introducing a second application or shipping bypass.
-- [ ] Verify source archive/VSIX boundaries and record both repository revisions
+- [x] Verify source archive/VSIX boundaries and record both repository revisions
   in production release evidence.
 - [x] Policy, clock and state validation with deterministic tests.
 - [x] Polar customer transport with product identity and failure tests.
@@ -140,7 +140,7 @@ Work and evidence
 - [ ] Real isolated VS Code acceptance, including expiry during a Codex goal.
 - [ ] Sandbox activation, repeat validation, second-install refusal, transfer,
   refund/revocation and download delivery (owner configuration required).
-- [ ] Versioned, verified release artifact; production configuration and live
+- [x] Versioned, verified release artifact; production configuration and live
   release checks remain separate from packaging or installation.
 
 The owner supplied Navigator sandbox organization/product/benefit IDs and a
@@ -284,3 +284,33 @@ Polar, with the sandbox banner and an email sign-in form. Navigation resolves to
 the organization's `/portal/request` page. No email or credentials were entered
 and no account settings changed. This closes portal-URL reachability only;
 authenticated purchase access and activation recovery remain owner-assisted gates.
+
+Production candidate 1.5.1
+--------------------------
+
+The immutable, unpublished candidate is `dist/codex-navigator-1.5.1.vsix`, with
+its adjacent `.vsix.json` receipt. It was built from clean independent worktrees:
+
+- Public revision: `6c9b73a1eac42cb0f1047e0ce83e64324ecaf029`.
+- Private revision: `4103b0ae1a0514c5cf97ca5f8c328ce7d48ad4ef`.
+- VSIX SHA-256: `43649b5a0f42d1c810c38aaf37a130bc58a6697e33dece1482603d9a765b9a68`.
+
+Packaging verified all 54 entries, complete fixed production configuration and
+no private source, source maps or tests. Public-only checks from that same public
+revision pass without private source and reject a full build without it
+(`public-only-kk0ORr` in the release worktree). The 123 public tests, 20 commercial
+tests and isolated integration checks passed before candidate packaging.
+
+The exact 1.5.1 VSIX passes installed acceptance in `installed-acceptance-mYRYEl`:
+51 installed runtime/document hashes and the manifest match the receipt; explicit
+trial admission, fixture-driven expiry, uninstall, settings reset and reinstall
+retain the original installation, trial start and stars, refusing a second trial.
+The installed fixture now accepts the receipt's version as well as disposable
+0.0.0 packages. The test extension was removed; the normal profile is unchanged.
+Test-harness and evidence-only follow-ups do not alter the candidate payload.
+
+This closes versioned artifact provenance and isolated installation acceptance,
+not live activation, authenticated Codex goal/hook acceptance, portal recovery,
+refund/revocation or customer download delivery. No release was published and no
+production purchase or refund was made. Context Suite's separate release and
+remaining owner-run checks are still required for the combined goal.
