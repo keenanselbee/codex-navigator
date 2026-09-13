@@ -14,7 +14,13 @@
 <div class="heading"><h2 id="labels-title">Chat labels and stars</h2><span id="labels-status" class="badge">Checking...</span></div>
 <p>See which project a chat belongs to and save favourites.</p>
 <p id="labels-detail" class="muted"></p>
-<p class="disclosure">Enabling this modifies your installed Codex extension. Original files are backed up so you can restore them here. This integration is unofficial. After updates, it is reapplied automatically when the Codex version and files are supported.</p>
+<aside class="patch-warning" aria-labelledby="patch-warning-title">
+<div class="warning-heading"><span class="warning-icon" aria-hidden="true">&#9888;</span><strong id="patch-warning-title">Modifies your Codex extension</strong></div>
+<p>Chat labels and stars use an unofficial modification to Codex. Original files are backed up.</p>
+<p>Before reporting a Codex problem to OpenAI, select <strong>Restore Codex</strong> below, reload VS Code, and check whether the problem still happens. Simply disabling Companion does not restore Codex.</p>
+</aside>
+<p class="hint">Displaying labels and stars does not use AI tokens. Project instruction routing is separate and can add instructions to the model's context.</p>
+<p class="disclosure">After you enable this feature, supported updates are reapplied automatically. Independent project; not affiliated with or endorsed by OpenAI or Microsoft.</p>
 <div class="actions"><button id="enable-labels" data-action="enableLabels" disabled>Enable Chat Labels</button><button id="extensions" class="secondary" data-action="extensions" hidden>Check for Updates</button><button id="reload" data-action="reload" hidden>Reload Window</button></div>
 <details id="restore-section" hidden><summary>Remove chat integration</summary><p>Restore the original Codex files before uninstalling Companion. Your chats, saved labels and project instructions are kept. Reload afterward.</p><button class="secondary" data-action="restoreLabels">Restore Codex</button></details>
 </section>

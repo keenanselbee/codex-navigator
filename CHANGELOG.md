@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+1.1.5
+--------
+
+- Adopt the MIT license and welcome contributions and upstream integration.
+- Highlight the optional Codex modification in setup, with restore-before-reporting guidance.
+- Clarify that displaying labels and stars uses no AI tokens; instruction routing can add context.
+
+
 1.1.4
 --------
 

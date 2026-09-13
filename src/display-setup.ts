@@ -119,7 +119,7 @@ export async function configureChatLabels(context: vscode.ExtensionContext, rest
       modal: true,
       detail: restore
         ? 'This restores the original Codex files. Your chats, saved labels and project instructions are kept. Reload the window afterward. Restore before uninstalling Repo Companion.'
-        : 'This modifies your installed Codex extension to show project labels and stars. It is an unofficial integration. Original files are backed up so you can restore them from setup. After updates, Companion reapplies this integration automatically only when the Codex version and files are supported. Reload the window afterward.\n\nProject instructions are a separate, optional setup step.',
+        : 'This modifies your installed Codex extension to show project labels and stars. It is an unofficial integration. Original files are backed up so you can restore them from setup. After updates, Companion reapplies this integration automatically only when the Codex version and files are supported. Reload the window afterward.\n\nBefore reporting a Codex problem to OpenAI, use Restore Codex from setup, reload VS Code, and check whether it still happens. Simply disabling Companion does not restore Codex.\n\nDisplaying labels and stars does not use AI tokens. Project instruction routing is separate and can add instructions to the model\'s context.',
     }, button);
     if (choice !== button) { return; }
     const current = vscode.extensions.getExtension('openai.chatgpt');

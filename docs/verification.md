@@ -419,3 +419,19 @@ These are controller and monitor fixtures, not a new live UI acceptance run. No
 installed Codex files or global/shared instructions were changed. Prior integration
 and patch recovery results remain applicable to their unchanged code. Dependencies,
 privacy wording and storage formats are unchanged.
+
+
+Version 1.1.5 verification
+--------------------------
+
+All 96 unit tests passed after the MIT metadata and setup copy/style changes.
+Setup now shows a labelled warning with a decorative icon, using VS Code warning,
+background and contrast theme colors. It explains restoration before reporting
+Codex issues and separates display-only token usage from instruction routing.
+The existing enable, restore and automatic repair controls are unchanged.
+
+The MIT license replaces the restricted free-use license for Companion's own code.
+Third-party files and notices are unchanged. This is a local source update, not
+publication of the repository or permission to modify OpenAI's software. No new
+live VS Code UI acceptance run was performed; installed extensions, global rules,
+shared instructions and user settings were not changed.

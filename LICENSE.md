@@ -1,26 +1,22 @@
-Codex Repo Companion Free-Use License
-====================================
+MIT License
+===========
 
-Copyright (c) 2026 Keenan Selbee. All rights reserved.
+Copyright (c) 2026 Keenan Selbee
 
-Permission is granted to install and use the unmodified Codex Repo Companion
-extension without charge for personal, educational and commercial purposes.
-You may make backup copies and share unmodified release packages without charge,
-provided this license and all copyright notices remain included.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-If source code is made available, you may view it and build an unmodified copy for
-your own use. No permission is granted to reuse its code in another project,
-distribute modified versions, sublicense it, or sell it without written permission
-from Keenan Selbee. Rights not expressly granted are reserved. This is not an
-open-source license.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-Third-party software, services, names and materials remain subject to their own
-licenses and terms. This license grants no rights to modify or redistribute
-OpenAI Codex or other third-party software. Nothing here limits rights granted
-by applicable law or by a separate license for third-party components. Distribution
-platforms may exercise rights separately granted by the copyright holder.
-
-The software is provided "as is", without warranties of any kind, to the extent
-permitted by law. The copyright holder is not liable for loss or damage arising
-from its use, to the extent permitted by law. No promise of continued support or
-compatibility is made. Mandatory statutory rights are unaffected.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

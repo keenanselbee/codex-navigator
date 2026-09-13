@@ -2,7 +2,7 @@ Codex Repo Companion
 ====================
 
 Keep your Codex chats organised and help Codex find the right project instructions.
-Free to use. Made by Keenan Selbee.
+Free and open source under the MIT license. Made by Keenan Selbee.
 
 - **Label chats** by project, or give them your own label.
 - **Star favourites** so they are easy to find again.
@@ -39,6 +39,12 @@ Codex extension. Setup checks compatibility and keeps backups. Supported updates
 are reapplied automatically after you enable the feature; other versions may need
 a Companion update. **Before uninstalling, run Restore Codex from setup and reload.**
 
+Before reporting a Codex problem to OpenAI, restore Codex from setup, reload VS Code,
+and check whether it still happens. Simply disabling Companion does not restore Codex.
+
+Displaying labels and stars does not use AI tokens. Project instruction routing is
+separate and can add instructions to the model's context.
+
 Routing setup adds a small section to your global Codex instructions and keeps your
 other rules. The optional shared file is only read.
 
@@ -52,6 +58,10 @@ Help and privacy
 
 Companion sends no chat content to an external service and has no telemetry.
 The optional message-based project detector reads local chat messages when enabled.
-[Privacy details](PRIVACY.md) | [Free-use license](LICENSE.md)
+[Privacy details](PRIVACY.md) | [MIT license](LICENSE.md)
+
+Contributions and upstream integration are welcome. Third-party software and
+materials retain their own licenses and terms; MIT covers Companion's own code,
+not permission to modify or redistribute OpenAI Codex.
 
 Independent project; not affiliated with or endorsed by OpenAI or Microsoft.

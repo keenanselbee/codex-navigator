@@ -3,7 +3,7 @@ Advanced Use and Development
 
 A local VS Code extension that labels Codex chats with the latest project being
 discussed. Labels appear in chat history, sidebar headers, and editor tabs.
-Version 1.1.4 provides display labels and stars: it does not select repositories, move
+Version 1.1.5 provides display labels and stars: it does not select repositories, move
 Source Control, or change the saved chat title, working directory, or permissions.
 It is not an official OpenAI product.
 
@@ -263,7 +263,7 @@ Build with Node.js 22+ and npm:
 npm ci
 npm test
 npm run package
-code --install-extension .\dist\codex-repo-companion-1.1.4.vsix
+code --install-extension .\dist\codex-repo-companion-1.1.5.vsix
 ```
 
 The release targets Windows x64 and requires VS Code 1.137 or later. The package
@@ -300,7 +300,7 @@ It preserves byte-for-byte originals and rejects unknown versions or edits.
 The v0.12.0 display patch adds direct repository menus to history rows and chat titles and upgrades recognized
 older patches while preserving their originals. Previously enabled integrations are
 reapplied automatically after supported updates.
-Version 1.1.4 bundles the existing v0.12.0 display patch; existing patched users
+Version 1.1.5 bundles the existing v0.12.0 display patch; existing patched users
 do not need to apply a different patch.
 Upgrade removes unpinned tentative directory labels before publishing labels or
 routing metadata. Manual labels and pins remain intact. The version advances from

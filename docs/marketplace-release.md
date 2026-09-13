@@ -1,24 +1,45 @@
 Marketplace Release Preparation
 ===============================
 
-Status: local preparation updated for 1.1.3; not submitted or installed into the
+Status: local preparation updated for 1.1.5; not submitted or installed into the
 working profile. Remaining release steps:
 
-- Confirm/register the keenanselbee publisher account with display name Keenan Selbee.
+- Publisher setup was confirmed by the user; verify dashboard access when submitting.
 - Resolve the optional Codex patch distribution permission described below.
 - Add the user's screenshots and finalize a new version for those packaged changes.
 - Review/commit/push the source and listing so the packaged GitHub help links resolve.
 - Verify the final artifact and submit it only after explicit publication approval.
 
-Verified current artifact: `dist/codex-repo-companion-1.1.3.vsix`, SHA-256
+Version 1.1.5 adopts MIT for Companion's own code, welcomes contributions and
+upstream integration, and adds a theme-aware setup warning with restoration and
+token-usage guidance. Patching remains opt-in and routing remains independent.
+MIT and these disclosures do not establish permission to modify Codex.
+
+Verified current artifact: `dist/codex-repo-companion-1.1.5.vsix`, SHA-256
+`d3b942d8a449cf92d1eaca75914d76fecf0d625d03e31aa354a27d92de5a9ac5`.
+All 96 unit tests and whitespace/conflict/local Markdown link checks passed.
+Archive inspection checked all 34 extension files: 32 match the source byte for
+byte; README/changelog content was checked separately because vsce rewrites links.
+MIT metadata, setup warning text and Windows x64 target were verified. The 1.1.4
+artifact is unchanged. No new live VS Code UI acceptance run was performed.
+
+Preserved prior artifact: `dist/codex-repo-companion-1.1.4.vsix`, SHA-256
+`4c4a183d787994eeef841497a210bcbbe902e0c668a70f5961e46ab89f53fcb6`.
+All 96 unit tests passed, including deferred repair on setup closure and truthful
+routing save results. Complete-file whitespace/conflict checks and local Markdown
+links passed. Archive inspection matched all 34 packaged files to the working
+source, accounting for vsce's Markdown link rewriting, and checked metadata,
+privacy heading and exclusions. The 1.1.3 artifact is preserved unchanged.
+
+Preserved prior artifact: `dist/codex-repo-companion-1.1.3.vsix`, SHA-256
 `817fcb637dcace2a7dd8711b8fe934a041f56f466a652a115c8031d07697c7f1`.
 All 94 tests passed, including restore opt-out across restart, visible rollback
 failure details and shared files selected by more specific routing profiles.
 Complete working-file whitespace/conflict checks and local Markdown links passed,
 including new documents. Archive inspection matched all 34 packaged files to the
 working source, accounting for vsce's Markdown link rewriting, and checked the
-privacy heading, metadata and exclusions. The fixes remain uncommitted; the
-previously staged 1.1.2 snapshot must be refreshed through a new DIFF/COMMIT review.
+privacy heading, metadata and exclusions. These 1.1.3 changes were committed as
+94acc48. The 1.1.4 setup fixes need a new DIFF/COMMIT review.
 
 Preserved prior artifact: `dist/codex-repo-companion-1.1.2.vsix`, SHA-256
 `50ff1e10b24fc8b2219999f525073bd4e6c432aa663eab96c1f13c2b2950e208`.
@@ -34,7 +55,8 @@ Publisher and listing
 
 Use **Keenan Selbee** as the publisher display name. The account identifier is
 separate; `keenanselbee` is the user-approved ID and is now set in package.json.
-Account ownership/registration still needs confirmation. Microsoft documents this distinction in its
+The user confirmed publisher setup at https://marketplace.visualstudio.com/publishers/keenanselbee.
+Microsoft documents this distinction in its
 [publisher instructions](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#create-a-publisher).
 The update-search action reads the installed extension ID, and integration tests
 read it from the manifest. The old local build has not been replaced in the user's
@@ -45,8 +67,9 @@ included in the product.
 
 README.md is the short user-facing listing. Detailed usage, developer commands
 and removal instructions are in advanced.md; architecture and verification remain
-separate. LICENSE.md permits free personal/commercial use while restricting code
-reuse; it does not grant rights over Codex. PRIVACY.md documents local data access.
+separate. LICENSE.md is the standard MIT license for Companion's own code, allowing
+reuse and modification; it does not grant rights over Codex. Third-party licenses
+and notices remain in place. PRIVACY.md documents local data access.
 An original 256-pixel PNG chat/branch icon is included, with a reproducible Windows
 drawing script. Screenshots remain deferred to the user. The author, repository,
 issue tracker, license and search keywords are included in the manifest.
