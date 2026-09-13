@@ -3,48 +3,46 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{csp}}; script-src 'nonce-{{nonce}}';">
-<link rel="stylesheet" href="{{style}}"><title>Set Up Repo Companion</title>
+<link rel="stylesheet" href="{{style}}"><title>Set Up Codex Navigator</title>
 </head>
 <body>
 <main>
-<header><p class="eyebrow">CODEX REPO COMPANION</p><h1>Make your chats easier to follow</h1><p>Set up either feature, or both. You can change your choices here anytime.</p></header>
+<header><h1>Set up Codex Navigator</h1><p>Choose the features you want. Each works independently.</p><div class="actions"><button data-action="showNavigator">Open Navigator</button><button class="secondary" data-action="arrangeNavigator">Arrange Navigator</button></div></header>
 <div id="message" role="status" aria-live="polite"></div>
 <div id="stale" hidden>Settings changed elsewhere. <button data-action="refresh" class="secondary">Refresh choices</button><span> This replaces unsaved choices.</span></div>
 <section aria-labelledby="labels-title">
-<div class="heading"><h2 id="labels-title">Chat labels and stars</h2><span id="labels-status" class="badge">Checking...</span></div>
-<p>See which project a chat belongs to and save favourites.</p>
-<p id="labels-detail" class="muted"></p>
-<aside class="patch-warning" aria-labelledby="patch-warning-title">
-<div class="warning-heading"><span class="warning-icon" aria-hidden="true">&#9888;</span><strong id="patch-warning-title">Modifies your Codex extension</strong></div>
-<p>Chat labels and stars use an unofficial modification to Codex. Original files are backed up.</p>
-<p>Before reporting a Codex problem to OpenAI, select <strong>Restore Codex</strong> below, reload VS Code, and check whether the problem still happens. Simply disabling Companion does not restore Codex.</p>
-</aside>
-<p class="hint">Displaying labels and stars does not use AI tokens. Project instruction routing is separate and can add instructions to the model's context.</p>
-<p class="disclosure">After you enable this feature, supported updates are reapplied automatically. Independent project; not affiliated with or endorsed by OpenAI or Microsoft.</p>
-<div class="actions"><button id="enable-labels" data-action="enableLabels" disabled>Enable Chat Labels</button><button id="extensions" class="secondary" data-action="extensions" hidden>Check for Updates</button><button id="reload" data-action="reload" hidden>Reload Window</button></div>
-<details id="restore-section" hidden><summary>Remove chat integration</summary><p>Restore the original Codex files before uninstalling Companion. Your chats, saved labels and project instructions are kept. Reload afterward.</p><button class="secondary" data-action="restoreLabels">Restore Codex</button></details>
+<div class="heading"><h2 id="labels-title">Automatic labels</h2><span id="labels-status" class="badge">Checking...</span></div>
+<p>Let agents report which repository a chat is about.</p>
+<p id="labels-detail" class="hint"></p>
+<div class="actions"><button id="enable-labels" data-action="enableAutomaticLabels">Enable Automatic Labels</button><button id="disable-labels" class="secondary" data-action="disableAutomaticLabels" hidden>Turn Off</button></div>
+<details><summary>Details</summary><p>Adds reporting guidance to your global Codex instructions and installs a local helper. Start a new chat after enabling. Fixed labels stay fixed; manual labels work without setup.</p><p id="labels-file" class="path"></p><p>Optional Detect Chat Focus recognises explicit repository switches when an agent misses a report. It reads local user messages and respects fixed labels and no-write requests.</p><button class="secondary" data-action="focusSettings">Configure Detect Chat Focus</button></details>
+</section>
+<section aria-labelledby="activity-title">
+<div class="heading"><h2 id="activity-title">Activity indicators</h2><span id="activity-status" class="badge">Checking...</span></div>
+<p>See when chats are working or ready.</p>
+<p id="activity-next"></p>
+<div class="actions"><button id="install-hooks" data-action="installHooks">Install Hooks</button><button id="review-hooks" data-action="reviewHooks" hidden>Open Hook Review</button><button id="reload-hooks" class="secondary" data-action="reload" hidden>Reload Window</button><button id="verify-hooks" class="secondary" data-action="verifyHooks" hidden>Check Status</button></div>
+<details><summary>Details and removal</summary><p id="activity-detail" class="muted"></p><p id="activity-checked" class="hint"></p><p id="install-detail"></p><p id="trust-detail"></p><p id="event-detail"></p><p id="hook-home" class="path"></p><p>Node.js must be on PATH. The review terminal opens in this workspace with the same Codex home. Only Codex can grant hook trust.</p><p>Hooks run locally without AI calls. Message text is discarded; only identifiers, events, status and times are stored. Installation backs up hooks.json and keeps unrelated hooks.</p><div class="actions"><button id="repair-hooks" class="secondary" data-action="installHooks">Reinstall Hooks</button><button class="secondary" data-action="disableHooks">Remove Navigator Hooks</button></div></details>
 </section>
 <section aria-labelledby="routing-title">
 <div class="heading"><h2 id="routing-title">Project instructions</h2><span id="routing-status" class="badge">Checking...</span></div>
-<p>Help Codex discover relevant project instructions when working across repositories,
-with optional shared workspace rules.</p>
-<p class="hint">This lightweight helper complements Codex's built-in AGENTS.md discovery
-and uses no additional AI calls. The agent still needs to read and follow the files.</p>
-<p id="routing-detail" class="muted">Project instruction routing does not require the chat integration.</p>
+<p>Help Codex find project rules, with optional shared instructions.</p>
+<div class="actions"><button id="save-routing" data-action="saveRouting" disabled>Enable Project Instructions</button><button id="disable-routing" class="secondary" data-action="disableRouting" hidden>Turn Off</button></div>
+<details id="routing-details"><summary>Details and options</summary><p id="routing-detail" class="muted"></p><p>Complements Codex's built-in AGENTS.md discovery. Agents still need to read and follow the files. No extra AI calls.</p>
 <div class="workspace-note"><strong id="scope-title">Automatically follow this workspace</strong><p id="scope-detail">Uses the folders in this VS Code workspace and their project instructions. This updates as you add or remove workspace folders.</p>
 <details><summary id="repo-count">Repositories currently found</summary><ul id="repositories"></ul><p class="muted">This is a live preview, not a list you need to configure.</p></details></div>
 <label for="main">Shared instructions <span class="muted">(optional)</span></label>
 <p class="hint" id="main-help">Choose a separate AGENTS.md to read before each project's own instructions. Leave blank to use project instructions only.</p>
 <div class="file-field"><input id="main" type="text" aria-describedby="main-help" placeholder="Use project instructions only" maxlength="4096"><button class="secondary" data-action="browseMain">Browse...</button><button class="secondary" id="clear-main">Clear</button></div>
-<details id="advanced"><summary>Advanced options</summary>
+<details id="advanced"><summary>Scope and filenames</summary>
 <label for="scope-mode">Project folders</label><select id="scope-mode"><option value="workspace">Follow this workspace automatically</option><option value="custom">Use custom folders</option></select>
 <div id="custom-scopes" hidden><label for="scopes">Custom folders, one per line</label><textarea id="scopes" rows="3" maxlength="262144"></textarea><button class="secondary" data-action="browseScope">Add Folder...</button></div>
 <label for="fallback">Extra instruction filenames <span class="muted">(optional)</span></label><p class="hint">Checked when AGENTS.override.md and AGENTS.md are absent. One filename per line.</p><textarea id="fallback" rows="2" maxlength="4096"></textarea>
 </details>
 <p class="disclosure">Enabling adds a small section to your global Codex instructions and keeps your other rules. Your shared file is only read, never changed.</p><details><summary>Global instructions file</summary><p id="global-file" class="path"></p></details>
-<div class="actions"><button id="save-routing" data-action="saveRouting" disabled>Enable Project Instructions</button><button id="disable-routing" class="secondary" data-action="disableRouting" hidden>Turn Off</button></div>
+</details>
 </section>
-<footer><button class="secondary" data-action="refresh">Refresh</button><span class="muted">Changes apply only when you click an action.</span><button data-action="done">Done</button></footer>
+<footer><button class="secondary" data-action="refresh">Refresh</button><button data-action="done">Done</button></footer>
 </main>
 <script nonce="{{nonce}}" src="{{script}}"></script>
 </body></html>

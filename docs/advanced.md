@@ -1,427 +1,361 @@
-Advanced Use and Development
+Advanced use and development
 ============================
 
-A local VS Code extension that labels Codex chats with the latest project being
-discussed. Labels appear in chat history, sidebar headers, and editor tabs.
-Version 1.1.8 provides display labels, colours and stars: it does not select repositories, move
-Source Control, or change the saved chat title, working directory, or permissions.
-It is not an official OpenAI product.
+Codex Navigator owns its sidebar. It does not inject UI, rename native Codex tabs,
+patch extension bundles or automatically restore/reapply another extension's files.
 
+Setup
+-----
 
-How labels work
----------------
+Start a trial or activate a licence in Navigator, then run **Codex Navigator:
+Set Up Codex Navigator**. **Open Navigator** opens the view. First use after
+admission shows a setup button and **Continue Without Setup**.
+Continuing exposes chats with a dismissible activity setup reminder. The reminder
+also disappears after a recorded hook event since installation. There is no
+separate startup popup. Setup has three independent sections: Automatic labels,
+Activity indicators and Project instructions. Details and diagnostics are collapsed.
+Manual labels, colours, stars and goals remain usable without setup.
+**Arrange Navigator** opens the view and explains how to drag its heading above
+Codex. Release at the insertion indicator and resize the divider. VS Code remembers
+the arrangement. Navigator does not invoke the focus-dependent Move View Up command
+or claim that the layout changed.
 
-New chats stay unlabeled until the conversation agent reports their repository
-scope, or you choose a label manually. The selected Source Control repository,
-active editor and chat starting directory never assign a label. Existing agent
-reports can restore labels when reopening a chat; no fresh report is required.
+Navigator's title-bar overflow menu ends its extension actions with **Extension
+Settings**, which opens VS Code Settings filtered to Codex Navigator.
 
-Auto uses the newest agent report or user correction. Labels replace past projects
-rather than accumulating history. Up to three labels describe projects still
-discussed together; larger scopes show two names plus `+N`. Pins override updates.
+Check Status reports the result and next step, with a last-checked time. Delivery
+requires a recorded event after installation; trust alone does not prove delivery.
+If the saved installation time is missing, collector and hook-file modification
+times provide a stable cutoff instead of discarding events at every refresh.
 
-**Detect Chat Focus** is an optional local shortcut, off by default. When enabled,
-clear requests such as "focus on Context Suite" can update a label before the
-agent reports. It matches known names and aliases, tolerating one unambiguous typo
-in longer names. Unknown/ambiguous references, quoted examples, instruction
-attachments and IDE active-file context do not supply a label. Implicit shifts
-still depend on agent reporting. Detection uses bounded local transcript reads,
-no external model or additional API call. Existing explicit opt-in settings remain
-respected on upgrade.
+Activity setup has three checks:
 
-Right-click a saved local chat in history or its title at the top of an open
-conversation. The dropdown lists this workspace's open Git repositories directly:
-click a repository to set that chat's label. Long lists scroll and can be filtered
-by name or path. Duplicate names include paths; hovering any entry shows its path.
-**Use Automatic Labels** resumes following discussion; **Clear Labels** pauses it.
-**Custom Label...** lets you enter your own display prefix, such as
-`Elden Ring modding`, without choosing a Git repository. Manual labels are pinned
-by default and survive reloads. Use the same option to edit it; choosing a repository, Automatic Labels,
-or Clear Labels replaces it. Labels use one line, up to 100 characters, without
-square brackets (the display adds those).
-**New Chat in Sidebar** runs Codex's existing new-chat command.
-Escape, clicking outside, or changing chats closes the dropdown.
+1. **Install Hooks** merges UserPromptSubmit, Stop, Interrupt and SessionEnd entries
+   into the effective `<CODEX_HOME>/hooks.json` and installs the local collector.
+   Existing unrelated hooks are retained, and changed JSON is backed up.
+2. **Open Hook Review** launches the installed Codex binary in a terminal with this
+   workspace and Codex home. Type `/hooks`, review the four Navigator definitions
+   and trust all Navigator hooks. Navigator never writes trust records or bypasses review.
+   The terminal runs the CLI bundled with the installed Codex extension, so you
+   do not need a separate CLI installation. Wait for Codex to finish starting,
+   then enter `/hooks` in its prompt. These entries run the local Navigator
+   collector when chats start, finish, stop or close. Trust is tied to the exact
+   hook definition; a changed definition needs review again. You can close the
+   review terminal afterward. Setup refreshes the trust check automatically.
+3. Reload VS Code, send a normal message in a chat, then check setup. A fresh real
+   collector event confirms delivery. No synthetic test prompt is submitted.
 
-This targets the clicked chat without opening it, including chats without a label.
-Remote-host and unsaved chats are excluded. The dropdown needs the v0.12.0 display
-patch and a window reload after upgrading. The native Choose Repository picker
-remains a fallback when the direct menu is unavailable.
+The page checks for Node.js on PATH, matching collector bytes and hook entries,
+Codex-reported enabled/trusted states for each workspace folder, and an event since
+installation. Installation alone does not mean trusted; trust alone does not mean
+delivery. Unknown APIs, config errors or warnings leave trust unverified.
+**Check Status** refreshes these checks; the visible page also polls every five
+seconds without replacing unsaved routing fields. A recorded event verifies one
+lifecycle delivery, not every hook, every chat, or a successful task result.
 
-Click the status-bar label for Auto, Pin current scope, Choose repositories, or
-Clear labels. Pins deliberately override later reports. Clear pauses labels until
-Auto is selected again. Existing pins are preserved on upgrade. Manual choices
-apply to the workspace; reports and corrections are shared by conversation within
-the same local Codex home.
+If setup says Node.js needed, install Node.js and restart VS Code. If trust is
+unverified, inspect `/hooks` in the provided terminal. If trusted but no event
+arrives, reload and start a new turn, then inspect the diagnostics path shown in
+setup. Other Codex policy or configuration can disable hooks. Official details:
+[Codex hooks](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks).
 
+Choose **Remove Navigator Hooks** and reload to stop collection. Only Navigator's
+own definitions are removed; its collector, diagnostics and backups remain local.
+Never delete another tool's hook definitions to repair Navigator.
 
-Simple preferences
-------------------
+Replacing Repo Companion
+------------------------
 
-**Pin Manual Labels** defaults to on. It applies to both repository choices and
-custom text. Turn it off if future manual choices should correct the label now
-and allow newer scope reports to replace it. Old reports cannot immediately
-undo that correction. Existing pins are unchanged when the setting changes; Use Automatic Labels still releases a pin explicitly.
+Navigator uses a new extension identity, settings and helper folder. It does not
+import old labels, colours, stars or routing configuration. Remove the old
+extension separately. If its patch is still installed, restore Codex through that
+release before removing it, or reinstall Codex from VS Code Extensions. Remove
+the old helper's marked global instruction block before enabling Navigator
+routing. Navigator's setup does not perform this cleanup automatically.
 
-Run **Codex Repo Companion: Set Repository Alias** from the Command Palette to
-give a Git repository a readable name, such as `Context Suite Private`. Leave its
-name blank to remove the alias. Aliases are saved in this workspace's
-`codexRepoCompanion.repositoryAliases` setting, keyed by exact Git-root path.
-They appear in labels and repository menus and are recognized in focus requests.
-Original directory names and workspace names remain recognized too. Changing an
-alias refreshes repository labels, including pinned ones, but never custom text.
-
-Hover over a chat title or history row for its full repository paths and label
-source: pinned, manually corrected, optional detected discussion, or agent report.
-Custom text is identified separately without inventing a root.
-
-
-Starred chats
--------------
-
-Right-click a saved local chat in history or its open conversation title and choose
-**Star Chat**. A star appears before its history/header title. Use **Unstar Chat**
-to remove it. Stars remain visible when repository prefixes are hidden or labels
-are cleared; they do not pin the repository label or change instruction routing.
-
-Choose **Starred Chats...** in the same menu, or run **Codex Repo Companion: Open
-Starred Chats**, to search starred conversations and open one in an editor tab.
-Stars are saved per workspace and survive reloads. The picker uses current titles
-from recent history, falling back to the title remembered when starred; if no title
-was available, it shows the conversation ID. Deleted chats may need manual unstarring.
-The original history order and saved conversation titles are unchanged. No AI call
-or conversation message is sent when starring a chat.
-
-
-Chat and repository colours
+Sidebar layout and ordering
 ---------------------------
 
-Choose **Chat Colour...** from a saved chat's history/title menu, or the Command
-Palette for the active chat. Choose **Repository Colour...** to select a local Git
-repository. Both open eight presets, a native colour picker and a synchronized
-hex field accepting `#RGB` or `#RRGGBB`. Apply saves; Cancel leaves the choice alone.
+At the default text size, content heights below 180px use the compact grid,
+180-339px use two-line columns, and 340px or more use the list. A 12px buffer
+around each boundary prevents flicker while resizing. Larger fonts scale these
+thresholds proportionally. Width adds
+readable columns. Text scales within bounded limits. Names wrap to two lines,
+or three in the tall layout, and labels to two lines. Exceptional long text is
+clamped with a full tooltip. Actual rendered bounds determine how many complete
+entries fit. Very small views can show no entries until enlarged.
 
-A manual chat colour overrides repository inheritance. **Automatic (from
-repositories)** removes that override after Apply. **No Colour** removes a
-repository's colour. Repository colours follow the same associated roots as the
-chat's label; custom labels use their retained repository association when present.
-Multiple coloured roots blend equally in Oklab, counting each root once and
-ignoring roots without a colour. Updating a repository colour refreshes inherited
-chat colours. Clearing repository labels removes inheritance, but keeps a manual
-chat colour.
+Order is Codex's `thread/list` with `sortKey: recency_at`, descending, persisted
+VS Code threads only. Up to 200 entries are read across bounded pages. Navigator
+preserves the returned order and ties; status, completion, stars and colours do
+not rank chats. A cached order survives unavailable reads and reloads; before any
+successful native read, the local index seeds entries. A successful native list
+also excludes archived chats from later index fallback.
 
-Colours appear as dots in Codex history and conversation headers. For starred chats,
-a star replaces the dot and uses the chat colour. Stars without a colour follow
-the theme. Both markers show their source
-in the title tooltip. Text remains theme-coloured; native VS Code tab titles remain
-plain. Turning off **Show Tab Prefix** also hides colour dots. Chat overrides are
-saved per workspace; `codexRepoCompanion.repositoryColours` is a user setting keyed
-by absolute Git-root path and shared across workspaces.
+The pointer holds order anywhere in Navigator's webview content, including blank
+space and controls. Keyboard focus in the list also holds order. Leaving releases
+the latest order. The native VS Code view heading is outside the webview.
+Indicators continue to refresh while held. Search covers the bounded cache, not
+an exhaustive archive. Search and starred filtering persist within this extension.
 
+Selecting a chat uses `vscode://openai.chatgpt/local/<chat-id>`. This is an existing
+Codex URI handler, not a promise of an enduring public API. VS Code may request
+confirmation. Unsaved and remote chats are excluded. Automatic tracking of chats
+selected through native Codex navigation is not provided.
 
-Single-repository workspaces
-----------------------------
+Chat visibility and selection
+-----------------------------
 
-With zero or one open local Git repository, the title/history popup shows a custom
-label text field and Apply Label instead of repository search and repository rows.
-Enter applies the label; invalid text keeps the popup open. Existing custom text
-is prefilled. Automatic Labels, Clear Labels and New Chat in Sidebar remain available.
+Hide Chat is the last chat context action. Hidden IDs and names are stored in
+Navigator global state; Codex conversations remain intact. Restore Hidden Chats
+in the title menu supports selecting several chats. Restoring removes the manual
+hide flag; it does not bypass the recency filter.
 
-**Hide Redundant Repository Labels** defaults to on. An automatic label naming only
-the sole open repository is hidden. Custom labels, manual choices, other-project
-labels and multi-project labels stay visible. Nested independent Git repositories
-count separately. Hiding is presentation only: the stored scope is retained.
+Recent Chats Only defaults on. It uses native recencyAt or a more recent Navigator
+selection, never a background update timestamp. Known recency older than 24 hours
+is excluded, including starred chats. Unknown timestamps stay visible. Turn the
+setting off to browse older chats in the existing bounded history cache.
 
+Each successful Navigator open starts its own linear fade (three minutes by default) using the
+hover background mixed with 20% of the chat label colour (theme foreground when
+no colour is assigned). It fades only the background, preserves text and icon colours,
+and keeps its elapsed time across rerenders and webview restoration. Selecting another chat leaves existing timers running; revisiting a chat refreshes
+only its own timer. **Highlight Recently Viewed Chats** defaults on; turn it off
+to hide fading backgrounds. **Highlight Only Last Viewed Chat** defaults off;
+when enabled, only the latest Navigator visit is highlighted. The master setting
+must be on. Both settings apply without reloading and preserve elapsed timers;
+neither changes the hover outline. Expired entries are removed on render. These highlights mean
+recently viewed through Navigator, not
+confirmed currently visible in Codex. Hover uses an inset one-pixel theme outline.
 
-Setup and project instructions
-------------------------------
-
-Run **Codex Repo Companion: Set Up Repo Companion** from the Command Palette,
-or follow the link in Settings. A single page shows **Chat labels and stars** and
-**Project instructions**, with current status and inline explanations. Choose
-either or both. Buttons apply the stated action; leaving the page does not save
-unfinished choices. The legacy **Set Up Routing** command opens this same page.
-
-On first use, Companion asks: **Set up Codex Repo Companion?** Choose **Set Up** or
-**Not Now**. One later startup offers **Set Up** or **Don't Ask Again**. Closing
-both invitations also ends reminders. Opening setup ends reminders even if you
-leave partway through. Existing dismissals and configured/off choices are kept on
-upgrade. Dismissing the invitation never disables a feature.
-
-**Automatically follow this workspace** is the default for project instructions.
-The expandable repository list is a live preview, not a fixed selection. Names
-are shown with full paths on hover. Adding or removing workspace folders updates
-the saved scope; discovered Git repositories refresh the displayed list too.
-Choose an optional separate shared AGENTS.md, or leave it blank to use project
-instructions only. Custom folders and extra filenames are under **Advanced options**.
-Existing custom scopes remain selected and are described as custom, not automatic.
-
-**Enable Project Instructions** (or **Save Project Instructions**) adds/updates
-Companion's marked section in global instructions and saves workspace settings.
-Your other global rules are kept; the shared file is only read. Start a new Codex
-chat afterward. **Turn Off** disables routing for this workspace while retaining
-other instructions and saved choices.
-
-**Enable Chat Labels** checks compatibility, backs up and updates the installed
-Codex files, then shows **Reload Window** on the page. No terminal or separate
-Node installation is needed for chat setup. Unsupported versions are left alone;
-project instructions remain independently available. This integration is unofficial
-and Codex updates may need a newer Companion version. Once enabled, Companion
-reapplies the integration after updates only when the installed Codex version and
-file checksums are supported. It never reloads your window automatically.
-Compatibility is checked at startup and when Codex changes. Closing setup also
-rechecks any eligible automatic repair. Setup updates its
-status without replacing your unsaved choices. A status-bar warning opens setup
-when chat labels need attention; **Check for Updates** helps you check for updates.
-Project instructions remain available when the chat integration is unsupported.
-Routing has a separate status that checks helper files and saved settings. Ready
-means those checks passed; it cannot prove that an agent has read the instructions.
-After saving, any remaining routing problem is shown with its details.
-
-An automatic patch attempt runs at most once per installation and Companion
-version. Failed or partial setups offer manual repair. With Silent Mode off,
-previously enabled users receive a non-blocking failure reminder: **Open Setup**,
-**Not Now**, or **Don't Ask Again for This Version**. Not Now or closing the message
-allows one reminder on a later startup, then stops for that Codex version. Silent
-Mode, unfocused windows and an open setup page suppress these notifications.
-Successful automatic changes offer reload; setup and the status bar retain that
-action when notifications are suppressed. Restoring Codex turns off automatic
-reapplication, including when its files are already original. Failure explanations
-remain visible after a failed patch rolls back. Routing readiness checks shared
-files chosen by more specific project scopes too. Check for Updates uses VS Code's extension update controls; it does
-not promise that a compatible release exists.
-
-If setup was interrupted, try enabling chat labels again or restoring Codex.
-If the error names a setup lock, close all Companion setup operations and remove
-only that named lock before retrying. Leftover temporary files do not block a retry
-and are preserved; the installer never treats their contents as originals.
-Use **Remove chat integration > Restore Codex**, or the **Restore Codex** command,
-before uninstalling Companion. Reload afterward. Chats and routing choices are kept.
-
-The page follows VS Code's light, dark and high-contrast theme colours and supports
-keyboard navigation. Only Browse opens a system file/folder picker. Errors and
-success messages stay on the page. Refresh reloads settings and replaces unsaved
-choices. External settings changes require refresh before saving.
-
-There is no preview or reset feature. Uninstalling the extension alone does not
-remove all settings, saved state, installed helpers or Codex modifications.
-
-**Instruction Scope** limits those shared rules to explicit absolute directories.
-Leave it empty to use the workspace folders, or choose a collection's parent
-directory to cover its repositories. The most specific matching scope wins.
-Equally specific workspaces must agree; conflicts stop routing instead of guessing.
-**Instruction Fallback Names** adds ordered filenames such as `TEAM_GUIDE.md` after
-the standard names. If you use custom fallback filenames in Codex, enter the same
-names here; Companion does not modify or parse Codex's configuration file.
-
-Each local workspace saves its scopes, main file, fallback names and enabled state
-under `CODEX_HOME/repo-companion/routing-config`. An explicit target can use this
-configuration even after the window closes. A closed workspace retains its last
-observed settings; reopen it to change or disable its routing policy. An explicit
-disabled state remains saved and is honored by both the helper and fallback.
-Invalid settings stop routing until corrected, rather than retaining old enabled
-rules. These records contain configuration paths, not chat contents.
-
-The installed global guidance is deliberately short. On helper failure or
-unavailability, it asks the agent to read `CODEX_HOME/repo-companion/fallback.md`.
-That separate guide explains how to use saved JSON profiles, select the applicable
-scope and discover shared/project instructions without Node. It is not loaded on
-successful or explicitly disabled routing. Setup installs and repairs the guide.
-Missing configuration uses ordinary project discovery. If the recovery guide is
-also missing, the agent reports that and uses available project instructions.
-Disabled routing never activates this fallback; independent user/project rules
-still apply. Recovery needs local file access and remains best-effort guidance.
-
-The agent consults the local read-only helper before project work and when focus
-changes. It returns the main file first, followed by applicable parent/project
-instruction paths. `AGENTS.override.md` takes precedence over `AGENTS.md` in each
-directory. Target file paths let it discover deeper instructions without scanning
-the repository. The helper checks configured fallback filenames directly; the
-agent still follows the main file's own routing. Arbitrary Markdown links are not
-treated as automatic includes.
-
-Repository labels use stored roots, so aliases work. For custom text, run
-**Codex Repo Companion: Associate Custom Label with Repository** while that chat
-is open. Choose a repository, or No repository association to remove the link.
-Custom text never silently inherits a previous repository. Its association persists
-while editing that custom label; replacing it with repository/Auto/Clear and later
-creating a new custom label does not reuse the old association.
-
-Explicit user focus takes precedence over pinned labels. The helper accepts
-`--target "<exact Git root>"` for that case and repeatable
-`--file "<absolute file path>"` for nested instructions. Only the main agent may
-use its verified local conversation identity. No instructions are automatically
-injected into Codex, and no cwd, permissions or Source Control selection changes.
-This is best-effort agent guidance, not a guarantee that files have been read.
-Conflicting live or saved routing settings fail explicitly; the fallback must not
-choose a winner. Without an explicit target, chat associations still require a live
-window; saved configuration never guesses focus from old labels. No additional AI
-service is used.
-
-
-Agent guidance and cost
------------------------
-
-The installed global AGENTS guidance asks the main conversation agent to report
-the latest task's exact Git roots once it identifies them, and again only when
-scope changes. It excludes incidental project mentions, shared instructions,
-unrelated active files and subagent reports. After resuming or compaction, one
-idempotent report can restore certainty. Missing permissions or helper identity
-must not interrupt the task. This is best-effort guidance, not a guaranteed hook.
-
-The direct detector uses no AI tokens and starts no model or network request.
-Agent reporting uses the existing conversation: its instructions and helper tool
-call add context tokens, and the helper briefly starts Node and Git. There is no
-separate classifier/API call. Exact additional tokens depend on the conversation
-and have not been measured. Keep reporting tied to scope changes, not every tool.
-
-Local work is bounded: at most 1 MiB per transcript read, incremental cached reads,
-a 500-repository catalog, and session-change batches throttled to once per second.
-The repository menu adds no polling or AI work. These are implementation bounds, not
-a measured CPU/memory benchmark. See [architecture](architecture.md).
-
-
-Setup and upgrade
+Scope and colours
 -----------------
 
-Build with Node.js 22+ and npm:
+Enable **Automatic labels** in setup, then start a new Codex chat. This installs
+its own marked reporting guidance in global Codex instructions and sets
+`agentRepositoryLabels` for this VS Code profile. It does not turn on instruction
+routing or hooks. Turning it off removes that guidance and ignores later agent
+reports while keeping current labels. Existing chats may retain old guidance;
+start a new chat after changing setup. Explicit user corrections and optional
+Detect Chat Focus remain independent.
 
-```powershell
-npm ci
-npm test
-npm run package
-code --install-extension .\dist\codex-repo-companion-1.1.8.vsix
-```
+Auto follows the newest enabled agent report or explicit user correction. Optional Detect
+Chat Focus can recognize clear switches from local user messages, including known
+cue typos such as "lelts talk about" and one unambiguous typo in longer names.
+Quoted examples, IDE attachments, incidental mentions and ambiguous names do not
+supply a label. Explicit no-write/read-only, AUDIT and DNE requests suppress inferred
+metadata updates. Implicit shifts still depend on agent reporting.
 
-The release targets Windows x64 and requires VS Code 1.137 or later. The package
-command reads the version from package.json, checks the lockfile root and refuses
-to overwrite an existing VSIX. Keep reserved artifacts; bump the root version and
-update release documentation before packaging changed contents. The original icon
-can be rebuilt on Windows with `tools/render-icon.ps1`.
+Labels replace previous task scope. Related repositories appear only when they
+are part of the current task. The active editor, Source Control selection and
+chat starting directory do not assign a repository. Keep current labels fixed holds scope fixed;
+Clear selects None, suppressing automatic labels. Custom labels can optionally
+be associated with an exact repository for routing and colour inheritance.
 
-After installing, use **Set Up Repo Companion** from Settings or the Command
-Palette. For terminal-based setup, `node tools/install-agent-helper.cjs` remains
-available from this checkout after compilation.
+Multi-repository workspaces default new repository selections to Auto unless
+`keepManualLabelsFixed` was explicitly set. Single-repository choices and custom labels
+use the fixed-label preference. Automatic colours maximise separation among current
+repositories, remain stable when repositories are added, and adjust for theme
+contrast. User hex colours remain exact. No colour suppresses automatic colour.
+Initial colour assignment waits for Git's startup discovery to finish. Resetting
+Navigator regenerates the same defaults for the same repository set, theme type
+(light or dark) and custom colour choices. Later repository additions keep existing
+assignments; changing that history or opening a different workspace can change
+the defaults after a reset.
 
-Helper setup installs compiled files under `CODEX_HOME/repo-companion` (normally
-`~/.codex/repo-companion`) and updates only its marked block in the effective
-global AGENTS file, preserving unrelated instructions and the original backup.
-Node and Git must be available to the agent. No additional model or service runs.
+Activity indicator prototype
+----------------------------
 
-After upgrading an existing setup to 1.0.6, open **Set Up Repo Companion** and
-click **Save Project Instructions** to replace the older managed block and install
-the recovery guide. Start a new chat to load the shorter instructions. Updating
-the extension alone does not rewrite global instructions or enable routing.
+Hooks write one bounded status record per chat. UserPromptSubmit records working;
+matching Stop or Interrupt records idle; SessionEnd records unknown. Late events
+from another turn cannot stop the current spinner. The collector discards prompt
+and response text and returns empty JSON without model context or continuations.
+Each invocation has a one-second Codex timeout.
 
-The display installer and bridge are included in the extension package. Setup
-provides the normal enable/restore flow. For development or troubleshooting, the
-command-line installer is also available. Locate the installed extension using `code --locate-extension openai.chatgpt`, then run:
+With activity enabled, bounded local transcript reads supplement hooks for older
+sessions. Explicit lifecycle/tool events can indicate working, approval/input
+waiting or a terminal failure. Tool exit codes and prose are not sufficient.
+The existing local runtime can also supply status without loading/resuming chats.
+Unfamiliar records leave status unknown. Working/waiting observations expire
+without fresh evidence. A blue ready dot records a completed turn since opening
+through Navigator; native navigation is not tracked reliably.
 
-```powershell
-node tools/patch-codex.cjs check "<Codex extension directory>"
-node tools/patch-codex.cjs apply "<Codex extension directory>"
-```
+An active goal also displays one animated circle immediately after its goal icon,
+even between turns or without activity hooks. A working turn shares that spinner;
+pausing the goal removes it only when the chat is not working. When a goal and another activity indicator appear together, the chat title uses
+one line with an ellipsis so the indicators do not add another text row. The full
+title stays in its tooltip. Status dots retain their existing meanings. The goal-only spinner is labelled "Goal running".
 
-The patch supports Codex 26.908.40401 with exact checksums for three bundles.
-It preserves byte-for-byte originals and rejects unknown versions or edits.
-The v0.12.0 display patch adds direct repository menus to history rows and chat titles and upgrades recognized
-older patches while preserving their originals. Previously enabled integrations are
-reapplied automatically after supported updates.
-Version 1.1.6 extends the display patch with colours. Previously enabled users
-receive the compatible upgrade automatically and must reload when prompted.
-Upgrade removes unpinned tentative directory labels before publishing labels or
-routing metadata. Manual labels and pins remain intact. The version advances from
-0.12.0 to 1.0.0 to adopt the shared version-number format, not a breaking API change.
-Reload the window when convenient after installation. Setup does not close or
-reload your windows. Without the patch, saved editor chats can still be assigned;
-display prefixes and sidebar identity require the bridge.
+Goal status is separate from turn activity. Persisted goal reads expose objective,
+status and usage for visible chats. Goal clicks request a status-only change through
+the runtime that owns the loaded chat, with stale-state checks. If unavailable,
+Navigator opens the chat for native control. Viewing makes no AI calls; resuming
+a goal can continue normal work and model usage.
 
-Upgrading from v0.4.0 removes Source Control commands, settings, and navigation.
-If its optional VS Code workbench patch was installed, restore it from an elevated
-terminal when necessary (Program Files requires administrator rights):
-
-```powershell
-node tools/patch-vscode.cjs restore "<VS Code resources/app directory>"
-```
-
-The tool is retained solely to check or restore that retired patch. It rejects
-unknown edits and cannot apply the patch again. Reload restores the original
-workbench in each window. The Codex display patch remains separate.
-
-
-Switching from a local build
+Project instruction routing
 ---------------------------
 
-The Marketplace build is `keenanselbee.codex-repo-companion`. Earlier development
-builds use `local-tools.codex-repo-companion`. VS Code treats these as different
-extensions; settings with the `codexRepoCompanion` prefix and the Codex-home helper
-files retain their paths, but saved chat labels, stars and reminder state do not
-automatically transfer to the new identity.
+Setup can use project instructions alone or an optional shared file. Workspace
+folders are followed automatically; Advanced options allow custom scopes and
+extra instruction filenames. Scoped conflicts fail clearly rather than selecting
+an arbitrary file. The helper reports applicable paths; paths returned are not
+proof the agent read them. Shared rules are read before project and nested rules.
 
-Before switching, preserve a backup of your VS Code profile while VS Code is
-closed. For a normal Windows installation this is `%APPDATA%\Code\User`; portable
-and named profiles can use different locations. The relevant state lives in
-`globalStorage/state.vscdb`, `workspaceStorage/*/state.vscdb`, user/profile settings
-and any workspace settings. Do not edit the live databases or copy an entire
-database over another profile to transfer a single extension's state.
+**Save Project Instructions** installs helpers under `<CODEX_HOME>/codex-navigator`
+and updates only its marked block in global AGENTS.md, with a backup. It does not
+edit shared/project instruction files. Explicit task focus wins over chat labels.
+Automatic label reporting has its own setup and marked instruction block. Reports
+include only current task Git roots, primary first; discussion-only and
+acknowledgement-only switches should report. Explicit no-write restrictions,
+missing identity and helper failures must not interrupt the main task.
+If upgrading from combined guidance, Save Project Instructions replaces the old
+Navigator routing block with routing-only guidance; enable Automatic labels
+separately if wanted.
 
-Disable the old local build before enabling the new one, so only one copy manages
-labels and the patch. Recreate any saved labels and stars you need, or retain the
-old disabled build and profile backup for a deliberate state transfer. The new
-extension can recognise an existing supported Codex patch; restoration is not
-required just to switch Companion identities. This release does not migrate or
-delete the old extension's private storage automatically.
+The main agent uses CODEX_THREAD_ID from its environment and must never override
+it. The helper verifies local VS Code session identity and rejects subagents.
+Routing changes neither working directory nor permissions. Disabled routing skips
+the helper and fallback; ordinary Codex instructions still apply. If an enabled
+helper is unavailable, its generated fallback.md describes the local saved rules.
 
+Routing adds local discovery checks and relevant instruction text, with no extra
+AI calls. It complements Codex's built-in AGENTS.md discovery and cannot guarantee
+agent adherence. One extension's license or setup does not change Codex permissions.
 
-Corrections and settings
+Settings and storage
+--------------------
+
+Settings use the `codexNavigator` namespace. Common settings include
+`agentRepositoryLabels`, `detectChatFocus`, `keepManualLabelsFixed`, `repositoryAliases`, `repositoryColours`,
+`instructionRouting`, `mainInstructionsFile`, `instructionScope`,
+`instructionFallbackNames`, `hideRedundantRepositoryLabels` and `silentMode`.
+Use VS Code Settings for descriptions. Chat labels, stars, modes, colours and
+recency IDs and pinned chat identity/title snapshots are saved in extension state. Generated repository colours live in
+the local profile. Helper reports, routing configuration, diagnostics and backups
+live under `<CODEX_HOME>/codex-navigator`. Custom repository colours use user settings.
+
+There is no migration from the old Repo Companion extension, settings namespace,
+helper directory or patch. Disable/remove its hooks separately and restore its
+patch before uninstalling that older extension, or reinstall Codex. Remove its marked global instruction block if old routing was enabled. The new
+extension does not inspect or alter that installation.
+
+Verification and release
 ------------------------
 
-For a user-confirmed correction to an older chat, run from the project directory:
+`npm test` compiles and runs the public unit tests. `npm run test:public-only`
+exports an explicit public source snapshot without `proprietary/`, runs its
+tests and verifies that a full build fails without the private checkout.
 
-```powershell
-node tools/correct-chat-scope.cjs "<saved conversation UUID>" "<current project Git root>"
-```
+The independent `codex-navigator-private` repository belongs at `proprietary/`.
+It is ignored by the public parent and has separate Git operations. `npm run
+build` compiles one extension from both checkouts; `npm run test:commercial`
+tests the private licensing service. Missing private source never enables a
+fallback application. Credentials belong in neither repository.
 
-Corrections are separate from agent reports under `repo-companion/corrections`.
-A newer agent report takes over automatically in Auto mode; pins and Clear still
-win. Reporting never changes the agent's own conversation identity.
+`npm run test:integration` builds both checkouts and uses an isolated
+VS Code profile, real Git repositories and fixture chat URIs. Hook events are
+synthetic within that fixture; no authenticated chat or user installation is
+modified. Current native metadata API checks are read-only. Runtime compatibility
+and complete authenticated UI acceptance must be reported separately.
 
-- `codexRepoCompanion.detectChatFocus`: detect clear project switches directly
-  from local user messages; defaults to false. Disable to use only agent reports,
-  corrections, and manual choices.
-- `codexRepoCompanion.showTabPrefix`: show history, sidebar, and tab labels;
-  defaults to true.
-- `codexRepoCompanion.silentMode`: log automatic errors without popups;
-  defaults to true. Explicit command failures still show feedback.
+`package.json` owns the release version; root lockfile metadata must match.
+`npm run package` requires clean, committed public and private checkouts and
+complete production licensing configuration. It builds both, inspects every VSIX
+entry against the expected runtime files and hashes, and rejects changed inputs.
+It emits an immutable VSIX and adjacent JSON receipt containing both Git revisions,
+the archive SHA-256 and every payload hash. It refuses to overwrite a reserved
+version. Private TypeScript, tests and source maps are excluded; compiled commercial
+modules are required runtime payload. Synthetic archive checks run with the public
+tests; a passing fixture is not an approved production release.
+`npm run test:package` additionally exercises the real VSIX packager in a disposable
+0.0.0 fixture, including private-source and source-map exclusion sentinels. It
+does not install or reserve a release version.
+Packaging, installation, commits and publication are distinct operations.
+Development and redistribution permissions are governed by [the license](../LICENSE.md).
 
-**Show Integration Status** shows scope source, bridge availability, and counts
-in **Output > Codex Repo Companion**. Scope-change logs include identifiers and
-repository roots, never chat text. **Open Saved Codex Chat** can recover a generic
-editor tab using up to 200 recent index entries from at most the last 1 MiB of
-`session_index.jsonl`. It does not scan transcripts or modify the index.
+
+Licence and transfer
+--------------------
+
+The next commercial release offers seven days (168 elapsed hours) starting only
+when you choose **Start 7-Day Trial**, or a separate $5 CAD one-time Navigator
+purchase with all future updates. Hooks do not start the trial. Context Suite
+requires its own purchase. Live checkout and delivery verification are pending.
+
+Open **License** in Navigator's top menu to activate a purchased key, check paid
+status or deactivate this installation. Deactivate before moving to another
+computer or VS Code profile. Multiple workspace windows in the same local profile
+share one installation. Paid access refreshes daily while running and permits
+up to 30 days offline from successful validation, capped by any provider expiry.
+Known revocation blocks access; an outage does not extend the deadline.
+
+When access expires, Navigator shows the licence screen and stops its feature
+actions and metadata polling. Saved chats, labels, stars, pins and colours remain.
+Codex continues independently, including running goals. Settings, licensing and
+setup remain available so you can remove Navigator hooks and guidance.
+
+Use **Customer Portal** to remove an unavailable installation. If an interrupted
+activation or deactivation leaves recovery pending, confirm removal in Polar
+before choosing **Recover Licence**. The same action can replace a damaged or
+missing protected record when its local presence marker remains. That recovery
+permits paid activation only; it cannot start another trial. An unavailable
+keychain or database remains an error and is not overwritten.
+Do not retry activation repeatedly after a lost reply;
+the first request may have consumed the installation slot. Ordinary Navigator
+settings resets do not reset licensing. See [privacy](../PRIVACY.md) for local data.
 
 
-Verification and removal
-------------------------
+Pinned chats
+------------
 
-```powershell
-npm test
-npm run test:integration
-node tools/verify-patch.cjs "<Codex extension directory>"
-```
+Pinned, unstarred chats show the pin directly after the label. Hover or keyboard
+focus reveals the star outline after the pin without moving it. When both are
+enabled, the order is label, star, pin. Hover or keyboard focus reveals an unpinned
+outline; pinned chats always show the icon. Pinning preserves the chat's
+list position, not a screen coordinate: resizing can change its row and column.
+Other chats retain their normal recency order around pinned positions.
 
-Integration uses isolated profiles, disposable repositories, real VS Code/Git,
-and fixture conversations. It verifies labels, latest-scope changes, persistence,
-sidebar history, and absence of Source Control selection changes. It does not
-exercise an authenticated Codex conversation. Scratch data stays in `.codex-temp`.
+Pins bypass Recent Chats Only and retain saved chat identity/title metadata when
+native recent history no longer includes the chat. Up to 200 pins are saved in
+`pinnedChats.v1`. The latest available metadata takes precedence over the snapshot.
+Filters temporarily compact the list; resizing still shows only what fits. Explicit
+Hide Chat still hides a pin, and unpinning restores ordinary ordering and age filtering.
+Pinning does not restore a chat deleted in Codex.
 
-Before uninstalling, run **Codex Repo Companion: Restore Codex** and reload.
-The development command is also available:
+**Keep Manual Labels Fixed** replaces Pin Manual Labels and affects label/scope
+updates only. It does not pin a chat's position. Existing fixed labels remain fixed;
+configure the renamed preference for future manual choices.
 
-```powershell
-node tools/patch-codex.cjs restore "<Codex extension directory>"
-```
 
-Reload after restoring. Remove the companion through Extensions. Remove its marked
-instruction block to stop agent reporting. Keep the helper metadata while you want
-to preserve reports or corrections. See [architecture](architecture.md) and
-[verification status](verification.md) for details.
+Chat and repository menus
+-------------------------
+
+Right-click a chat (or use Shift+F10/Menu) for VS Code's native context menu.
+It can extend beyond Navigator and uses VS Code's own placement, scrolling and
+keyboard navigation. Custom Label, Chat Colour and automatic/fixed label options
+remain available; Hide Chat stays last. Choose Repository opens a searchable
+picker containing every local Git repository open in the workspace, including
+nested repositories. The action targets the captured chat, independently of
+which Codex chat is visible. Repository names are no longer listed directly in
+the menu: the supported native menu contributions have static command titles.
+See [VS Code webview context menus](https://code.visualstudio.com/api/extension-guides/webview#context-menus).
+
+Associate Custom Label with Repository is available only for custom text labels.
+It preserves that text while linking it to a repository for routing and inherited
+colour. Ordinary repository assignment does not require a custom label.
+
+Open **Repository Colours** from Navigator's top overflow menu. It replaces the
+chat contents with repository names. Click a name to open its colour picker directly.
+Right-click also offers Change Colour.
+Click a swatch once to preview; click the same colour again to apply and return
+to the list. Changing colour or editing its value resets this confirmation. Apply
+and Cancel remain available. Palette controls sit directly below a regular swatch
+grid instead of stretching to the bottom of the panel. Apply or Cancel returns to this list. Back returns to chats. The list follows
+workspace repository changes, and names use their current resolved colours.
+
+Automatic labels require agent reports or the optional Detect Chat Focus fallback.
+Enable Automatic labels in setup to install reporting guidance and its helper,
+then start a fresh chat. An empty global instructions file has no such guidance;
+hooks report activity and do not report repository scope. Reporting is best effort,
+respects fixed labels and explicit no-write requests, and never uses unrelated
+editor tabs to guess the task repository.

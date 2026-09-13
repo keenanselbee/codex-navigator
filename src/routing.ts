@@ -20,7 +20,7 @@ export class RoutingPublisher {
   private previous = '';
   private pending = Promise.resolve();
   constructor(private home: string) {
-    this.filename = path.join(home, 'repo-companion', 'routing', randomUUID() + '.json');
+    this.filename = path.join(home, 'codex-navigator', 'routing', randomUUID() + '.json');
   }
   publish(snapshot?: RoutingSnapshot): Promise<void> {
     this.pending = this.pending.catch(() => {}).then(() => this.writeSnapshot(snapshot));
@@ -130,7 +130,7 @@ export async function resolveRouting(args: string[], home = codexHome(), id = pr
   const candidates: { main: string; roots: string[]; profile?: RoutingProfile }[] = [];
   const live: RoutingProfile[] = [];
   let directory;
-  try { directory = await opendir(path.join(home, 'repo-companion', 'routing')); }
+  try { directory = await opendir(path.join(home, 'codex-navigator', 'routing')); }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { throw error; } }
   if (directory) {
     let count = 0;
@@ -138,7 +138,7 @@ export async function resolveRouting(args: string[], home = codexHome(), id = pr
       if (++count > 256) { throw new Error('Too many routing records; routing was not inferred.'); }
       if (!entry.isFile() || !entry.name.endsWith('.json')) { continue; }
       try {
-        const record = await readSnapshot(path.join(home, 'repo-companion', 'routing', entry.name));
+        const record = await readSnapshot(path.join(home, 'codex-navigator', 'routing', entry.name));
         if (record?.profile) { live.push(record.profile); }
         const roots = record?.chats['local/' + id];
         if (record && Array.isArray(roots) && roots.length <= 16 && roots.every(absolute)) { candidates.push({ main: record.main, roots: target ? exactGitRoots([target]) : roots, profile: record.profile }); }
@@ -157,7 +157,7 @@ export async function resolveRouting(args: string[], home = codexHome(), id = pr
     // Keep the legacy live-window path during upgrades where no scoped profile exists yet.
     if (routes.some(route => route.profile) || candidates.some(item => item.profile) || !candidates.length) {
       const disabled = routes.some(route => route.profile?.enabled === false);
-      if (disabled) { return { enabled: false, status: 'disabled', roots, reason: 'Routing is explicitly disabled for a matching scope. Do not apply Companion fallback; resolve mixed batches one target at a time.' }; }
+      if (disabled) { return { enabled: false, status: 'disabled', roots, reason: 'Routing is explicitly disabled for a matching scope. Do not apply Navigator fallback; resolve mixed batches one target at a time.' }; }
       if (!routes.length || routes.some(route => !route.profile)) {
         return { enabled: false, status: 'unavailable', roots, reason: 'No saved routing scope matches the explicit target, or no repository association exists. Use ordinary project instruction discovery.' };
       }

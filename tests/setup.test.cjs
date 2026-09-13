@@ -42,63 +42,31 @@ function setup(t, options = {}) {
         if (name === 'vscode') { return api; }
         if (name === './agent-helper') { return { ...installer, prepareAgentHelper: () => installer.prepareAgentHelper(home) }; }
         if (name === './setup-page') { return { openSetupPage: async () => commands.push(['page']) }; }
-        if (name === './display-setup') { return { chatLabelsStatus: async () => ({ label: 'Off', detail: 'Enable labels' }), configureChatLabels: async () => { commands.push(['labels']); } }; }
         if (name === './model') { return require('../dist/model'); }
         return require(name);
       },
     });
-    return { hub: () => exports.setUpCompanion(context), run: () => exports.setUpAgentHelper(context), offer: () => exports.offerRoutingSetup(context) };
+    return { hub: () => exports.setUpNavigator(context), run: () => exports.setUpAgentHelper(context) };
   }
   return { home, messages, commands, picks, updates, fileChoices, values, state, api, reload, ...reload() };
 }
 
-test('Not Now allows one reminder on a later startup, then never asks again', async t => {
-  const fixture = setup(t, { choices: ['Not Now', "Don't Ask Again"] });
-  await fixture.offer();
-  assert.equal(fixture.messages[0][2], 'Not Now');
-  await fixture.reload().offer();
-  assert.equal(fixture.messages[1][2], "Don't Ask Again");
-  await fixture.reload().offer();
-  assert.equal(fixture.messages.length, 2);
-  assert.equal(fixture.updates.length, 0);
-  assert.ok(!fs.existsSync(path.join(fixture.home, 'repo-companion')));
+test('both setup entry points open the page without enabling features or rewriting instructions', async t => {
+  const f = setup(t);
+  await f.hub(); await f.run();
+  assert.deepEqual(f.commands, [['page'], ['page']]);
+  assert.equal(f.updates.length, 0);
+  assert.equal(f.messages.length, 0);
+  assert.equal(f.state.get('navigatorWelcome.v1'), true);
+  assert.deepEqual(fs.readdirSync(f.home), ['AGENTS.md']);
 });
 
-test('ignored invitations also stop after two startups; choosing setup ends reminders', async t => {
-  const ignored = setup(t);
-  await ignored.offer(); await ignored.reload().offer(); await ignored.reload().offer();
-  assert.equal(ignored.messages.length, 2);
-  const accepted = setup(t, { choices: ['Set Up'] });
-  await accepted.offer(); await accepted.reload().offer();
-  assert.equal(accepted.messages.length, 1);
-  assert.deepEqual(accepted.commands, [['codexRepoCompanion.setUp']]);
-});
-
-test('invitations respect configured users, explicit off, remote and unfocused windows', async t => {
-  const configured = setup(t, { values: { instructionRouting: true } });
-  installer.installAgentHelper(installer.prepareAgentHelper(configured.home));
-  await configured.offer();
-  assert.equal(configured.messages.length, 0);
-  const off = setup(t, { values: { instructionRouting: false } });
-  await off.offer(); assert.equal(off.messages.length, 0);
-  const remote = setup(t, { remoteName: 'ssh-remote' });
-  await remote.offer(); assert.equal(remote.messages.length, 0);
-  const background = setup(t); background.api.window.state.focused = false;
-  await background.offer(); assert.equal(background.messages.length, 0);
-});
-
-
-
-test('both setup entry points open one page and stop reminders without writing settings', async t => {
-  const fixture = setup(t);
-  await fixture.hub(); await fixture.run(); await fixture.reload().offer();
-  assert.deepEqual(fixture.commands, [['page'], ['page']]);
-  assert.equal(fixture.updates.length, 0);
-  assert.equal(fixture.messages.length, 0);
-  assert.deepEqual(fs.readdirSync(fixture.home), ['AGENTS.md']);
-});
-
-test('old invitation dismissals survive upgrades', async t => {
-  const fixture = setup(t, { state: new Map([['routingInvitation.v1', { shown: 2, handled: true }]]) });
-  await fixture.offer(); assert.equal(fixture.messages.length, 0);
+test('setup requires a trusted local workspace before changing onboarding state', async t => {
+  const f = setup(t, { remoteName: 'ssh-remote' });
+  await assert.rejects(f.run(), /trusted local/);
+  f.api.env.remoteName = undefined; f.api.workspace.isTrusted = false;
+  await assert.rejects(f.run(), /trusted local/);
+  f.api.workspace.isTrusted = true; f.api.workspace.workspaceFolders = [];
+  await assert.rejects(f.run(), /trusted local/);
+  assert.equal(f.state.size, 0); assert.equal(f.commands.length, 0);
 });

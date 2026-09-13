@@ -5,13 +5,13 @@ import { prepareAgentHelper } from './agent-helper';
 import { readProfiles, selectProfile, containsPath } from './routing-config';
 import { sameRoot } from './model';
 
-// These are file/configuration checks, independent of Codex's optional display bridge.
+// These are file/configuration checks, independent of chat display and activity hooks.
 export async function routingStatus(plan: ReturnType<typeof prepareAgentHelper> | undefined,
   choices: { enabled: boolean; main: string; scopes: string[]; fallbackNames: string[] },
   workspace: string, scopes: string[], targets: string[]) {
   const independent = 'Project instruction routing does not require the chat integration.';
   if (!choices.enabled) { return { label: 'Off', detail: 'Turn on project instructions to use routing. ' + independent }; }
-  if (!plan || !plan.before.includes('<!-- codex-repo-companion:start -->')) {
+  if (!plan || !plan.before.includes('<!-- codex-navigator:start -->')) {
     return { label: 'Needs setup', detail: 'Save project instructions to install routing. ' + independent };
   }
   try {

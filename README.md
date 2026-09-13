@@ -1,78 +1,101 @@
-Codex Repo Companion
-====================
+Codex Navigator
+===============
 
-Keep your Codex chats organised and help Codex find the right project instructions.
-Free and open source under the MIT license. Made by Keenan Selbee.
+Find and switch between Codex chats in a compact VS Code sidebar. Saved chats
+appear at startup while live metadata refreshes in the background. Give chats
+clear project labels, colour your repositories and star the ones you return to.
+Made by Keenan Selbee.
 
-- **Label chats** by project, or give them your own label.
-- **Star favourites** so they are easy to find again.
-- **Colour chats** individually or inherit colours from their repositories.
-- **Use project instructions** as you move between repositories, with an optional
-  shared AGENTS.md for your workspace.
+What it does
+------------
 
+- **Chats that fit your space.** Resize the sidebar to show more chats. Names wrap,
+  width adds columns, and height chooses the layout.
+- **Recent chats within reach.** Click to open a chat, search, or filter favourites.
+  Chats follow Codex's recency order, left to right and then down. The order holds
+  steady while you hover or use the keyboard in the list. Recent Chats Only is on
+  by default, filtering known interaction recency to the last 24 hours.
+- **Labels, colours and stars.** Repositories get distinct automatic colours.
+  Right-click a chat for Choose Repository, Custom Label or
+  Chat Colour. Choose Repository opens a searchable list of all workspace repos.
+  Open Repository Colours from the top menu to edit
+  repository colours in Navigator. Hover or focus beside a label to reveal its star. Hide Chat removes
+  a chat from Navigator; Restore Hidden Chats in the overflow menu brings it back.
+- **Pinned chats.** Hover beside a label to reveal the pin control.
+  Pins hold its list position and bypass the 24-hour filter. Unpin to return
+  it to normal ordering. Fixed labels are a separate preference.
+- **Activity at a glance.** Optional hooks show a working spinner and a blue ready
+  dot. Supported runtime signals also show waiting in yellow and errors in red.
+- **Goal controls.** A circle with pause bars shows a running goal; a play triangle
+  shows a paused goal. Running goals also show a spinner to the right. Click to
+  pause or resume, where supported. With goal and activity indicators together,
+  the title stays on one line with an ellipsis; hover for its full text.
+- **Help across repositories.** Optional project instruction routing helps Codex
+  find relevant AGENTS.md files and shared rules. Optional Detect Chat Focus helps
+  labels follow explicit repository switches during conversation.
+
+Chats viewed through Navigator each get a background tinted by their label colour that fades over
+three minutes by default. Set **Highlight Duration Seconds** in Extension Settings
+to choose 1?3600 seconds. Other chats keep their own timers; revisiting a chat refreshes
+its highlight. In Extension Settings, turn off **Highlight Recently Viewed Chats**
+or enable **Highlight Only Last Viewed Chat** (off by default). Hovering shows a thin outline. This does not track switches made inside Codex itself.
 
 Get started
 -----------
 
-1. Install Codex Repo Companion alongside the OpenAI Codex extension.
-2. Open a local project or workspace and choose **Set Up** when prompted. You can
-   also run **Codex Repo Companion: Set Up Repo Companion** from the Command Palette.
-3. Enable **Chat labels and stars**, **Project instructions**, or both.
+1. Install Codex Navigator alongside the OpenAI Codex extension.
+2. Open Navigator and choose **Start 7-Day Trial** or **Activate Licence**.
+   Then choose **Set Up Codex Navigator**, or **Continue Without
+   Setup** to browse immediately. Setup is also available from the Command Palette.
+3. Choose Automatic labels, Activity indicators or Project instructions independently.
+   For activity, select **Install Hooks**, then **Open Hook Review**.
+   Type `/hooks` in the Codex terminal and review and trust all Navigator hooks.
+4. Reload the window and send a normal chat message. Setup confirms when it
+   receives an activity event.
 
-Right-click a saved chat or its title to choose a project, add a custom label,
-or star it. With a single project open, custom labels come first.
+The review terminal opens in the right workspace and Codex home automatically;
+no separate Codex CLI installation or directory command is needed. Activity hooks
+require Node.js on PATH. Labels, colours, stars and goals work without these hooks.
 
-Choose **Chat Colour...** or **Repository Colour...** for eight presets, a colour
-picker and custom hex input. Chat colours override repository colours; multiple
-repository colours blend equally. Colour dots appear in chat history and headers; starred chats use a coloured star instead.
-Choose **Automatic (from repositories)** to reset a chat colour.
+Choose **Arrange Navigator** in setup, then drag its heading above Codex and resize
+the divider. The view shows as many complete chats as fit, without a scrollbar or
+Show more button. Full names are available in tooltips when very long text is cut
+short. Right-click options also work with Shift+F10 or the Menu key.
 
-Instruction routing is designed to make discovery more consistent as conversations
-move between repositories. It complements Codex's built-in AGENTS.md discovery and
-uses lightweight local helpers without additional AI calls; discovered instructions
-can add to the model's context.
+Help and requirements
+---------------------
 
-For project instructions, setup follows the folders in your workspace. Choose a
-shared AGENTS.md if you want common rules across projects. Start a new Codex chat
-after enabling instructions. Automatic labels rely on Codex reporting its project;
-you can always choose a label yourself.
+Supports local Windows x64 with VS Code 1.137 or newer and Codex. Navigator does
+not modify Codex or VS Code files. Activity and goal controls depend on the Codex
+runtime; a ready dot means a turn finished, not necessarily that it succeeded.
+Project instruction routing complements Codex's own discovery and makes no extra
+AI calls; the agent still needs to read and follow the instructions.
 
+See [setup, troubleshooting and advanced options](docs/advanced.md), including
+removing hooks and replacing an older Repo Companion installation. Old settings
+and data are not imported. [Privacy and local data](PRIVACY.md) explains storage.
 
-Compatibility
--------------
+The next commercial release offers a **7-day trial**, then **$5 CAD once** with
+all future updates and one active installation. Transfer it by deactivating the
+old installation first. Paid access checks daily, with up to 30 days offline
+after successful validation. Open **License** from Navigator's menu to manage it.
+After expiry, Navigator shows the licence screen; your saved data and Codex chats
+remain intact. Existing releases retain their original terms. Commercial checkout
+and release verification are still in progress.
 
-Requires VS Code 1.137 or later on Windows x64. Instruction routing needs Node.js and Git available
-to Codex. It works independently of the chat integration and guides Codex to the
-right files; it cannot guarantee that the agent reads them.
+Published source and component tests are available for inspection;
+source reuse, modification and redistribution require written permission. See
+[LICENSE.md](LICENSE.md). This independent project is not affiliated with or
+endorsed by OpenAI or Microsoft.
 
-Chat labels and stars use an optional, unofficial modification to the installed
-Codex extension. Setup checks compatibility and keeps backups. Supported updates
-are reapplied automatically after you enable the feature; other versions may need
-a Companion update. **Before uninstalling, run Restore Codex from setup and reload.**
-
-Before reporting a Codex problem to OpenAI, restore Codex from setup, reload VS Code,
-and check whether it still happens. Simply disabling Companion does not restore Codex.
-
-Displaying labels and stars does not use AI tokens. Project instruction routing is
-separate and can add instructions to the model's context.
-
-Routing setup adds a small section to your global Codex instructions and keeps your
-other rules. The optional shared file is only read.
+Maintainer build and test instructions are in [advanced help](docs/advanced.md).
 
 
-Help and privacy
-----------------
+Automatic repository labels
+---------------------------
 
-[Report a problem](https://github.com/keenanselbee/codex-repo-companion/issues)
-| [Advanced help](docs/advanced.md)
-| [Release notes](CHANGELOG.md)
-
-Companion sends no chat content to an external service and has no telemetry.
-The optional message-based project detector reads local chat messages when enabled.
-[Privacy details](PRIVACY.md) | [MIT license](LICENSE.md)
-
-Contributions and upstream integration are welcome. Third-party software and
-materials retain their own licenses and terms; MIT covers Companion's own code,
-not permission to modify or redistribute OpenAI Codex.
-
-Independent project; not affiliated with or endorsed by OpenAI or Microsoft.
+In setup, enable **Automatic labels**, then start a new Codex chat. This adds
+only the reporting guidance and local helper; it does not enable project instruction
+routing or activity hooks. Auto labels follow the repositories the agent reports. Existing chats may not have loaded that guidance. Optional
+**Detect Chat Focus** can recognise explicit repository switches when an agent
+misses a report. Fixed labels remain unchanged until you select Auto under Label Behaviour.

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{csp}} 'unsafe-inline'; script-src 'nonce-{{nonce}}';">
+<link rel="stylesheet" href="{{style}}"><title>Navigator</title>
+</head><body>
+<section id="licensePage" hidden aria-label="Codex Navigator license">
+<div class="license-content">
+<h2>Codex Navigator</h2>
+<p id="licenseSandbox" hidden>Sandbox testing</p>
+<p id="licenseStatus" role="status">Checking license...</p>
+<p id="licenseOffer">$5 CAD once. All future updates. One active installation.</p>
+<p id="licenseEnds"></p>
+<div class="license-actions">
+<button id="licenseTrial" data-license="startTrial" class="setup-primary">Start 7-Day Trial</button>
+<button id="licenseBuy" data-license="buy" class="setup-primary">Buy for $5 CAD</button>
+<button id="licenseActivate" data-license="activate">Activate License</button>
+<button id="licenseValidate" data-license="validate">Check License</button>
+<button id="licenseBack" data-license="back">Back to Chats</button>
+</div>
+<p id="licenseNotice" role="alert"></p>
+<details><summary>Manage license and setup</summary>
+<div class="license-actions"><button id="licensePortal" data-license="portal">Open Customer Portal</button>
+<button id="licenseDeactivate" data-license="deactivate">Deactivate This Installation</button>
+<button id="licenseRecover" data-license="recover">Recover Licence</button>
+<button data-license="setup">Setup and Removal</button></div>
+<p>Your chats, labels and colours stay saved. Codex continues working independently.</p>
+</details>
+</div></section>
+<section id="welcomePage" hidden aria-label="Welcome to Codex Navigator"><button id="welcomeSetup" class="setup-primary">Set Up Codex Navigator</button><button id="continueWithoutSetup">Continue Without Setup</button><p class="welcome-tip">Tip: Drag the Navigator heading above the Codex heading to move it to the top.</p></section>
+<section id="chatPage">
+<div id="activityPrompt" hidden><button id="activitySetup">Set up activity indicators</button><button id="dismissActivityPrompt" aria-label="Dismiss activity setup reminder" title="Dismiss">&#215;</button></div>
+<div id="searchBox" hidden><input id="search" type="search" aria-label="Search chats" placeholder="Search chats" autocomplete="off"><button id="closeSearch" aria-label="Close search">×</button></div>
+<button id="filter" hidden title="Show all recent chats">Starred ×</button>
+<p id="message" role="status"></p>
+<div id="viewport" tabindex="-1" aria-label="Saved chats"><div id="chats"></div></div>
+</section>
+<section id="repositoryPage" hidden aria-label="Repository Colours"><div class="repository-heading"><button id="repositoryBack" aria-label="Back to chats">Back</button><strong>Repository Colours</strong></div><div id="repositoryList"></div></section>
+<section id="colourPage" hidden aria-label="Choose colour"></section>
+<script nonce="{{nonce}}" src="{{colourScript}}"></script>
+<script nonce="{{nonce}}" src="{{layout}}"></script>
+<script nonce="{{nonce}}" src="{{script}}"></script>
+</body></html>

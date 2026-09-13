@@ -31,12 +31,12 @@ test('repository label respects exact workspace folder names', () => {
 
 
 test('history commands require the clicked local chat identity and never fall back to focus', () => {
-  const valid = { webviewSection: 'repoCompanionChat', repoCompanionConversationKey: 'local/00000000-0000-0000-0000-000000000001' };
-  assert.equal(historyContextKey(valid), valid.repoCompanionConversationKey);
-  for (const input of [undefined, null, {}, [], valid.repoCompanionConversationKey,
-    { ...valid, webviewSection: 'editor' }, { ...valid, repoCompanionConversationKey: 'local/new' },
-    { ...valid, repoCompanionConversationKey: 'remote/a' },
-    { ...valid, repoCompanionConversationKey: valid.repoCompanionConversationKey + '/extra' }]) {
+  const valid = { webviewSection: 'codexNavigatorChat', codexNavigatorConversationKey: 'local/00000000-0000-0000-0000-000000000001' };
+  assert.equal(historyContextKey(valid), valid.codexNavigatorConversationKey);
+  for (const input of [undefined, null, {}, [], valid.codexNavigatorConversationKey,
+    { ...valid, webviewSection: 'editor' }, { ...valid, codexNavigatorConversationKey: 'local/new' },
+    { ...valid, codexNavigatorConversationKey: 'remote/a' },
+    { ...valid, codexNavigatorConversationKey: valid.codexNavigatorConversationKey + '/extra' }]) {
     assert.equal(historyContextKey(input), undefined);
   }
 });

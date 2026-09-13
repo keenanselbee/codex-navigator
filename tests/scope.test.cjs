@@ -58,7 +58,7 @@ test('subagent metadata, mismatched identity, and malformed reports fail closed'
   assert.equal(parseScopeReport({ version: 1, threadId: b, roots: [f.repo], reportedAt: Date.now() }, a), undefined);
   assert.equal(parseScopeReport({ version: 1, threadId: a, roots: ['relative'], reportedAt: Date.now() }, a), undefined);
   await writeScopeReport(f.root, a, []);
-  await fs.writeFile(path.join(f.root, 'repo-companion', 'reports', a + '.json'), '{partial');
+  await fs.writeFile(path.join(f.root, 'codex-navigator', 'reports', a + '.json'), '{partial');
   assert.equal(await readScopeReport(f.root, a), undefined);
 });
 

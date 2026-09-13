@@ -56,6 +56,6 @@ test('settings/global instruction changes and loss of workspace trust stop the p
     if (change === 'trust') f.api.workspace.isTrusted = false;
     await assert.rejects(f.save({ main: '', scopes: [], fallbackNames: [] }));
     assert.equal(f.updates.length, 0);
-    assert.ok(!fs.existsSync(path.join(f.home, 'repo-companion')));
+    assert.ok(!fs.existsSync(path.join(f.home, 'codex-navigator')));
   }
 });

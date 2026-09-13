@@ -6,7 +6,7 @@ import { sameRoot } from './model';
 import { absolutePath, validateFallbackNames } from './routing-config';
 
 export function routingChoices() {
-  const config = vscode.workspace.getConfiguration('codexRepoCompanion');
+  const config = vscode.workspace.getConfiguration('codexNavigator');
   return { main: config.get('mainInstructionsFile', ''), scopes: config.get<string[]>('instructionScope', []),
     fallbackNames: config.get<string[]>('instructionFallbackNames', []), enabled: config.get('instructionRouting', false) };
 }
@@ -29,7 +29,7 @@ export async function saveRoutingChoices(input: unknown, previous: ReturnType<ty
   if (!value.scopes.every(scope => existsSync(scope) && statSync(scope).isDirectory())) { throw new Error('Choose existing project folders.'); }
   if (JSON.stringify(routingChoices()) !== JSON.stringify(previous)) { throw new Error('Settings changed elsewhere. Refresh this page before saving.'); }
   installAgentHelper(plan);
-  const config = vscode.workspace.getConfiguration('codexRepoCompanion');
+  const config = vscode.workspace.getConfiguration('codexNavigator');
   await config.update('mainInstructionsFile', value.main, vscode.ConfigurationTarget.Workspace);
   await config.update('instructionScope', value.scopes, vscode.ConfigurationTarget.Workspace);
   await config.update('instructionFallbackNames', value.fallbackNames, vscode.ConfigurationTarget.Workspace);

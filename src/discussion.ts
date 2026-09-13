@@ -23,13 +23,17 @@ export function userRequest(text: string): string {
   const marker = /^## My request:\s*$/m.exec(text);
   if (marker) { text = text.slice(marker.index + marker[0].length); }
   else if (/^\s*(?:<(?:environment_context|INSTRUCTIONS|recommended_plugins|send_user_message)|# (?:AGENTS\.md instructions|Context from my IDE setup))/i.test(text)) { return ''; }
-  return text.replace(/```[\s\S]*?(?:```|$)/g, '').split('\n').filter(line => !/^\s*>/.test(line)).join('\n').trim();
+  return text.replace(/```[\s\S]*?(?:```|$)/g, '').replace(/"[^"\n]*(?:\n[^"\n]*)*"|\u201c[^\u201d]*\u201d/g, quote => /\n|\b(?:focus|switch|talk about|work on|review)\b/i.test(quote) ? '' : quote).split('\n').filter(line => !/^\s*>/.test(line)).join('\n').trim();
 }
 
 export function detectDiscussion(text: string, projects: ProjectName[]): string[] | undefined {
   const request = userRequest(text);
   if (!request || request.length > 32768) { return; }
-  const prefix = /^(?:(?:ok(?:ay)?|yes)[, ]+)?(?:(?:now|instead|next)[, ]+)?(?:(?:let['\u2019]?s|let us|please|can we|could we|can you|could you|i want to|we should)\s+)?(?:(?:focus|focsu|foucs|focs)\s+(?:on|back on)|(?:switch|swich|swtich|move|return)\s+(?:to|back to)|(?:work|working|continue working)\s+on|(?:discuss|revisit|review)|look\s+at|talk\s+about|(?:back|continue)\s+(?:to|with))\s+/i;
+  // Explicit write restrictions also cover inferred metadata updates.
+  if (/\b(?:AUDIT|DNE|read[ -]only)\b/i.test(request)
+    || /\b(?:do not|don['\u2019]t|never)\s+(?:\w+\s+){0,3}(?:write|edit|modify|change|update|save|touch)\b/i.test(request)
+    || /\bno\s+(?:writes|edits|changes)\b/i.test(request)) return;
+  const prefix = /^(?:(?:ok(?:ay)?|yes)[, ]+)?(?:(?:now|instead|next)[, ]+)?(?:(?:let['\u2019]?s|lelts|ltes|let us|please|can we|could we|can you|could you|i want to|we should)\s+)?(?:(?:focus|focsu|foucs|focs)\s+(?:on|back on)|(?:switch|swich|swtich|move|return)\s+(?:to|back to)|(?:work|working|continue working)\s+on|(?:discuss|revisit|review)|look\s+at|talk\s+about|(?:back|continue)\s+(?:to|with))\s+/i;
   let latest: string[] | undefined;
   for (const sentence of request.split(/\n|[.!?]\s+/)) {
     const value = sentence.trim();

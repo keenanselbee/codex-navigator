@@ -108,13 +108,13 @@ test('managed guidance and readable saved settings survive a missing routing hel
   await saveProfile(home, profile);
   const plan = prepareAgentHelper(home);
   installAgentHelper(plan);
-  await fs.unlink(path.join(home, 'repo-companion', 'routing.js'));
+  await fs.unlink(path.join(home, 'codex-navigator', 'routing.js'));
   const guidance = await fs.readFile(plan.instructions, 'utf8');
-  const fallbackFile = path.join(home, 'repo-companion', 'fallback.md');
+  const fallbackFile = path.join(home, 'codex-navigator', 'fallback.md');
   assert.ok(guidance.includes(fallbackFile));
   assert.ok(!guidance.includes('fallbackNames'), 'detailed recovery is not loaded into every chat');
   const fallback = await fs.readFile(fallbackFile, 'utf8');
-  assert.ok(fallback.includes(path.join(home, 'repo-companion', 'routing-config')));
+  assert.ok(fallback.includes(path.join(home, 'codex-navigator', 'routing-config')));
   assert.ok(fallback.includes('enabled: false'));
   assert.ok(fallback.includes('AGENTS.override.md') && fallback.includes('fallbackNames'));
   const selected = selectProfile(repo, await readProfiles(home));
@@ -155,18 +155,18 @@ test('installed routing resolves shared and nested instructions with no bridge o
   const nested = path.join(repo, 'src'); await fs.mkdir(nested);
   const projectRules = path.join(repo, 'AGENTS.md'), nestedRules = path.join(nested, 'AGENTS.override.md');
   await fs.writeFile(projectRules, 'Project rules'); await fs.writeFile(nestedRules, 'Nested rules');
-  const result = JSON.parse(execFileSync(process.execPath, [path.join(home, 'repo-companion', 'routing.js'),
+  const result = JSON.parse(execFileSync(process.execPath, [path.join(home, 'codex-navigator', 'routing.js'),
     '--target', repo, '--file', path.join(nested, 'index.ts')], {
     env: { ...process.env, CODEX_HOME: home, CODEX_THREAD_ID: id }, windowsHide: true, encoding: 'utf8',
   }));
   assert.equal(result.status, 'enabled');
   assert.deepEqual(result.instructions, [main, path.join(home, 'AGENTS.md'), projectRules, nestedRules]);
-  await assert.rejects(fs.access(path.join(home, 'repo-companion', 'routing')));
+  await assert.rejects(fs.access(path.join(home, 'codex-navigator', 'routing')));
   const { routingStatus } = require('../dist/routing-status');
   const plan = prepareAgentHelper(home);
   const choices = { enabled: true, main, scopes: profile.scopes, fallbackNames: profile.fallbackNames };
   assert.equal((await routingStatus(plan, choices, profile.workspace, profile.scopes, [repo])).label, 'Ready');
-  await fs.unlink(path.join(home, 'repo-companion', 'model.js'));
+  await fs.unlink(path.join(home, 'codex-navigator', 'model.js'));
   assert.equal((await routingStatus(plan, choices, profile.workspace, profile.scopes, [repo])).label, 'Needs attention');
   assert.equal((await routingStatus(plan, { ...choices, enabled: false }, profile.workspace, profile.scopes, [repo])).label, 'Off');
 });

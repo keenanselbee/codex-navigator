@@ -2,7 +2,7 @@
 const api = acquireVsCodeApi(), el = id => document.getElementById(id);
 const presets = [['Red', '#E45B65'], ['Orange', '#E58C42'], ['Yellow', '#C8AC36'], ['Green', '#4EA876'],
   ['Teal', '#35A7AE'], ['Blue', '#6B8AFD'], ['Purple', '#A37DE0'], ['Pink', '#D66BAD']];
-let colour = null, state;
+let colour = null, state, lastSwatch;
 function normalise(value) {
   const text = value.trim();
   if (/^#[0-9a-f]{6}$/i.test(text)) return text.toUpperCase();
@@ -17,6 +17,7 @@ function render() {
   for (const button of el('presets').children) button.setAttribute('aria-pressed', String(button.dataset.colour === colour));
 }
 function select(value) {
+  lastSwatch = undefined;
   colour = value;
   el('hex').value = value ?? '';
   el('picker').value = value ?? state.inherited ?? '#6B8AFD';
@@ -26,7 +27,10 @@ for (const [name, value] of presets) {
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'swatch swatch-' + name.toLowerCase(); button.dataset.colour = value;
   button.textContent = name; button.title = name + ' ' + value; button.disabled = true;
-  button.addEventListener('click', () => select(value)); el('presets').append(button);
+  button.addEventListener('click', () => {
+    if (state && lastSwatch === value && colour === value) { api.postMessage({ type: 'apply', colour }); return; }
+    select(value); lastSwatch = value;
+  }); el('presets').append(button);
 }
 window.addEventListener('message', event => {
   if (state) return;
@@ -39,6 +43,7 @@ window.addEventListener('message', event => {
 });
 el('picker').addEventListener('input', () => select(normalise(el('picker').value)));
 el('hex').addEventListener('input', () => {
+  lastSwatch = undefined;
   colour = normalise(el('hex').value);
   if (colour) el('picker').value = colour;
   render();

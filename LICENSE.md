@@ -1,22 +1,77 @@
-MIT License
-===========
+Codex Navigator Source-Available License
+========================================
 
-Copyright (c) 2026 Keenan Selbee
+Copyright (c) 2026 Keenan Selbee. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This license applies to Codex Navigator source code, documentation, assets and
+official release packages supplied under this license (the "Software").
+"Licensor" means Keenan Selbee.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Permitted use
+-------------
+
+You may download, install, run and use unmodified official Codex Navigator
+releases for your own personal or internal business purposes during a seven-day
+(168-hour) trial, starting when you choose Start 7-Day Trial, or under a valid
+paid licence. A $5 CAD one-time purchase includes all future Codex Navigator
+updates and permits one active installation at a time. You may transfer that
+installation by deactivating it before activating another. Context Suite is a
+separate purchase. Applicable taxes are shown at checkout.
+
+Paid access requires periodic online validation. Offline access lasts up to
+30 days after successful validation, subject to earlier licence expiry or known
+revocation. You may make copies reasonably necessary for permitted installation,
+operation and personal backup. Licence management, settings and removal of
+Navigator hooks and guidance remain available after access expires; expiry does
+not delete your saved data or restrict use of Codex itself.
+
+You may view and inspect the published source, including downloading a private
+copy and compiling and running its published component tests solely for
+inspection. These inspection permissions are free of charge. They do not grant
+access to unpublished private source or permission to distribute or use a
+replacement application build.
+
+Restrictions
+------------
+
+Except for the permissions above, applicable mandatory law, or the Licensor's
+prior written permission, you may not:
+
+- Reuse or incorporate any part of the source code in another project or product.
+- Modify the Software, create derivative works, build releases from its source,
+  or bypass its commercial access controls.
+- Publish, distribute, redistribute, sublicense, sell or otherwise supply copies
+  of the source code, modified versions, or official release packages to others.
+- Remove or obscure copyright, license or attribution notices.
+
+Use the normal settings and setup actions supplied by an official release freely;
+these supported operations are permitted use and are not prohibited modifications.
+Linking others to the official project or release download is permitted.
+For permissions beyond this license, contact Keenan Selbee through the official
+project's contact channels. No trademark rights or endorsement are granted.
+
+Earlier versions and third-party material
+-----------------------------------------
+
+This license does not revoke, replace or restrict permissions already granted
+for copies released under the MIT license, an earlier version of this license
+(including earlier free official releases), or another license. Those copies remain
+subject to their original terms. Third-party material, if any, remains subject to
+its own license; this license does not override those rights or requirements.
+This is a source-available license, not an open-source license.
+
+Termination
+-----------
+
+The permissions granted by this license terminate if you violate its terms.
+On termination, stop using and delete copies held under this license, except
+copies you are required by law to retain or are independently entitled to keep.
+
+Disclaimer
+----------
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW,
+THE LICENSOR IS NOT LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE OR OTHER DEALINGS.

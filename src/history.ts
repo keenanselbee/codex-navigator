@@ -9,6 +9,7 @@ export interface RecentConversation {
   id: string;
   title: string;
   updatedAt: string;
+  recencyAt?: number;
 }
 
 export function parseRecentConversations(text: string): RecentConversation[] {

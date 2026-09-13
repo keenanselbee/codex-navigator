@@ -58,4 +58,6 @@ test('eight presets, picker and hex stay synced; invalid input blocks apply and 
   el('apply').events.click(); assert.equal(sent.length, 1);
   el('reset').events.click(); assert.equal(el('apply').disabled, false); assert.equal(sent.length, 1);
   el('apply').events.click(); assert.equal(sent.at(-1).colour, null);
+  const before=sent.length;el('presets').children[0].events.click();assert.equal(sent.length,before,'first click previews');
+  el('presets').children[0].events.click();assert.equal(sent.length,before+1);assert.equal(sent.at(-1).colour,'#E45B65');
 });

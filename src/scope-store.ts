@@ -20,7 +20,7 @@ export function parseScopeReport(value: unknown, id: string): ScopeReport | unde
 export async function readScopeReport(home: string, id: string, kind: 'reports' | 'corrections' = 'reports'): Promise<ScopeReport | undefined> {
   if (!threadIdPattern.test(id)) { return; }
   try {
-    const file = await open(path.join(home, 'repo-companion', kind, id + '.json'), 'r');
+    const file = await open(path.join(home, 'codex-navigator', kind, id + '.json'), 'r');
     try {
       if ((await file.stat()).size > 65536) { return; }
       return parseScopeReport(JSON.parse(await file.readFile('utf8')), id);
@@ -38,7 +38,7 @@ export async function writeScopeReport(home: string, id: string, roots: string[]
     && (!correction || previous.reportedAt >= correction.reportedAt)) { return false; }
   const record = parseScopeReport({ version: 1, threadId: id, roots, reportedAt: Date.now() }, id);
   if (!record) { throw new Error('Invalid scope report.'); }
-  const directory = path.join(home, 'repo-companion', kind);
+  const directory = path.join(home, 'codex-navigator', kind);
   await mkdir(directory, { recursive: true });
   const temporary = path.join(directory, id + '.' + randomUUID() + '.pending');
   await writeFile(temporary, JSON.stringify(record), { flag: 'wx' });
@@ -117,7 +117,7 @@ export class SessionIndex {
 export async function reportedThreadIds(home: string, kind: 'reports' | 'corrections' = 'reports'): Promise<string[]> {
   const ids: string[] = [];
   try {
-    const directory = await opendir(path.join(home, 'repo-companion', kind));
+    const directory = await opendir(path.join(home, 'codex-navigator', kind));
     for await (const entry of directory) {
       if (ids.length >= 2000) { break; }
       const id = entry.name.replace(/\.json$/, '');

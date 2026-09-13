@@ -1,11 +1,11 @@
 {
-  "name": "codex-repo-companion",
-  "displayName": "Codex Repo Companion",
-  "description": "Organise Codex chats with project labels and stars, and find the right AGENTS.md.",
-  "version": "1.1.8",
+  "name": "codex-navigator",
+  "displayName": "Codex Navigator",
+  "description": "Find your Codex chats with project labels, colours, stars, activity indicators and goal controls.",
+  "version": "1.5.0",
   "publisher": "keenanselbee",
   "private": true,
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE.md",
   "engines": {
     "vscode": "^1.137.0"
   },
@@ -33,222 +33,354 @@
   "contributes": {
     "commands": [
       {
-        "command": "codexRepoCompanion.setUp",
-        "title": "Set Up Repo Companion",
-        "category": "Codex Repo Companion"
+        "command": "codexNavigator.setUp",
+        "title": "Set Up Codex Navigator",
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.restoreCodex",
-        "title": "Restore Codex",
-        "category": "Codex Repo Companion"
-      },
-      {
-        "command": "codexRepoCompanion.setUpAgentHelper",
+        "command": "codexNavigator.setUpAgentHelper",
         "title": "Set Up Routing",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.scopeMenu",
+        "command": "codexNavigator.scopeMenu",
         "title": "Manage Chat Repository Scope",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.useAutomaticScope",
+        "command": "codexNavigator.useAutomaticScope",
         "title": "Use Automatic Chat Scope",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.openSavedChat",
+        "command": "codexNavigator.openSavedChat",
         "title": "Open Saved Codex Chat",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.assignRepository",
+        "command": "codexNavigator.assignRepository",
         "title": "Assign Repository to Chat",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.clearRepository",
+        "command": "codexNavigator.clearRepository",
         "title": "Clear Chat Repository",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.diagnostics",
-        "title": "Show Integration Status",
-        "category": "Codex Repo Companion"
+        "command": "codexNavigator.diagnostics",
+        "title": "Show Navigator Status",
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.chooseHistoryRepository",
-        "title": "Choose Repository...",
-        "category": "Codex Repo Companion"
-      },
-      {
-        "command": "codexRepoCompanion.autoHistoryScope",
-        "title": "Use Automatic Labels",
-        "category": "Codex Repo Companion"
-      },
-      {
-        "command": "codexRepoCompanion.clearHistoryLabels",
-        "title": "Clear Labels",
-        "category": "Codex Repo Companion"
-      },
-      {
-        "command": "codexRepoCompanion.setCustomLabel",
+        "command": "codexNavigator.setCustomLabel",
         "title": "Custom Label...",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.customHistoryLabel",
-        "title": "Custom Label...",
-        "category": "Codex Repo Companion"
-      },
-      {
-        "command": "codexRepoCompanion.setRepositoryAlias",
+        "command": "codexNavigator.setRepositoryAlias",
         "title": "Set Repository Alias",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.associateLabelRepository",
+        "command": "codexNavigator.associateLabelRepository",
         "title": "Associate Custom Label with Repository",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.toggleStar",
+        "command": "codexNavigator.toggleStar",
         "title": "Star / Unstar Chat",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.starHistoryChat",
-        "title": "Star / Unstar Chat",
-        "category": "Codex Repo Companion"
-      },
-      {
-        "command": "codexRepoCompanion.openStarredChats",
+        "command": "codexNavigator.openStarredChats",
         "title": "Open Starred Chats",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.setChatColour",
+        "command": "codexNavigator.setChatColour",
         "title": "Chat Colour...",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
       },
       {
-        "command": "codexRepoCompanion.chatHistoryColour",
-        "title": "Chat Colour...",
-        "category": "Codex Repo Companion"
-      },
-      {
-        "command": "codexRepoCompanion.setRepositoryColour",
+        "command": "codexNavigator.setRepositoryColour",
         "title": "Repository Colour...",
-        "category": "Codex Repo Companion"
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.showChats",
+        "title": "Show Navigator",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.refreshChats",
+        "title": "Refresh Navigator Chats",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.searchChats",
+        "title": "Search Chats",
+        "category": "Codex Navigator",
+        "icon": "$(search)"
+      },
+      {
+        "command": "codexNavigator.filterChats",
+        "title": "Toggle Starred Chats",
+        "category": "Codex Navigator",
+        "icon": "$(star)"
+      },
+      {
+        "command": "codexNavigator.newSidebarChat",
+        "title": "New Chat in Codex",
+        "category": "Codex Navigator",
+        "icon": "$(add)"
+      },
+      {
+        "command": "codexNavigator.sidebar.repositories",
+        "title": "Choose Repository...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.label",
+        "title": "Custom Label...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.colour",
+        "title": "Chat Colour...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.associate",
+        "title": "Associate Custom Label with Repository...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.automatic",
+        "title": "Use Automatic Labels",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.clear",
+        "title": "Clear",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.setUpActivity",
+        "title": "Set Up Activity Indicators",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.openSettings",
+        "title": "Extension Settings",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.license",
+        "title": "License",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.hide",
+        "title": "Hide Chat",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.restoreHiddenChats",
+        "title": "Restore Hidden Chats...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.showRepositoryColours",
+        "title": "Repository Colours",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.scope",
+        "title": "Label Behaviour...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.sidebar.repositoryColour",
+        "title": "Change Colour...",
+        "category": "Codex Navigator"
       }
     ],
     "menus": {
       "editor/title/context": [
         {
-          "command": "codexRepoCompanion.assignRepository",
+          "command": "codexNavigator.assignRepository",
           "when": "resourceScheme == openai-codex",
-          "group": "codexRepoCompanion"
+          "group": "codexNavigator"
         },
         {
-          "command": "codexRepoCompanion.setCustomLabel",
+          "command": "codexNavigator.setCustomLabel",
           "when": "resourceScheme == openai-codex",
-          "group": "codexRepoCompanion"
+          "group": "codexNavigator"
         },
         {
-          "command": "codexRepoCompanion.clearRepository",
+          "command": "codexNavigator.clearRepository",
           "when": "resourceScheme == openai-codex",
-          "group": "codexRepoCompanion"
+          "group": "codexNavigator"
         },
         {
-          "command": "codexRepoCompanion.toggleStar",
+          "command": "codexNavigator.toggleStar",
           "when": "resourceScheme == openai-codex",
-          "group": "codexRepoCompanion"
+          "group": "codexNavigator"
         },
         {
-          "command": "codexRepoCompanion.setChatColour",
+          "command": "codexNavigator.setChatColour",
           "when": "resourceScheme == openai-codex",
-          "group": "codexRepoCompanion"
+          "group": "codexNavigator"
         }
       ],
       "webview/context": [
         {
-          "command": "codexRepoCompanion.chooseHistoryRepository",
-          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
-          "group": "repoCompanion@1"
+          "command": "codexNavigator.sidebar.repositories",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "2_navigator@1"
         },
         {
-          "command": "codexRepoCompanion.customHistoryLabel",
-          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
-          "group": "repoCompanion@1a"
+          "command": "codexNavigator.sidebar.label",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "2_navigator@2"
         },
         {
-          "command": "codexRepoCompanion.autoHistoryScope",
-          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
-          "group": "repoCompanion@2"
+          "command": "codexNavigator.sidebar.colour",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "2_navigator@3"
         },
         {
-          "command": "codexRepoCompanion.clearHistoryLabels",
-          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
-          "group": "repoCompanion@3"
+          "command": "codexNavigator.sidebar.associate",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat && navigatorHasCustomLabel",
+          "group": "2_navigator@4"
         },
         {
-          "command": "codexRepoCompanion.chatHistoryColour",
-          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
-          "group": "repoCompanion@4"
+          "command": "codexNavigator.sidebar.clear",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "3_navigator@3"
+        },
+        {
+          "command": "codexNavigator.sidebar.hide",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "z_navigator_hide@1"
+        },
+        {
+          "command": "codexNavigator.sidebar.scope",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
+          "group": "3_navigator@2"
+        },
+        {
+          "command": "codexNavigator.sidebar.repositoryColour",
+          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorRepository",
+          "group": "2_navigator@1"
         }
       ],
       "commandPalette": [
         {
-          "command": "codexRepoCompanion.chooseHistoryRepository",
+          "command": "codexNavigator.sidebar.repositories",
           "when": "false"
         },
         {
-          "command": "codexRepoCompanion.autoHistoryScope",
+          "command": "codexNavigator.sidebar.label",
           "when": "false"
         },
         {
-          "command": "codexRepoCompanion.clearHistoryLabels",
+          "command": "codexNavigator.sidebar.colour",
           "when": "false"
         },
         {
-          "command": "codexRepoCompanion.customHistoryLabel",
+          "command": "codexNavigator.sidebar.associate",
           "when": "false"
         },
         {
-          "command": "codexRepoCompanion.starHistoryChat",
+          "command": "codexNavigator.sidebar.automatic",
           "when": "false"
         },
         {
-          "command": "codexRepoCompanion.chatHistoryColour",
+          "command": "codexNavigator.sidebar.clear",
           "when": "false"
+        },
+        {
+          "command": "codexNavigator.sidebar.hide",
+          "when": "false"
+        },
+        {
+          "command": "codexNavigator.sidebar.scope",
+          "when": "false"
+        },
+        {
+          "command": "codexNavigator.sidebar.repositoryColour",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "codexNavigator.license",
+          "when": "view == codexNavigator.chats",
+          "group": "1_navigator@7"
+        },
+        {
+          "command": "codexNavigator.searchChats",
+          "when": "view == codexNavigator.chats",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codexNavigator.newSidebarChat",
+          "when": "view == codexNavigator.chats",
+          "group": "navigation@2"
+        },
+        {
+          "command": "codexNavigator.filterChats",
+          "when": "view == codexNavigator.chats",
+          "group": "1_navigator@1"
+        },
+        {
+          "command": "codexNavigator.showRepositoryColours",
+          "when": "view == codexNavigator.chats",
+          "group": "1_navigator@2"
+        },
+        {
+          "command": "codexNavigator.refreshChats",
+          "when": "view == codexNavigator.chats",
+          "group": "1_navigator@3"
+        },
+        {
+          "command": "codexNavigator.setUp",
+          "when": "view == codexNavigator.chats",
+          "group": "1_navigator@4"
+        },
+        {
+          "command": "codexNavigator.openSettings",
+          "when": "view == codexNavigator.chats",
+          "group": "zz_navigator_settings@1"
+        },
+        {
+          "command": "codexNavigator.restoreHiddenChats",
+          "when": "view == codexNavigator.chats",
+          "group": "1_navigator@6"
         }
       ]
     },
     "configuration": {
-      "title": "Codex Repo Companion",
+      "title": "Codex Navigator",
       "properties": {
-        "codexRepoCompanion.detectChatFocus": {
+        "codexNavigator.detectChatFocus": {
           "type": "boolean",
           "default": false,
           "markdownDescription": "Try to spot clear project changes in your messages. When off, wait for Codex to report the project. Open editor tabs do not choose the project."
         },
-        "codexRepoCompanion.silentMode": {
+        "codexNavigator.silentMode": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "Keep background warnings in the Output panel instead of showing popups. Commands you run still show errors."
         },
-        "codexRepoCompanion.showTabPrefix": {
+        "codexNavigator.keepManualLabelsFixed": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Show project labels on Codex chats. [Set Up Repo Companion](command:codexRepoCompanion.setUp) installs the optional chat integration. Turning this off hides labels; stars remain available."
+          "markdownDescription": "Keep new manual label choices fixed. This affects labels only, not chat position or age filtering. Unless explicitly configured, repository selections in multi-repository workspaces stay in Auto; single-repository choices and custom text retain the default below. Existing fixed labels are unchanged until you make another choice."
         },
-        "codexRepoCompanion.pinManualLabels": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Keep labels you choose until you change them. Turn off to let later project changes update new labels you choose."
-        },
-        "codexRepoCompanion.repositoryAliases": {
+        "codexNavigator.repositoryAliases": {
           "type": "object",
           "default": {},
           "additionalProperties": {
@@ -258,31 +390,31 @@
           },
           "markdownDescription": "Friendly names for your repositories. Use the Set Repository Alias command to add or change a name."
         },
-        "codexRepoCompanion.hideRedundantRepositoryLabels": {
+        "codexNavigator.hideRedundantRepositoryLabels": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "Hide an automatic label when it only repeats the one repository open here. Keep custom labels and labels you choose."
         },
-        "codexRepoCompanion.instructionRouting": {
+        "codexNavigator.instructionRouting": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Help Codex read the right rules when you switch projects. [Set Up Repo Companion](command:codexRepoCompanion.setUp) to choose a shared rules file, pick your project folders, and turn this on.\n\nSetup adds a section to your global instructions and keeps your other rules. Turning this off also turns off the backup routing method."
+          "markdownDescription": "Help Codex read the right rules when you switch projects. [Set Up Codex Navigator](command:codexNavigator.setUp) to choose a shared rules file, pick your project folders, and turn this on.\n\nSetup adds a section to your global instructions and keeps your other rules. Turning this off also turns off the backup routing method."
         },
-        "codexRepoCompanion.mainInstructionsFile": {
+        "codexNavigator.mainInstructionsFile": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Optional shared rules file to read before each project's own rules. Leave blank to use project rules only. This file is read, not changed.\n\n[Set Up Repo Companion](command:codexRepoCompanion.setUp) lets you choose the file. It should be separate from your global Codex instructions."
+          "markdownDescription": "Optional shared rules file to read before each project's own rules. Leave blank to use project rules only. This file is read, not changed.\n\n[Set Up Codex Navigator](command:codexNavigator.setUp) lets you choose the file. It should be separate from your global Codex instructions."
         },
-        "codexRepoCompanion.instructionScope": {
+        "codexNavigator.instructionScope": {
           "type": "array",
           "default": [],
           "maxItems": 64,
           "items": {
             "type": "string"
           },
-          "markdownDescription": "Project folders that use these rules. Leave empty to use the folders in this workspace. Choose a parent folder to include all projects inside it.\n\n[Set Up Repo Companion](command:codexRepoCompanion.setUp) can help you choose. Saved choices still work after this window closes."
+          "markdownDescription": "Project folders that use these rules. Leave empty to use the folders in this workspace. Choose a parent folder to include all projects inside it.\n\n[Set Up Codex Navigator](command:codexNavigator.setUp) can help you choose. Saved choices still work after this window closes."
         },
-        "codexRepoCompanion.instructionFallbackNames": {
+        "codexNavigator.instructionFallbackNames": {
           "type": "array",
           "default": [],
           "maxItems": 16,
@@ -293,25 +425,69 @@
           },
           "markdownDescription": "Extra rules filenames to check if a folder has no AGENTS.override.md or AGENTS.md. For example: TEAM_GUIDE.md. Enter filenames only, in the order to check them. Most users can leave this empty."
         },
-        "codexRepoCompanion.repositoryColours": {
+        "codexNavigator.repositoryColours": {
           "type": "object",
           "scope": "application",
           "default": {},
           "additionalProperties": {
             "type": "string",
-            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+            "pattern": "^(none|#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))$"
           },
-          "markdownDescription": "Colours for repositories across workspaces. Use Repository Colour to choose a preset, custom picker or hex colour. Chats inherit their repositories' colours unless you choose a chat colour."
+          "markdownDescription": "Custom repository colours across workspaces, or \"none\" to disable one. Multi-repository workspaces assign stable automatic colours to uncoloured repositories. Repository Colour offers Automatic, Custom and No colour. Chats inherit or blend repository colours unless overridden."
+        },
+        "codexNavigator.highlightRecentlyViewedChats": {
+          "type": "boolean",
+          "default": true,
+          "description": "Highlight chats opened through Navigator with their label colour, fading over Highlight Duration Seconds. Does not affect the hover outline."
+        },
+        "codexNavigator.highlightOnlyLastViewedChat": {
+          "type": "boolean",
+          "default": false,
+          "description": "Highlight only the last chat opened through Navigator. Requires Highlight Recently Viewed Chats. The highlight still fades over three minutes."
+        },
+        "codexNavigator.recentChatsOnly": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show chats with Codex recency or a Navigator selection within the last 24 hours. Chats with unavailable recency remain visible. Hidden chats stay hidden until restored."
+        },
+        "codexNavigator.agentRepositoryLabels": {
+          "type": "boolean",
+          "scope": "application",
+          "default": false,
+          "markdownDescription": "Follow repository reports from agents for chats using Auto labels. Enable Automatic labels in [Set Up Codex Navigator](command:codexNavigator.setUp) to install the reporting guidance, then start a new chat. Independent of activity hooks and project instruction routing. Turning this off keeps existing labels."
+        },
+        "codexNavigator.highlightDurationSeconds": {
+          "type": "integer",
+          "default": 180,
+          "minimum": 1,
+          "maximum": 3600,
+          "description": "How long each chat highlight fades, in seconds (1?3600). Applies to both highlight modes. Revisiting a chat restarts its timer."
         }
       }
+    },
+    "views": {
+      "codexSecondaryViewContainer": [
+        {
+          "id": "codexNavigator.chats",
+          "name": "Navigator",
+          "type": "webview",
+          "visibility": "visible",
+          "icon": "media/icon.png"
+        }
+      ]
     }
   },
   "scripts": {
-    "compile": "tsc -p .",
+    "compile": "node tools/compile.cjs",
+    "build": "node tools/build.cjs",
     "test": "npm run compile && node --test tests/*.test.cjs",
-    "test:integration": "npm run compile && node tools/run-integration.cjs",
+    "test:public-only": "node tools/test-public-only.cjs",
+    "test:commercial": "npm run build && node --test proprietary/tests/*.test.cjs",
+    "test:integration": "npm run build && node tools/run-integration.cjs",
+    "test:package": "npm run build && node tools/test-package.cjs",
+    "test:installed": "npm run build && node tools/test-installed.cjs",
     "package": "node tools/package.cjs",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
     "@types/node": "22.20.2",
@@ -324,11 +500,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/keenanselbee/codex-repo-companion.git"
+    "url": "https://github.com/keenanselbee/codex-navigator.git"
   },
-  "homepage": "https://github.com/keenanselbee/codex-repo-companion#readme",
+  "homepage": "https://github.com/keenanselbee/codex-navigator#readme",
   "bugs": {
-    "url": "https://github.com/keenanselbee/codex-repo-companion/issues"
+    "url": "https://github.com/keenanselbee/codex-navigator/issues"
   },
   "keywords": [
     "codex",

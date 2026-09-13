@@ -79,3 +79,15 @@ test('repository aliases are additional detection names, with ambiguity still re
   const ambiguous=projectNames([root,other],[{fsPath:root,name:'Private Project'},{fsPath:other,name:'Private Project'}]);
   assert.equal(detectDiscussion('Focus on Private Project',ambiguous),undefined);
 });
+
+test('acknowledgement focus tolerates the reported cue and name typos',()=>{
+ assert.deepEqual(detectDiscussion('lelts talk about keenansellbee.com reply ok',projects),['website']);
+ assert.deepEqual(detectDiscussion('ltes focus on Context Suite',projects),['parent']);
+ assert.deepEqual(detectDiscussion('Focus on "Context Suite"',projects),['parent']);
+ for(const text of ['"Previous request:\nlelts talk about keenansellbee.com\nreply ok"\nWhy did this fail?', 'Example: "Switch to proprietary. Focus on Context Suite"', 'Do not update metadata. Focus on Context Suite', 'Focus on Context Suite; read-only', 'AUDIT\nFocus on Context Suite', 'Focus on Context Suite, no changes', "Focus on Context Suite but don't write anything"])
+  assert.equal(detectDiscussion(text,projects),undefined,text);
+});
+
+test('smart apostrophes preserve explicit no-write restrictions',()=>{
+ assert.equal(detectDiscussion('Focus on Context Suite but don\u2019t change metadata',projects),undefined);
+});

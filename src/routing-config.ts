@@ -46,7 +46,7 @@ export function validateProfile(value: unknown): asserts value is RoutingProfile
 export function profileFilename(home: string, workspace: string): string {
   const normalized = path.resolve(workspace);
   const key = process.platform === 'win32' ? normalized.toLowerCase() : normalized;
-  return path.join(home, 'repo-companion', 'routing-config', createHash('sha256').update(key).digest('hex') + '.json');
+  return path.join(home, 'codex-navigator', 'routing-config', createHash('sha256').update(key).digest('hex') + '.json');
 }
 
 export async function saveProfile(home: string, profile: RoutingProfile): Promise<void> {
@@ -77,14 +77,14 @@ export async function saveProfile(home: string, profile: RoutingProfile): Promis
 
 export async function readProfiles(home: string): Promise<RoutingProfile[]> {
   let directory;
-  try { directory = await opendir(path.join(home, 'repo-companion', 'routing-config')); }
+  try { directory = await opendir(path.join(home, 'codex-navigator', 'routing-config')); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { return []; } throw error; }
   const profiles: RoutingProfile[] = [];
   let count = 0;
   for await (const entry of directory) {
     if (++count > 256) { throw new Error('Too many saved routing records; routing was not inferred.'); }
     if (!entry.isFile() || !entry.name.endsWith('.json')) { continue; }
-    const filename = path.join(home, 'repo-companion', 'routing-config', entry.name);
+    const filename = path.join(home, 'codex-navigator', 'routing-config', entry.name);
     const file = await open(filename, 'r');
     try {
       if ((await file.stat()).size > 1024 * 1024) { throw new Error('Saved routing configuration is too large.'); }

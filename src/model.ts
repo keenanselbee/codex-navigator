@@ -32,8 +32,8 @@ export function conversationKey(uri: { scheme: string; authority: string; path: 
 /** Context is supplied by the clicked history row, never inferred from focus. */
 export function historyContextKey(value: unknown): string | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) { return undefined; }
-  const { webviewSection, repoCompanionConversationKey: key } = value as Record<string, unknown>;
-  return webviewSection === 'repoCompanionChat' && typeof key === 'string'
+  const { webviewSection, codexNavigatorConversationKey: key } = value as Record<string, unknown>;
+  return webviewSection === 'codexNavigatorChat' && typeof key === 'string'
     && /^local\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(key) ? key : undefined;
 }
 

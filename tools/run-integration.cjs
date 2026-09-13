@@ -30,10 +30,17 @@ async function main() {
     'git.openRepositoryInParentFolders': 'never', 'git.autofetch': false,
     'scm.repositories.selectionMode': 'multiple', 'security.workspace.trust.enabled': false,
     'telemetry.telemetryLevel': 'off', 'window.restoreWindows': 'none',
-    'codexRepoCompanion.instructionRouting': false,
+    'codexNavigator.instructionRouting': false,
   } }, null, 2));
   const executable = process.env.VSCODE_EXECUTABLE ?? 'C:\\Program Files\\Microsoft VS Code\\Code.exe';
   if (!fs.existsSync(executable)) { throw new Error('Set VSCODE_EXECUTABLE to an installed VS Code executable.'); }
+  const userDirectory = path.join(testRoot, 'profile', 'User');
+  fs.mkdirSync(userDirectory, { recursive: true });
+  fs.writeFileSync(path.join(userDirectory, 'settings.json'), JSON.stringify({
+    'window.confirmBeforeClose': 'never', 'window.confirmSaveUntitledWorkspace': false,
+    'window.restoreWindows': 'none', 'window.closeWhenEmpty': true,
+    'telemetry.telemetryLevel': 'off', 'update.mode': 'none',
+  }, null, 2));
   console.log(`Isolated integration profile: ${testRoot}`);
   for (const phase of ['initial', 'restart']) {
     // --extensionTestsPath deliberately forces in-memory VS Code storage. A normal
@@ -48,7 +55,7 @@ async function main() {
     ], {
       windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, CODEX_HOME: codexHome, REPO_COMPANION_ISOLATED_HOST: '1',
-        REPO_COMPANION_TEST_ROOT: testRoot, REPO_COMPANION_TEST_PHASE: phase },
+        REPO_COMPANION_TEST_SUITE: 'sidebar', REPO_COMPANION_TEST_ROOT: testRoot, REPO_COMPANION_TEST_PHASE: phase },
     });
     const log = fs.createWriteStream(path.join(testRoot, `host-${phase}.log`));
     child.stdout.pipe(log, { end: false }); child.stderr.pipe(log, { end: false });

@@ -25,7 +25,7 @@ test('release version changes leave dependency versions and constraints intact',
   }
 });
 
-test('packaging rejects mismatched versions and preserves an existing release artifact', t => {
+test('packaging rejects mismatched versions and preserves an existing release artifact', async t => {
   const { packageExtension } = require('../tools/package.cjs');
   const scratch = path.join(root, '.codex-temp');
   fs.mkdirSync(scratch, { recursive: true });
@@ -34,11 +34,11 @@ test('packaging rejects mismatched versions and preserves an existing release ar
   fs.writeFileSync(path.join(fixture, 'package.json'), JSON.stringify({ version: '1.1.2' }));
   const lockPath = path.join(fixture, 'package-lock.json');
   fs.writeFileSync(lockPath, JSON.stringify({ version: '1.1.1', packages: { '': { version: '1.1.1' } } }));
-  assert.throws(() => packageExtension(fixture), /matching release versions/);
+  await assert.rejects(() => packageExtension(fixture), /matching release versions/);
   fs.writeFileSync(lockPath, JSON.stringify({ version: '1.1.2', packages: { '': { version: '1.1.2' } } }));
   fs.mkdirSync(path.join(fixture, 'dist'));
-  const artifact = path.join(fixture, 'dist', 'codex-repo-companion-1.1.2.vsix');
+  const artifact = path.join(fixture, 'dist', 'codex-navigator-1.1.2.vsix');
   fs.writeFileSync(artifact, 'reserved payload');
-  assert.throws(() => packageExtension(fixture), /already packaged/);
+  await assert.rejects(() => packageExtension(fixture), /already packaged/);
   assert.equal(fs.readFileSync(artifact, 'utf8'), 'reserved payload');
 });

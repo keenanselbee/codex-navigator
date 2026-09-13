@@ -34,7 +34,7 @@ test('routing uses verified chat identity, main first, overrides, explicit focus
   try {
     assert.equal((await resolveRouting([],home,id)).enabled,false);
     await Promise.all([publisher.publish({...snapshot,chats:{}}), publisher.publish(snapshot)]);
-    await fs.writeFile(path.join(home,'repo-companion','routing','malformed.json'),'null');
+    await fs.writeFile(path.join(home,'codex-navigator','routing','malformed.json'),'null');
     const result=await resolveRouting(['--file',path.join(src,'future.ts')],home,id);
     assert.deepEqual(result.roots,[nested]);
     assert.equal(result.instructions[0],main);

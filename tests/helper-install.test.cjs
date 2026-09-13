@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { prepareAgentHelper, installAgentHelper } = require('../dist/agent-helper');
+const { prepareAgentHelper, installAgentHelper, prepareLabelHelper, labelHelperStatus } = require('../dist/agent-helper');
 
 test('setup preview makes no writes and refuses instruction changes before installation', t => {
   const root = fs.mkdtempSync(path.join(__dirname, '..', '.codex-temp', 'helper-preview-'));
@@ -17,7 +17,7 @@ test('setup preview makes no writes and refuses instruction changes before insta
   fs.writeFileSync(instructions, 'Edited while reviewing\n');
   assert.throws(() => installAgentHelper(plan), /changed during setup/);
   assert.equal(fs.readFileSync(instructions, 'utf8'), 'Edited while reviewing\n');
-  assert.ok(!fs.existsSync(path.join(root, 'repo-companion')));
+  assert.ok(!fs.existsSync(path.join(root, 'codex-navigator')));
   const second = prepareAgentHelper(root);
   fs.writeFileSync(path.join(root, 'AGENTS.override.md'), 'New effective override\n');
   assert.throws(() => installAgentHelper(second), /changed during setup/);
@@ -27,13 +27,13 @@ test('setup rejects malformed markers without installing helper files', t => {
   const root = fs.mkdtempSync(path.join(__dirname, '..', '.codex-temp', 'helper-markers-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   for (const content of [
-    '<!-- codex-repo-companion:start -->',
-    '<!-- codex-repo-companion:end -->\n<!-- codex-repo-companion:start -->',
-    '<!-- codex-repo-companion:start --><!-- codex-repo-companion:end -->'.repeat(2),
+    '<!-- codex-navigator:start -->',
+    '<!-- codex-navigator:end -->\n<!-- codex-navigator:start -->',
+    '<!-- codex-navigator:start --><!-- codex-navigator:end -->'.repeat(2),
   ]) {
     fs.writeFileSync(path.join(root, 'AGENTS.md'), content);
     assert.throws(() => prepareAgentHelper(root), /Ambiguous/);
-    assert.ok(!fs.existsSync(path.join(root, 'repo-companion')));
+    assert.ok(!fs.existsSync(path.join(root, 'codex-navigator')));
     assert.equal(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'), content);
   }
 });
@@ -48,9 +48,9 @@ test('one-time setup preserves instructions, uses the effective override, and is
   assert.equal(fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8'), 'Original global rules\n');
   const override = fs.readFileSync(path.join(root, 'AGENTS.override.md'), 'utf8');
   assert.ok(override.startsWith('Active override rules'));
-  assert.equal(override.split('<!-- codex-repo-companion:start -->').length, 2);
-  assert.equal(fs.readFileSync(path.join(root, 'repo-companion', 'AGENTS.override.md.before-setup'), 'utf8'), 'Active override rules\n');
-  assert.ok(fs.existsSync(path.join(root, 'repo-companion', 'report-scope.js')));
+  assert.equal(override.split('<!-- codex-navigator:start -->').length, 2);
+  assert.equal(fs.readFileSync(path.join(root, 'codex-navigator', 'AGENTS.override.md.before-setup'), 'utf8'), 'Active override rules\n');
+  assert.ok(fs.existsSync(path.join(root, 'codex-navigator', 'report-scope.js')));
 });
 
 test('upgrading guidance keeps surrounding user rules and installs recovery separately', t => {
@@ -59,17 +59,17 @@ test('upgrading guidance keeps surrounding user rules and installs recovery sepa
   const instructions = path.join(root, 'AGENTS.md');
   const prefix = '# My rules\r\n\r\nKeep this exactly.\r\n';
   const suffix = '\r\n\r\n## More rules\r\nKeep these too.\r\n';
-  const before = prefix + '<!-- codex-repo-companion:start -->\nOld detailed routing guidance.\n<!-- codex-repo-companion:end -->' + suffix;
+  const before = prefix + '<!-- codex-navigator:start -->\nOld detailed routing guidance.\n<!-- codex-navigator:end -->' + suffix;
   fs.writeFileSync(instructions, before);
   const plan = prepareAgentHelper(root);
-  assert.equal(fs.existsSync(path.join(root, 'repo-companion')), false);
+  assert.equal(fs.existsSync(path.join(root, 'codex-navigator')), false);
   installAgentHelper(plan);
   const after = fs.readFileSync(instructions, 'utf8');
   assert.ok(after.startsWith(prefix) && after.endsWith(suffix));
   assert.ok(!after.includes('Old detailed'));
-  assert.ok(after.includes(path.join(root, 'repo-companion', 'fallback.md')));
-  assert.equal(fs.readFileSync(path.join(root, 'repo-companion', 'AGENTS.md.before-setup'), 'utf8'), before);
-  const fallback = path.join(root, 'repo-companion', 'fallback.md');
+  assert.ok(after.includes(path.join(root, 'codex-navigator', 'fallback.md')));
+  assert.equal(fs.readFileSync(path.join(root, 'codex-navigator', 'AGENTS.md.before-setup'), 'utf8'), before);
+  const fallback = path.join(root, 'codex-navigator', 'fallback.md');
   const contents = fs.readFileSync(fallback, 'utf8');
   assert.ok(contents.includes('deepest matching scope') && contents.includes('Equally specific profiles must agree'));
   assert.ok(contents.includes('enabled: false') && contents.includes('ordinary project instruction discovery'));
@@ -77,5 +77,38 @@ test('upgrading guidance keeps surrounding user rules and installs recovery sepa
   assert.equal(installAgentHelper(prepareAgentHelper(root)).changed, false);
   assert.equal(fs.readFileSync(fallback, 'utf8'), contents, 're-running setup repairs a missing fallback guide');
   assert.equal(fs.readFileSync(instructions, 'utf8'), after);
-  assert.equal(fs.readFileSync(path.join(root, 'repo-companion', 'AGENTS.md.before-setup'), 'utf8'), before);
+  assert.equal(fs.readFileSync(path.join(root, 'codex-navigator', 'AGENTS.md.before-setup'), 'utf8'), before);
+});
+
+test('labels install independently, preserve routing and user rules, and can be removed separately', t => {
+  const home = fs.mkdtempSync(path.join(__dirname, '..', '.codex-temp', 'labels-install-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const file = path.join(home, 'AGENTS.md'); fs.writeFileSync(file, 'My rules\n');
+  installAgentHelper(prepareLabelHelper(home));
+  let text = fs.readFileSync(file, 'utf8');
+  assert.ok(text.startsWith('My rules')); assert.ok(!text.includes('codex-navigator:start'));
+  assert.ok(text.includes('acknowledgement-only')); assert.ok(!fs.existsSync(path.join(home,'codex-navigator/routing.js')));
+  assert.equal(labelHelperStatus(home).installed,true);
+  assert.equal(installAgentHelper(prepareLabelHelper(home)).changed,false);
+  installAgentHelper(prepareAgentHelper(home));
+  text = fs.readFileSync(file, 'utf8');
+  const routing = text.slice(text.indexOf('<!-- codex-navigator:start -->'));
+  assert.ok(!routing.includes('After identifying/changing scope'));
+  installAgentHelper(prepareLabelHelper(home,false));
+  text = fs.readFileSync(file, 'utf8');
+  assert.ok(!text.includes('codex-navigator-labels:start')); assert.ok(text.endsWith(routing));
+  assert.equal(labelHelperStatus(home).installed,false);
+});
+
+test('label setup refuses malformed owned markers and detects missing installed files', t => {
+  const home = fs.mkdtempSync(path.join(__dirname, '..', '.codex-temp', 'labels-markers-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const file = path.join(home, 'AGENTS.md');
+  fs.writeFileSync(file, '<!-- codex-navigator-labels:start -->');
+  assert.throws(() => prepareLabelHelper(home), /Ambiguous/);
+  assert.throws(() => prepareLabelHelper(home,false), /Ambiguous/);
+  assert.equal(fs.existsSync(path.join(home,'codex-navigator')),false);
+  fs.writeFileSync(file, ''); installAgentHelper(prepareLabelHelper(home));
+  fs.unlinkSync(path.join(home,'codex-navigator/report-scope.js'));
+  assert.equal(labelHelperStatus(home).installed,false);
 });
