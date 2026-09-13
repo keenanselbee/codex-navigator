@@ -2,14 +2,18 @@
 const fs = require('node:fs'), path = require('node:path');
 const { execFileSync, spawn } = require('node:child_process');
 const { createTestPackage } = require('./test-package.cjs');
+const { hash } = require('./release-evidence.cjs');
 
-async function testInstalledPackage(prepared) {
+async function testInstalledPackage(prepared, acceptance = {}) {
   const root = path.resolve(__dirname, '..'), scratch = path.join(root, '.codex-temp');
   const { fixture, archive, receipt } = prepared ?? await createTestPackage();
   const environment = receipt.environment ?? 'production';
   if (!['production', 'sandbox'].includes(environment)) throw new Error('Unknown fixture environment.');
   if (!fs.realpathSync(fixture).startsWith(fs.realpathSync(scratch) + path.sep)
       || path.dirname(fs.realpathSync(archive)) !== fs.realpathSync(fixture)) throw new Error('Prepared package escaped scratch.');
+  if (hash(fs.readFileSync(archive)) !== receipt.sha256) throw new Error('Prepared archive no longer matches its receipt.');
+  const developmentFixture = acceptance.fixture ?? path.join(root, 'tests', 'fixture');
+  if (!fs.realpathSync(developmentFixture).startsWith(fs.realpathSync(root) + path.sep)) throw new Error('Acceptance fixture escaped the repository.');
   const testRoot = fs.mkdtempSync(path.join(scratch, 'installed-acceptance-'));
   const profile = path.join(testRoot, 'profile'), extensions = path.join(testRoot, 'extensions');
   for (const directory of [profile, extensions]) {
@@ -39,7 +43,7 @@ async function testInstalledPackage(prepared) {
   fs.copyFileSync(path.join(fixture, 'package.json'), path.join(testRoot, 'expected-package.json'));
   const codexHome = path.join(testRoot, 'codex-home'); fs.mkdirSync(codexHome);
   console.log('Installed test profile: ' + testRoot);
-  for (const phase of ['installed', 'reinstalled']) {
+  for (const phase of acceptance.phases ?? ['installed', 'reinstalled']) {
     if (phase === 'reinstalled') {
       console.log(command(['--uninstall-extension', 'keenanselbee.codex-navigator']));
       if (command(['--list-extensions']).split(/\r?\n/).includes('keenanselbee.codex-navigator')) throw new Error('Fixture uninstall did not remove the extension.');
@@ -49,11 +53,11 @@ async function testInstalledPackage(prepared) {
       fs.writeFileSync(settingsPath, JSON.stringify(current));
     }
     console.log(command(['--install-extension', archive, '--force']));
-    const env = { ...process.env, CODEX_HOME: codexHome, REPO_COMPANION_ISOLATED_HOST: '1',
+    const env = { ...process.env, ...acceptance.environment, CODEX_HOME: codexHome, REPO_COMPANION_ISOLATED_HOST: '1',
       REPO_COMPANION_TEST_ROOT: testRoot, REPO_COMPANION_TEST_SUITE: 'installed', REPO_COMPANION_TEST_PHASE: phase,
       REPO_COMPANION_TEST_LICENSE_ENVIRONMENT: environment };
     delete env.ELECTRON_RUN_AS_NODE;
-    const child = spawn(executable, [workspace, ...scoped, '--extensionDevelopmentPath=' + path.join(root, 'tests', 'fixture'),
+    const child = spawn(executable, [workspace, ...scoped, '--extensionDevelopmentPath=' + developmentFixture,
       '--disable-telemetry', '--disable-updates', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--new-window'],
     { cwd: root, windowsHide: true, env, stdio: ['ignore', 'pipe', 'pipe'] });
     const log = fs.createWriteStream(path.join(testRoot, 'host-' + phase + '.log'));

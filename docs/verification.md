@@ -38,6 +38,13 @@ Automated checks
   old activation and transfer. The final test activation was released. This tests
   the shipping provider against real customer endpoints, not the complete
   packaged licence UI. Refund/revocation and download delivery remain unverified.
+- A follow-up installed sandbox licence-screen test passes real activation,
+  paid-state restoration after restarting VS Code, explicit validation and
+  deactivation. Deactivation returns to the licence screen with no new trial;
+  the test activation was released. The actual webview dispatches the actions,
+  while the fixture supplies the masked input value and modal confirmation.
+  Native dialog appearance, portal recovery and real Codex activity remain
+  outside this check. Owned test files/logs contain no plaintext Navigator key.
 - The actual VSIX packager passes a disposable 0.0.0 archive check: all 54 entries
   match expected hashes; private source and source-map sentinels are excluded.
   The installation fixture uses this archive only in its owned profile; it is

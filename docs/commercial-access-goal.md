@@ -192,7 +192,8 @@ rate limiting and stopped; its known activation was explicitly released before
 the successful paced rerun. Private receipts contain fixed metadata and no keys.
 This confirms the supplied sandbox organization/benefit identity and licence
 limits. Refund/revocation, portal recovery and actual download delivery are still
-outstanding, as is configured end-user activation inside the packaged extension.
+outstanding. Configured activation inside the packaged extension is now verified
+through the separate licence-screen test described below.
 Production organization/product/benefit IDs, checkout and portal remain pending.
 Context Suite configuration exists separately; reuse no product-specific IDs.
 CAD tax presentation must be confirmed in checkout. Seven-day trials are local,
@@ -221,5 +222,17 @@ only fixed sandbox configuration in the copied runtime. Its receipt records both
 source revisions/status, the substitution and archive/file hashes. The sandbox
 installed/reset/reinstall check passes (`installed-acceptance-palTG6`), including
 separate protected environment records. This makes no paid provider requests;
-customer activation in the licence UI and production release evidence remain
-separate outstanding checks.
+production release evidence remains outstanding.
+
+The full installed sandbox licence-screen flow passes in
+`installed-acceptance-vg4X1U`: activate, reveal Navigator, retain the paid identity
+after restarting VS Code, explicitly validate, then deactivate and block features
+without granting another trial. The final test activation was released. Native
+input and confirmation values are fixture-supplied; actions otherwise pass through
+the actual webview, host controller, protected store and Polar provider. A first
+attempt intercepted the fixture extension's API rather than Navigator's and never
+submitted a key; read-only inspection confirmed no licence record before retry.
+The observer now attaches on view activation and uses Navigator's API object.
+No plaintext Navigator key was found in owned test files or logs. Native dialog
+appearance, real Codex goal/hook acceptance, portal recovery, refunds, delivery
+and clean production release artifacts remain separate gates.
