@@ -9,7 +9,7 @@ retains release history. Old patch checks are not evidence for this product.
 Automated checks
 ----------------
 
-- The private split passes 120 public tests in a source snapshot without the
+- The private split passes 123 public tests in a source snapshot without the
   private checkout and 20 commercial tests in the private repository. Full
   builds reject missing private source even with stale compiled output.
 - Isolated VS Code verifies explicit trial start and protected persistence,
@@ -62,6 +62,9 @@ Automated checks
   URI dispatch, native-menu context and command dispatch, responsive layouts, colours/stars,
   pointer ordering hold and independence of activity from native recency. Repository-menu checks cover captured-chat picker assignment and colour-page return navigation. Native overlay appearance is not inspected; the fixture supplies picker choices and suppresses the real menu while testing captured context. Pin checks
   cover icon order, persisted list position, old/missing recent entries, and unpinning.
+- Long repository labels use a single-line ellipsis. Real webview measurements
+  across compact, column and list layouts verify unchanged row height, reserved
+  star/pin space and full-label hover text.
 - Startup is exercised with native metadata deliberately blocked: local history
   appears before opening a Codex chat. Unit coverage also restores cached titles
   without the index and keeps chat actions usable after failed refreshes.

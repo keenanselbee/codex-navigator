@@ -21,6 +21,7 @@ What it does
   Open Repository Colours from the top menu to edit
   repository colours in Navigator. Hover or focus beside a label to reveal its star. Hide Chat removes
   a chat from Navigator; Restore Hidden Chats in the overflow menu brings it back.
+  Long repository labels stay on one line with an ellipsis; hover for the full label.
 - **Your own chat names.** Right-click for Rename Chat. Original Chat Name shows
   the Codex title; Use Codex Name restores it. Search finds either name.
 - **Pinned chats.** Hover beside a label to reveal the pin control.

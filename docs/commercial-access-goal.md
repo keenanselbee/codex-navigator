@@ -254,3 +254,13 @@ the original Codex title for lookup, search and reset. The 123 public tests and
 isolated VS Code run `integration-F5cpx8` pass, including native command dispatch
 for rename, original-title lookup and reset. Menu titles remain static; the
 Original Chat Name action displays the title in a native dialog.
+
+Latest local boundary verification passes 123 public tests without private source
+(`public-only-ZNRpgA`) and all 20 private commercial tests. The updated disposable
+package (`package-acceptance-zaVJXH`) passes 54 archive-entry checks and installed
+expiry/reset/reinstall acceptance in `installed-acceptance-9uopj0`; the fixture
+removes its extension afterward. Label ellipsis measurements pass all three
+layouts in `integration-LgdkdB`. An earlier run failed the existing resize-focus
+assertion; the unchanged rerun passed and exited cleanly. Local receipts retain
+the archive hash, source revisions and working-state qualification. These are
+test artifacts, not the still-pending clean production release.

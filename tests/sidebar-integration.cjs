@@ -91,6 +91,15 @@ exports.run = async function (context, fixtureVscode) {
             message:document.getElementById('message').textContent,dots:document.querySelectorAll('.activity-dot').length, stars:document.querySelector('.star')?.textContent,
             layout:document.body.dataset.layout, columns:getComputedStyle(document.getElementById('chats')).gridTemplateColumns.split(' ').length,
             focus:document.activeElement?.dataset.focus, searchHidden:document.getElementById('searchBox').hidden,menuContext});
+          if(m.type==='fixture:labelSize') {
+            const row=document.querySelector('.chat'),label=row.querySelector('.label');
+            const before=row.getBoundingClientRect().height,original=label.textContent,hover=label.title;
+            label.textContent='Context Suite - Context Suite - Private repository with a very long label';
+            const after=row.getBoundingClientRect().height,style=getComputedStyle(label),bounds=row.getBoundingClientRect();
+            const controls=[...row.querySelectorAll('.star,.pin')].every(n=>n.getBoundingClientRect().right<=bounds.right);
+            api.postMessage({type:'fixture:probe',before,after,controls,hoverMatches:hover===original,nowrap:style.whiteSpace,ellipsis:style.textOverflow,truncated:label.scrollWidth>label.clientWidth});
+            label.textContent=original;
+          }
           if(m.type==='fixture:orderEnter') document.body.dispatchEvent(new Event('pointerenter'));
           if(m.type==='fixture:orderProbe') {
             const original=rows; const before=[...document.querySelectorAll('.chat')].map(item=>JSON.parse(item.dataset.vscodeContext).navigatorChatId);
@@ -318,6 +327,16 @@ exports.run = async function (context, fixtureVscode) {
       await companion.webview.postMessage({type:'fixture:size',width:2600,height});
       await until(async () => {const p=await probe();return p.columns>4&&p.fits;},'wide columns beyond four at height '+height);
     }
+    for(const height of [140,240,400]) {
+      await companion.webview.postMessage({type:'fixture:size',width:780,height});
+      await until(async()=>(await probe()).rows>0,'rows ready for label measurement');
+      const measured=new Promise(resolve=>{probeResolve=resolve;});
+      await companion.webview.postMessage({type:'fixture:labelSize'});
+      const result=await measured;
+      assert.equal(result.after,result.before,'long labels never increase row height');
+      assert.equal(result.nowrap,'nowrap');assert.equal(result.ellipsis,'ellipsis');
+      assert.equal(result.truncated,true);assert.equal(result.controls,true);assert.equal(result.hoverMatches,true);
+    }
     await companion.webview.postMessage({type:'fixture:size',width:780,height:140});
     const colourChoice=vscode.commands.executeCommand('codexNavigator.setChatColour',target);
     await until(async () => !(await probe()).pickerHidden,'colour options replace Navigator contents');
@@ -544,7 +563,7 @@ exports.run = async function (context, fixtureVscode) {
         'height-driven layouts', 'width-dependent columns', 'resize preserves focus', 'column and fitted row counts survive webview reload', 'native header search',
         'native extension URI dispatch', 'both sidebar views visible', 'no patch bridge',
         'row context command dispatch', 'right-click/keyboard menu events', 'coloured stars beside repository labels',
-        'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt'],
+        'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'single-line repository labels keep row heights and control space', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt'],
       scope: 'Real isolated VS Code; fixture URI handler and synthetic hook events. Native-menu context data and command dispatch exercised with synthetic mouse/keyboard events; picker choices supplied by fixture. Native overlay appearance is not inspected. No authenticated Codex conversation.' };
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));

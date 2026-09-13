@@ -20,9 +20,9 @@ button:focus-visible, input:focus { outline: 1px solid var(--vscode-focusBorder)
 .name { min-height: 24px; display: flex; align-items: center; min-width: 0; gap: 3px; }
 .open { flex: 0 1 auto; min-width: 0; text-align: left; padding: 0; overflow: hidden; }
 .open:hover { background: transparent; }
-.label, .title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
+.title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
 .label-row { display: flex; align-items: center; min-width: 0; gap: 3px; }
-.label { min-width: 0; font-size: 0.85em; line-height: 1.2; font-weight: 600; color: var(--chat-colour, var(--vscode-descriptionForeground)); }
+.label { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.85em; line-height: 1.2; font-weight: 600; color: var(--chat-colour, var(--vscode-descriptionForeground)); }
 .title { line-height: 1.35; }
 .chat.condensed-title .title { display: block; white-space: nowrap; text-overflow: ellipsis; }
 body[data-layout="list"] .title { -webkit-line-clamp: 3; }

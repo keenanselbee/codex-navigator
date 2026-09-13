@@ -52,7 +52,7 @@ function render() {
     item.addEventListener('click', event => { if (!event.target.closest('button')) send('open', { id: row.id }); });
     const open = button('', item.title, () => send('open', { id: row.id })); open.className = 'open'; open.dataset.focus = row.id + ':open';
     open.setAttribute('aria-label', ['Open ' + row.title, row.label, activityText].filter(Boolean).join(', '));
-    const label = document.createElement('span'); label.className = 'label'; label.textContent = row.label || 'Chat';
+    const label = document.createElement('span'); label.className = 'label'; label.textContent = row.label || 'Chat'; label.title = label.textContent;
     const title = document.createElement('span'); title.className = 'title'; title.textContent = row.title || 'Untitled chat'; open.append(title);
     const name = document.createElement('div'); name.className = 'name';
     const star = button('', row.starred ? 'Unstar chat' : 'Star chat', event => { if (event.detail > 0) star.blur(); send('action', { id: row.id, action: 'star' }); }); star.className = 'star'; star.dataset.focus = row.id + ':star'; star.setAttribute('aria-pressed', String(row.starred));

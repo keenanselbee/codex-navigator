@@ -4,6 +4,8 @@ Release Notes
 Unreleased
 ----------
 
+- Keep repository labels on one line with an ellipsis and full-label hover text,
+  so long labels do not increase chat row height.
 - Add Navigator-only chat names with original-title lookup, search and reset.
 - Keep event delivery verification diagnostic so new or idle chats never block Navigator.
 - Require installed, enabled and trusted activity hooks before showing chats. Remove setup bypasses,
