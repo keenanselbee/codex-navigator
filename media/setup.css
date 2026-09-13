@@ -35,6 +35,16 @@ li { margin: 4px 0; overflow-wrap: anywhere; }
 .warning-icon { color: var(--vscode-editorWarning-foreground); font-size: 26px; line-height: 1; flex-shrink: 0; }
 .patch-warning p { margin: 10px 0 0; }
 .actions { margin-top: 16px; }
+.colour-picker { max-width: 500px; }
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 20px 0; }
+.swatch { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); padding: 10px 4px; border-top: 8px solid var(--swatch); }
+.swatch[aria-pressed="true"] { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
+.swatch-red { --swatch: #E45B65; } .swatch-orange { --swatch: #E58C42; }
+.swatch-yellow { --swatch: #C8AC36; } .swatch-green { --swatch: #4EA876; }
+.swatch-teal { --swatch: #35A7AE; } .swatch-blue { --swatch: #6B8AFD; }
+.swatch-purple { --swatch: #A37DE0; } .swatch-pink { --swatch: #D66BAD; }
+#picker { height: 48px; cursor: pointer; }
+#target { overflow-wrap: anywhere; }
 footer { justify-content: space-between; }
 #message:not(:empty), #stale:not([hidden]) { padding: 12px; margin-bottom: 16px; border: 1px solid var(--vscode-focusBorder); border-radius: 3px; }
 #message.error { border-color: var(--vscode-errorForeground); color: var(--vscode-errorForeground); }

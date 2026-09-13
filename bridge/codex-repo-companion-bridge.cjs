@@ -6,6 +6,7 @@ const surfaces = new Map();
 let assignments = Object.create(null);
 let repositories = [];
 let tooltips = Object.create(null);
+let colours = Object.create(null);
 let customLabels = Object.create(null);
 let starred = [];
 let pinManualLabels = true;
@@ -75,8 +76,8 @@ function observeMessage(webview, message) {
       Promise.resolve(require('vscode').commands.executeCommand('chatgpt.newChat')).catch(() => {});
       return true;
     }
-    const command = { custom: 'customHistoryLabel', assign: 'chooseHistoryRepository', auto: 'autoHistoryScope', clear: 'clearHistoryLabels', star: 'starHistoryChat', starred: 'openStarredChats' }[action];
-    if (!command || !['assign', 'auto', 'clear', 'custom', 'star', 'starred'].includes(action)) { return true; }
+    const command = { custom: 'customHistoryLabel', assign: 'chooseHistoryRepository', auto: 'autoHistoryScope', clear: 'clearHistoryLabels', star: 'starHistoryChat', starred: 'openStarredChats', colour: 'chatHistoryColour', repositoryColour: 'setRepositoryColour' }[action];
+    if (!command || !['assign', 'auto', 'clear', 'custom', 'star', 'starred', 'colour', 'repositoryColour'].includes(action)) { return true; }
     if (action === 'assign' && !repositories.some(repo => repo.root === root)) { return true; }
     if (action === 'custom' && label !== undefined && (typeof label !== 'string' || !label.trim() || label.length > 100 || /[\x00-\x1f\x7f\[\]]/.test(label))) { return true; }
     const vscode = require('vscode');
@@ -107,10 +108,10 @@ function observeMessage(webview, message) {
 function sendLabel(webview, surface, force = false) {
   if (!webview.postMessage) { return; }
   const label = surface.key ? assignments[surface.key] ?? '' : '';
-  const identity = JSON.stringify([surface.key, label, assignments, repositories, tooltips, pinManualLabels, customLabels, starred]);
+  const identity = JSON.stringify([surface.key, label, assignments, repositories, tooltips, colours, pinManualLabels, customLabels, starred]);
   if (!force && surface.sentLabel === identity) { return; }
   surface.sentLabel = identity;
-  Promise.resolve(webview.postMessage({ type: 'repo-companion-label', key: surface.key, label, assignments, repositories, tooltips, pinManualLabels, customLabels, starred })).catch(() => {});
+  Promise.resolve(webview.postMessage({ type: 'repo-companion-label', key: surface.key, label, assignments, repositories, tooltips, colours, pinManualLabels, customLabels, starred })).catch(() => {});
 }
 
 function keyFor(uri) {
@@ -168,6 +169,7 @@ function install(context) {
     }
     pinManualLabels = pin !== false;
     tooltips = Object.create(null);
+    colours = Object.create(null);
     repositories = Array.isArray(catalog) ? catalog.filter(repo => repo && typeof repo.root === 'string' && repo.root.startsWith('file:') && repo.root.length <= 4096 && typeof repo.label === 'string' && repo.label.length <= 100 && typeof repo.description === 'string' && repo.description.length <= 4096).map(repo => ({ root: repo.root, label: repo.label, description: repo.description })) : [];
     const next = Object.create(null);
     if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -175,6 +177,7 @@ function install(context) {
         if (/^(local|remote)\/[^/]+$/.test(key) && item && typeof item.label === 'string') {
           const label = item.label.replace(/[\r\n\[\]]/g, ' ').trim().slice(0, 100);
           if (label) { next[key] = label; }
+          if (typeof item.colour === 'string' && /^#[0-9a-f]{6}$/i.test(item.colour)) { colours[key] = item.colour.toUpperCase(); }
           if (typeof item.tooltip === 'string' && item.tooltip.length <= 16000) { tooltips[key] = item.tooltip; }
         }
       }
@@ -194,6 +197,7 @@ function install(context) {
     assignments = Object.create(null);
     repositories = [];
     tooltips = Object.create(null);
+    colours = Object.create(null);
     pinManualLabels = true;
     customLabels = Object.create(null);
     starred = [];

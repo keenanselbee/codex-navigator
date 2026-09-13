@@ -89,7 +89,7 @@ function repoCompanionInstallMenu(dispatch) {
       };
       menu.append(apply,error);
     } else { menu.append(list,button(`Custom Label...`,`custom`)); }
-    menu.append(separator,button(window.__codexRepoCompanionStarred?.includes(key)?`Unstar Chat`:`Star Chat`,`star`),button(`Starred Chats...`,`starred`),button(`Use Automatic Labels`,`auto`),button(`Clear Labels`,`clear`),button(`New Chat in Sidebar`,`newChat`));
+    menu.append(separator,button(`Chat Colour...`,`colour`),button(`Repository Colour...`,`repositoryColour`),button(window.__codexRepoCompanionStarred?.includes(key)?`Unstar Chat`:`Star Chat`,`star`),button(`Starred Chats...`,`starred`),button(`Use Automatic Labels`,`auto`),button(`Clear Labels`,`clear`),button(`New Chat in Sidebar`,`newChat`));
     menu.addEventListener(`keydown`,event=>{
       if (event.key === `Escape`) { event.preventDefault(); event.stopPropagation(); close(true); return; }
       if (event.key === `Tab`) { close(true); return; }

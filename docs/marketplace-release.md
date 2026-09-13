@@ -1,8 +1,7 @@
 Marketplace Release Preparation
 ===============================
 
-Status: local preparation updated for 1.1.5; not submitted or installed into the
-working profile. Remaining release steps:
+Status: 1.1.8 installed locally; not submitted to the Marketplace. Remaining release steps:
 
 - Publisher setup was confirmed by the user; verify dashboard access when submitting.
 - Resolve the optional Codex patch distribution permission described below.
@@ -10,12 +9,38 @@ working profile. Remaining release steps:
 - Review/commit/push the source and listing so the packaged GitHub help links resolve.
 - Verify the final artifact and submit it only after explicit publication approval.
 
+Version 1.1.8 clarifies that lightweight routing complements built-in AGENTS.md
+discovery, without extra AI calls or a guarantee of agent compliance. All 13 setup
+tests, compilation, whitespace and local-link checks passed. Archive checks verified
+all 38 extension files and confirmed only wording/version differences from 1.1.7.
+Installed and verified as `keenanselbee.codex-repo-companion@1.1.8`; reload is pending.
+Verified current artifact: `dist/codex-repo-companion-1.1.8.vsix`, SHA-256
+`bb7ac0d7a83f6d67a837950dd6b310bf73df36cd284ef978bbb1cc592574e88f`. The 1.1.7 artifact is unchanged.
+
+Version 1.1.7 uses a coloured star instead of a dot for starred chats. All 106 unit
+tests and isolated VS Code initial/restart integration passed. Disposable patch
+upgrade/restoration and archive-source checks passed; 1.1.6 is preserved.
+Preserved prior artifact: `dist/codex-repo-companion-1.1.7.vsix`, SHA-256
+`a962483da223c582013e1af017005a549ab450bc32a9220a90551bb1ac234e98`.
+
+Version 1.1.6 adds chat and repository colours with eight presets, a native picker,
+custom hex input, manual overrides and equal repository-colour blending. All 105
+unit tests and isolated VS Code initial/restart integration passed. A disposable
+Codex copy upgraded from the 1.1.5 patch and restored its original files exactly.
+Native colour-picker interaction remains pending manual acceptance.
+
+Preserved prior artifact: `dist/codex-repo-companion-1.1.6.vsix`, SHA-256
+`cdf887a38d6c515e6d7597e75ec940ad0bbab5fdeb3a543bf1a62a293f4c06f7`.
+Archive inspection matched all 38 extension files to source, accounting for
+Markdown link rewriting, and checked the new colour assets and Windows x64 target.
+The 1.1.5 artifact is unchanged. No installation, commit or publication was performed.
+
 Version 1.1.5 adopts MIT for Companion's own code, welcomes contributions and
 upstream integration, and adds a theme-aware setup warning with restoration and
 token-usage guidance. Patching remains opt-in and routing remains independent.
 MIT and these disclosures do not establish permission to modify Codex.
 
-Verified current artifact: `dist/codex-repo-companion-1.1.5.vsix`, SHA-256
+Preserved prior artifact: `dist/codex-repo-companion-1.1.5.vsix`, SHA-256
 `d3b942d8a449cf92d1eaca75914d76fecf0d625d03e31aa354a27d92de5a9ac5`.
 All 96 unit tests and whitespace/conflict/local Markdown link checks passed.
 Archive inspection checked all 34 extension files: 32 match the source byte for

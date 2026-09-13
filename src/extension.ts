@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { inheritedColour, readColours, repositoryColourKey } from './colours';
+import { chooseColour } from './colour-picker';
 import { hideRedundantLabel, readStarredChats } from './model';
 import { RoutingPublisher } from './routing';
 import { configureChatLabels, monitorChatLabels } from './display-setup';
@@ -32,6 +34,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const manualTimes = readManualTimes(context.workspaceState.get('manualLabelTimes.v1'));
   const customLabels = readCustomLabels(context.workspaceState.get('customLabels.v1'));
   const starredChats = readStarredChats(context.workspaceState.get('starredChats.v1'));
+  const chatColours = readColours(context.workspaceState.get('chatColours.v1'), 'chat');
   const modes = readModes(context.workspaceState.get(modeKey));
   // Remove old guesses before publishing labels or routing, preserving manual choices.
   const detectOnStartup = vscode.workspace.getConfiguration('codexRepoCompanion').get('detectChatFocus', false);
@@ -59,7 +62,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (record) { discussionScopes[id] = record; }
   }
   let discussionTimer: ReturnType<typeof setTimeout> | undefined;
-  const knownKeys = new Set([...Object.keys(assignments), ...Object.keys(customLabels)]);
+  const knownKeys = new Set([...Object.keys(assignments), ...Object.keys(customLabels), ...Object.keys(chatColours)]);
   const pendingKeys = new Set<string>();
   let scopeTimer: ReturnType<typeof setTimeout> | undefined;
   let previousActive: vscode.Tab | undefined;
@@ -89,6 +92,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     const origin = mode === 'pinned' ? 'Repository label (pinned)' : mode === 'none' ? 'Automatic labels paused' : manualTimes[key] ? 'Manual correction (follows newer discussion)' : assignment?.source === 'discussion' ? 'Automatic: detected from your chat message' : assignment?.source === 'agent' ? 'Automatic: reported by agent' : assignment?.source === 'correction' ? 'Automatic: user-corrected scope' : 'Waiting for the agent to report repository scope';
     return { label: roots.length === 1 && !assignment?.members ? repositoryLabel(roots[0].fsPath, folders) : display?.label ?? '', tooltip: [origin, ...roots.map(root => root.fsPath)].join('\n').slice(0, 16000) };
+  }
+
+  function colourFor(key: string, override = chatColours[key],
+    repositories = readColours(vscode.workspace.getConfiguration('codexRepoCompanion').get('repositoryColours'), 'repository'), folders = repositoryNames()) {
+    const assignment = assignments[key];
+    const roots = effectiveMode(modes[key], assignment) === 'none' ? [] : customLabels[key]
+      ? (customRouting[key] ? [customRouting[key]] : [])
+      : (assignment?.members ?? (assignment ? [assignment] : [])).map(item => vscode.Uri.parse(item.root).fsPath);
+    const colour = inheritedColour(override, roots, repositories);
+    const sources = [...new Set(roots.map(repositoryColourKey))].filter(root => repositories[root]);
+    const detail = override ? `Chat colour: ${colour}` : colour
+      ? `Repository colour${sources.length > 1 ? ' blend' : ''}: ${colour}\n${sources.map(root => `${repositoryLabel(root, folders)}: ${repositories[root]}`).join('\n')}` : '';
+    return { colour, detail };
   }
 
   async function saveManualChoice(key: string) {
@@ -267,8 +283,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const repositories = git!.repositories.filter(repo => repo.rootUri.scheme === 'file').map(repo => ({
         root: repo.rootUri.toString(), label: repositoryLabel(repo.rootUri.fsPath, folders), description: repo.rootUri.fsPath,
       })).sort((a, b) => a.label.localeCompare(b.label) || a.description.localeCompare(b.description));
-      const displayAssignments: Record<string, { label: string; tooltip: string }> = Object.create(null);
-      for (const key of new Set([...Object.keys(assignments), ...Object.keys(customLabels)])) { displayAssignments[key] = displayFor(key, folders); }
+      const displayAssignments: Record<string, { label: string; tooltip: string; colour?: string }> = Object.create(null);
+      const repositoryColours = readColours(vscode.workspace.getConfiguration('codexRepoCompanion').get('repositoryColours'), 'repository');
+      for (const key of new Set([...Object.keys(assignments), ...Object.keys(customLabels), ...Object.keys(chatColours)])) {
+        const display = displayFor(key, folders), colour = colourFor(key, chatColours[key], repositoryColours, folders);
+        displayAssignments[key] = { ...display, colour: colour.colour, tooltip: [display.tooltip, colour.detail].filter(Boolean).join('\n').slice(0, 16000) };
+      }
       await vscode.commands.executeCommand(prefixCommand, enabled ? displayAssignments : {}, repositories, vscode.workspace.getConfiguration('codexRepoCompanion').get('pinManualLabels', true), customLabels, Object.keys(starredChats));
     }
   }
@@ -414,9 +434,43 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     return vscode.Uri.from({ scheme: 'openai-codex', authority: 'route', path: '/' + key });
   }
 
+  async function setChatColour(uri?: vscode.Uri) {
+    await syncPrefixes();
+    const key = uri instanceof vscode.Uri ? conversationKey(uri) : chat()?.key;
+    if (!key) { throw new Error('Focus a saved Codex chat or right-click its title first.'); }
+    const colour = await chooseColour(context, `Chat: ${displayFor(key).label || key}`, chatColours[key],
+      colourFor(key, '').colour, 'Automatic (from repositories)');
+    if (colour === undefined || disposed) { return; }
+    const next = { ...chatColours };
+    if (colour === null) { delete next[key]; } else { next[key] = colour; }
+    await context.workspaceState.update('chatColours.v1', next);
+    if (colour === null) { delete chatColours[key]; } else { chatColours[key] = colour; }
+    knownKeys.add(key);
+    refresh(true);
+  }
+
+  async function setRepositoryColour() {
+    const picked = await vscode.window.showQuickPick(git!.repositories.filter(repo => repo.rootUri.scheme === 'file').map(repo => ({
+      label: repositoryLabel(repo.rootUri.fsPath, repositoryNames()), description: repo.rootUri.fsPath, root: repo.rootUri.fsPath,
+    })), { title: 'Choose repository colour', matchOnDescription: true });
+    if (!picked) { return; }
+    const config = vscode.workspace.getConfiguration('codexRepoCompanion');
+    const key = repositoryColourKey(picked.root);
+    const colours = readColours(config.get('repositoryColours'), 'repository');
+    const colour = await chooseColour(context, `Repository: ${picked.label}`, colours[key], undefined, 'No Colour');
+    if (colour === undefined || disposed) { return; }
+    const next = readColours(vscode.workspace.getConfiguration('codexRepoCompanion').get('repositoryColours'), 'repository');
+    if (colour === null) { delete next[key]; } else { next[key] = colour; }
+    await config.update('repositoryColours', next, vscode.ConfigurationTarget.Global);
+    refresh(true);
+  }
+
   context.subscriptions.push(output, status, { dispose: () => { disposed = true; generation++; clearTimeout(discussionTimer); void queue.finally(() => routing.dispose()); } });
   const commands: [string, (...args: any[]) => unknown][] = [
     ['setUp', () => setUpCompanion(context)],
+    ['setChatColour', setChatColour],
+    ['chatHistoryColour', (value: unknown) => setChatColour(historyUri(value))],
+    ['setRepositoryColour', setRepositoryColour],
     ['restoreCodex', () => configureChatLabels(context, true)],
     ['setUpAgentHelper', () => setUpAgentHelper(context)],
     ['surfaceChanged', (value: unknown) => {
@@ -569,6 +623,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         scopeMode: chat() ? effectiveMode(modes[chat()!.key], assignments[chat()!.key]) : null,
         labelExplanation: chat() ? displayFor(chat()!.key).tooltip : null,
         isStarred: chat() ? Object.hasOwn(starredChats, chat()!.key) : false, starredCount: Object.keys(starredChats).length,
+        colour: chat() ? colourFor(chat()!.key).colour ?? null : null,
         scopeSource: chat() ? customLabels[chat()!.key] ? 'custom' : assignments[chat()!.key]?.source ?? null : null,
         activeChatKind: chat()?.kind === 'sidebar' ? 'sidebar' : chat() ? 'saved-conversation' : isLauncher() ? 'generic-panel' : 'other',
         activeTabType: vscode.window.tabGroups.activeTabGroup.activeTab?.input?.constructor?.name };

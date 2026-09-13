@@ -9,6 +9,29 @@ restored; earlier v0.4.0 navigation results describe retired functionality.
 Current checks
 --------------
 
+
+Version 1.1.7: all 106 unit tests passed, including a single coloured star in
+headers/history, colour updates, unstarring back to a dot and theme-coloured stars
+without a colour. Isolated VS Code 1.137.0 initial/restart integration passed in
+`.codex-temp/integration-Lqgyr7`; it checks the rendered star replaces the dot and
+unstarring restores it. These use fixture conversations. A disposable copy also
+passed the 1.1.6 patch upgrade, idempotence, byte-identical restoration, refusal of
+unknown edits and partial-patch recovery.
+
+
+Version 1.1.6 colour checks: all 105 unit tests passed, covering hex validation,
+picker Apply/Cancel/reset, inheritance and equal blending, colour-only bridge
+updates, clicked-chat actions and rendered dots. Real VS Code 1.137.0 integration
+passed initial and restart phases in `.codex-temp/integration-xg043Z`, including
+repository-colour persistence, a two-repository blend and a live webview dot.
+These use fixture conversations, not an authenticated Codex session. The native
+colour-picker interaction still requires manual acceptance.
+
+A disposable copy of Codex 26.908.40401 upgraded from the preserved 1.1.5 patch,
+passed an idempotent check, and restored all three original files byte for byte.
+The installed Codex extension was only read. Older checks below record earlier
+feature milestones.
+
 - TypeScript compilation and 39 unit tests passed. Coverage includes conversation
   identity, metadata validation, exact nested roots, latest scope, multiple labels,
   helper identity, manual pins, rendered titles/history and global-instruction setup.

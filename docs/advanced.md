@@ -3,7 +3,7 @@ Advanced Use and Development
 
 A local VS Code extension that labels Codex chats with the latest project being
 discussed. Labels appear in chat history, sidebar headers, and editor tabs.
-Version 1.1.5 provides display labels and stars: it does not select repositories, move
+Version 1.1.8 provides display labels, colours and stars: it does not select repositories, move
 Source Control, or change the saved chat title, working directory, or permissions.
 It is not an official OpenAI product.
 
@@ -90,6 +90,32 @@ from recent history, falling back to the title remembered when starred; if no ti
 was available, it shows the conversation ID. Deleted chats may need manual unstarring.
 The original history order and saved conversation titles are unchanged. No AI call
 or conversation message is sent when starring a chat.
+
+
+Chat and repository colours
+---------------------------
+
+Choose **Chat Colour...** from a saved chat's history/title menu, or the Command
+Palette for the active chat. Choose **Repository Colour...** to select a local Git
+repository. Both open eight presets, a native colour picker and a synchronized
+hex field accepting `#RGB` or `#RRGGBB`. Apply saves; Cancel leaves the choice alone.
+
+A manual chat colour overrides repository inheritance. **Automatic (from
+repositories)** removes that override after Apply. **No Colour** removes a
+repository's colour. Repository colours follow the same associated roots as the
+chat's label; custom labels use their retained repository association when present.
+Multiple coloured roots blend equally in Oklab, counting each root once and
+ignoring roots without a colour. Updating a repository colour refreshes inherited
+chat colours. Clearing repository labels removes inheritance, but keeps a manual
+chat colour.
+
+Colours appear as dots in Codex history and conversation headers. For starred chats,
+a star replaces the dot and uses the chat colour. Stars without a colour follow
+the theme. Both markers show their source
+in the title tooltip. Text remains theme-coloured; native VS Code tab titles remain
+plain. Turning off **Show Tab Prefix** also hides colour dots. Chat overrides are
+saved per workspace; `codexRepoCompanion.repositoryColours` is a user setting keyed
+by absolute Git-root path and shared across workspaces.
 
 
 Single-repository workspaces
@@ -263,7 +289,7 @@ Build with Node.js 22+ and npm:
 npm ci
 npm test
 npm run package
-code --install-extension .\dist\codex-repo-companion-1.1.5.vsix
+code --install-extension .\dist\codex-repo-companion-1.1.8.vsix
 ```
 
 The release targets Windows x64 and requires VS Code 1.137 or later. The package
@@ -300,8 +326,8 @@ It preserves byte-for-byte originals and rejects unknown versions or edits.
 The v0.12.0 display patch adds direct repository menus to history rows and chat titles and upgrades recognized
 older patches while preserving their originals. Previously enabled integrations are
 reapplied automatically after supported updates.
-Version 1.1.5 bundles the existing v0.12.0 display patch; existing patched users
-do not need to apply a different patch.
+Version 1.1.6 extends the display patch with colours. Previously enabled users
+receive the compatible upgrade automatically and must reload when prompted.
 Upgrade removes unpinned tentative directory labels before publishing labels or
 routing metadata. Manual labels and pins remain intact. The version advances from
 0.12.0 to 1.0.0 to adopt the shared version-number format, not a breaking API change.

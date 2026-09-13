@@ -10,8 +10,10 @@ show saved or starred chats. If you enable Detect Chat Focus, it also reads loca
 user messages to identify clearly named projects. That option is off by default.
 The message detector does not call an AI service.
 
-The extension saves labels, stars, settings and reminder choices in VS Code's
-extension storage. Its helper saves repository paths and routing configuration
+The extension saves labels, stars, chat colours and reminder choices in VS Code's
+extension storage. Repository colours are saved by absolute path in VS Code user
+settings, shared across workspaces; Settings Sync may sync them if enabled.
+Its helper saves repository paths and routing configuration
 under your Codex home. Routing setup adds a marked section to your global Codex
 instructions and backs up their original contents. Chat integration setup backs
 up and modifies supported local Codex files. Diagnostic logs may contain repository

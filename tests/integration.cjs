@@ -14,7 +14,7 @@ function fixtureHtml(route) {
     const api=acquireVsCodeApi();let r=${JSON.stringify(route)},i='',cleanup;
     const J9={useEffect(callback){cleanup=callback();}};
     const vd={dispatchMessage(type,data){api.postMessage({type,...data});}};
-    const E=()=>({pathname:r,search:i}),Ln={useSyncExternalStore(subscribe,snapshot){return snapshot();}},$={Fragment:'fragment',jsxs(type,props){return $.jsx(type,props);},jsx(type,props){if(typeof type==='function')return type(props);const node=document.createElement(type);if(props.title)node.title=props.title;if(props['data-vscode-context'])node.setAttribute('data-vscode-context',props['data-vscode-context']);for(const child of [props.children].flat()){if(child!=null)node.append(child);}return node;}};
+    const E=()=>({pathname:r,search:i}),Ln={useSyncExternalStore(subscribe,snapshot){return snapshot();}},$={Fragment:'fragment',jsxs(type,props){return $.jsx(type,props);},jsx(type,props){if(typeof type==='function')return type(props);const node=document.createElement(type);if(props.style)Object.assign(node.style,props.style);if(props.role)node.setAttribute('role',props.role);if(props['aria-label'])node.setAttribute('aria-label',props['aria-label']);if(props.title)node.title=props.title;if(props['data-vscode-context'])node.setAttribute('data-vscode-context',props['data-vscode-context']);for(const child of [props.children].flat()){if(child!=null)node.append(child);}return node;}};
     ${menuComponent}
     ${titleComponent}
     function renderHeader(){document.getElementById('title').replaceChildren(RepoCompanionTitle({title:'Review fixture'}));document.getElementById('history').replaceChildren(RepoCompanionHistoryRow({component:RepoCompanionRowPrefix,repoCompanionKey:'local/00000000-0000-0000-0000-000000000001',conversationKey:'local/00000000-0000-0000-0000-000000000001',hostId:'local'}));}
@@ -30,7 +30,7 @@ function fixtureHtml(route) {
       if(event.data.type==='fixture:filter'){const input=document.querySelector('#repo-companion-menu input');input.value=event.data.value;input.dispatchEvent(new Event('input',{bubbles:true}));}
       if(event.data.type==='fixture:pick'){Array.from(document.querySelectorAll('#repo-companion-menu button')).find(item=>event.data.root?item.dataset.root===event.data.root:item.dataset.action===event.data.action)?.click();}
       if(event.data.type==='fixture:escape'){document.querySelector('#repo-companion-menu input')?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));}
-      if(event.data.type==='fixture:probe'){api.postMessage({type:'fixture:probe',focused:document.hasFocus(),element:document.activeElement.id,draft:document.getElementById('composer').value,title:document.getElementById('title').textContent,history:document.getElementById('history').textContent,titleTooltip:document.getElementById('title').firstElementChild?.title,historyTooltip:document.getElementById('history').firstElementChild?.title,menu:Array.from(document.querySelectorAll('#repo-companion-menu button')).map(item=>({label:item.textContent,root:item.dataset.root,action:item.dataset.action})),menuInput:document.querySelector('#repo-companion-menu input')?.value,menuOpen:!!document.getElementById('repo-companion-menu'),historyContext:JSON.parse(document.querySelector('#history [data-vscode-context]').getAttribute('data-vscode-context'))});}
+      if(event.data.type==='fixture:probe'){api.postMessage({type:'fixture:probe',focused:document.hasFocus(),element:document.activeElement.id,draft:document.getElementById('composer').value,title:document.getElementById('title').textContent,history:document.getElementById('history').textContent,titleColour:document.querySelector('#title [role=img]')?.style.backgroundColor,titleStarColour:document.querySelector('#title [role=img]')?.style.color,titleMarkers:document.querySelectorAll('#title [role=img]').length,titleTooltip:document.getElementById('title').firstElementChild?.title,historyTooltip:document.getElementById('history').firstElementChild?.title,menu:Array.from(document.querySelectorAll('#repo-companion-menu button')).map(item=>({label:item.textContent,root:item.dataset.root,action:item.dataset.action})),menuInput:document.querySelector('#repo-companion-menu input')?.value,menuOpen:!!document.getElementById('repo-companion-menu'),historyContext:JSON.parse(document.querySelector('#history [data-vscode-context]').getAttribute('data-vscode-context'))});}
     });
     render();document.getElementById('composer').focus();
     </script></body></html>`;
@@ -117,6 +117,9 @@ async function run() {
   const setupTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab => tab.label === 'Set Up Repo Companion');
   assert.equal(setupTabs.length, 1, 'both setup commands reuse one page');
   await vscode.window.tabGroups.close(setupTabs[0]);
+  const repositoryColours = { [parentUri.fsPath]: '#FF0000', [nestedUri.fsPath]: '#0000FF' };
+  if (phase === 'initial') await vscode.workspace.getConfiguration('codexRepoCompanion').update('repositoryColours', repositoryColours, vscode.ConfigurationTarget.Global);
+  else assert.deepEqual(vscode.workspace.getConfiguration('codexRepoCompanion').get('repositoryColours'), repositoryColours, 'repository colours survive restart');
   const aId = '00000000-0000-0000-0000-000000000001';
   const a = vscode.Uri.parse(`openai-codex://route/local/${aId}`);
   const b = vscode.Uri.parse('openai-codex://route/local/00000000-0000-0000-0000-000000000002');
@@ -178,6 +181,7 @@ async function run() {
   await vscode.commands.executeCommand('codexRepoCompanion.useAutomaticScope', a);
   await vscode.commands.executeCommand('codexRepoCompanion.useAutomaticScope', b);
   await check(b, 'Parent - Private \u00b7 Parent');
+  assert.equal((await vscode.commands.executeCommand('codexRepoCompanion.diagnostics')).colour, '#8C53A2', 'multi-repository colours blend');
   await check(a, 'Parent');
   // Latest scope replaces the older project instead of accumulating history.
   await sendScope(a, [nestedUri.fsPath]);
@@ -195,6 +199,11 @@ async function run() {
   }
   await sidebar.webview.postMessage({ type: 'fixture:navigate', path: a.path });
   await until(async () => (await probe()).title === '[Parent] Review fixture', 'sidebar header label');
+  await until(async () => (await probe()).titleColour === 'rgb(255, 0, 0)', 'repository colour dot');
+  await vscode.commands.executeCommand('codexRepoCompanion.toggleStar', a);
+  await until(async () => { const state = await probe(); return state.title === '\u2605[Parent] Review fixture' && state.titleStarColour === 'rgb(255, 0, 0)' && state.titleMarkers === 1 && !state.titleColour; }, 'one coloured star replaces the dot');
+  await vscode.commands.executeCommand('codexRepoCompanion.toggleStar', a);
+  await until(async () => (await probe()).titleColour === 'rgb(255, 0, 0)', 'unstarring restores the dot');
   await sendScope(a, [nestedUri.fsPath]);
   await until(async () => (await probe()).title === '[Parent - Private] Review fixture', 'sidebar label follows latest project');
   const state = await probe();
@@ -249,9 +258,11 @@ async function run() {
   await until(async () => (await probe()).history === '[Parent] ', 'unassigned row remains assignable');
 
   await sidebar.webview.postMessage({type:'fixture:menu',target:'title'});
-  await until(async () => (await probe()).menu.length === 8, 'header right-click lists both repositories plus Custom, Auto, Clear and New Chat');
+  await until(async () => (await probe()).menu.length === 10, 'header right-click lists both repositories plus Custom, Auto, Clear and New Chat');
   assert.deepEqual((await probe()).menu.filter(item=>item.root).map(item=>item.root),[parentUri.toString(),nestedUri.toString()]);
   assert.ok((await probe()).menu.some(item=>item.action==='custom' && item.label==='Custom Label...'));
+  assert.ok((await probe()).menu.some(item=>item.action==='colour' && item.label==='Chat Colour...'));
+  assert.ok((await probe()).menu.some(item=>item.action==='repositoryColour' && item.label==='Repository Colour...'));
   assert.ok((await probe()).menu.some(item=>item.action==='newChat' && item.label==='New Chat in Sidebar'));
   const beforeNewChat = await probe();
   const priorNewChatCalls = newChatCalls;
@@ -264,7 +275,7 @@ async function run() {
   await until(async () => (await probe()).menuOpen,'reopen after New Chat command');
 
   await sidebar.webview.postMessage({type:'fixture:filter',value:'private'});
-  await until(async () => (await probe()).menu.length === 7, 'direct menu filters repositories');
+  await until(async () => (await probe()).menu.length === 9, 'direct menu filters repositories');
   await sidebar.webview.postMessage({type:'fixture:escape'});
   await until(async () => !(await probe()).menuOpen, 'Escape dismisses the dropdown');
   await sidebar.webview.postMessage({type:'fixture:menu',target:'title'});

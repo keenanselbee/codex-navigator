@@ -1,6 +1,29 @@
 Release Notes
 =============
 
+1.1.8
+--------
+
+- Clarify that instruction routing complements Codex's built-in discovery for work across repositories.
+- Describe lightweight local helpers without additional AI calls, while retaining instruction-context and agent-compliance limits.
+
+
+1.1.7
+--------
+
+- Starred chats show one coloured star instead of a colour dot and a separate star.
+- Unstarred chats retain colour dots; stars without an assigned colour follow the theme.
+
+
+1.1.6
+--------
+
+- Choose chat and repository colours using eight presets, a colour picker or hex input.
+- Inherit repository colours automatically, blending multiple repositories equally; manual chat colours take precedence.
+- Show colour dots in chat history and headers without changing text colours or native editor tab titles.
+- Upgrade the optional display patch while retaining verified originals and restoration.
+
+
 1.1.5
 --------
 

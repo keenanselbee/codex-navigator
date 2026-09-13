@@ -6,6 +6,7 @@ Free and open source under the MIT license. Made by Keenan Selbee.
 
 - **Label chats** by project, or give them your own label.
 - **Star favourites** so they are easy to find again.
+- **Colour chats** individually or inherit colours from their repositories.
 - **Use project instructions** as you move between repositories, with an optional
   shared AGENTS.md for your workspace.
 
@@ -20,6 +21,16 @@ Get started
 
 Right-click a saved chat or its title to choose a project, add a custom label,
 or star it. With a single project open, custom labels come first.
+
+Choose **Chat Colour...** or **Repository Colour...** for eight presets, a colour
+picker and custom hex input. Chat colours override repository colours; multiple
+repository colours blend equally. Colour dots appear in chat history and headers; starred chats use a coloured star instead.
+Choose **Automatic (from repositories)** to reset a chat colour.
+
+Instruction routing is designed to make discovery more consistent as conversations
+move between repositories. It complements Codex's built-in AGENTS.md discovery and
+uses lightweight local helpers without additional AI calls; discovered instructions
+can add to the model's context.
 
 For project instructions, setup follows the folders in your workspace. Choose a
 shared AGENTS.md if you want common rules across projects. Start a new Codex chat

@@ -79,7 +79,7 @@ test('sidebar receives only display labels, updates assignments, and clears labe
   f.route('/local/a');
   assert.equal(f.messages.at(-1).label, 'Context Suite');
   assert.equal(f.messages.at(-1).key, 'local/a');
-  assert.deepEqual(Object.keys(f.messages.at(-1)).sort(), ['assignments', 'customLabels', 'key', 'label', 'pinManualLabels', 'repositories', 'starred', 'tooltips', 'type']);
+  assert.deepEqual(Object.keys(f.messages.at(-1)).sort(), ['assignments', 'colours', 'customLabels', 'key', 'label', 'pinManualLabels', 'repositories', 'starred', 'tooltips', 'type']);
   const count = f.messages.length;
   set({ 'local/a': { label: 'Context Suite' } });
   assert.equal(f.messages.length, count, 'identical assignment refresh sends no message');
@@ -236,4 +236,28 @@ test('star actions validate the clicked local chat and ordinary submit messages 
   bridge.observeMessage(webview, {type:'repo-companion-menu-action',key,action:'star'});
   assert.equal(calls[0][0].repoCompanionConversationKey,key);
   assert.equal(bridge.observeMessage(webview,{type:'submit-message',messageId:'queue-test'}),false);
+});
+
+
+test('colour-only metadata is validated, refreshed and cleared without changing chat titles', () => {
+  const f = sidebarFixture(); f.route('/local/a');
+  const set = f.commands.get('codexRepoCompanion.bridge.setAssignments');
+  set({ 'local/a': { label: '', colour: '#aabbcc' }, 'local/b': { label: '', colour: 'url(x)' } });
+  assert.equal(f.messages.at(-1).colours['local/a'], '#AABBCC');
+  assert.equal(f.messages.at(-1).colours['local/b'], undefined);
+  assert.equal(f.messages.at(-1).label, '');
+  const before = f.messages.length;
+  set({ 'local/a': { label: '', colour: '#112233' } });
+  assert.equal(f.messages.length, before + 1);
+  set({}); assert.equal(Object.keys(f.messages.at(-1).colours).length, 0);
+});
+
+test('colour menu actions retain the clicked chat identity and consume unregistered surfaces', () => {
+  const f = sidebarFixture(), calls = [];
+  const key = 'local/00000000-0000-0000-0000-000000000001';
+  f.commands.set('codexRepoCompanion.chatHistoryColour', value => calls.push(value));
+  f.bridge.observeMessage({}, { type: 'repo-companion-menu-action', key, action: 'colour' });
+  assert.equal(calls.length, 0);
+  f.bridge.observeMessage(f.webview, { type: 'repo-companion-menu-action', key, action: 'colour' });
+  assert.equal(calls[0].repoCompanionConversationKey, key);
 });

@@ -2,7 +2,7 @@
   "name": "codex-repo-companion",
   "displayName": "Codex Repo Companion",
   "description": "Organise Codex chats with project labels and stars, and find the right AGENTS.md.",
-  "version": "1.1.5",
+  "version": "1.1.8",
   "publisher": "keenanselbee",
   "private": true,
   "license": "MIT",
@@ -126,6 +126,21 @@
         "command": "codexRepoCompanion.openStarredChats",
         "title": "Open Starred Chats",
         "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.setChatColour",
+        "title": "Chat Colour...",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.chatHistoryColour",
+        "title": "Chat Colour...",
+        "category": "Codex Repo Companion"
+      },
+      {
+        "command": "codexRepoCompanion.setRepositoryColour",
+        "title": "Repository Colour...",
+        "category": "Codex Repo Companion"
       }
     ],
     "menus": {
@@ -147,6 +162,11 @@
         },
         {
           "command": "codexRepoCompanion.toggleStar",
+          "when": "resourceScheme == openai-codex",
+          "group": "codexRepoCompanion"
+        },
+        {
+          "command": "codexRepoCompanion.setChatColour",
           "when": "resourceScheme == openai-codex",
           "group": "codexRepoCompanion"
         }
@@ -171,6 +191,11 @@
           "command": "codexRepoCompanion.clearHistoryLabels",
           "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
           "group": "repoCompanion@3"
+        },
+        {
+          "command": "codexRepoCompanion.chatHistoryColour",
+          "when": "webviewSection == repoCompanionChat && (webviewId == 'chatgpt.sidebarView' || webviewId == 'chatgpt.sidebarSecondaryView' || webviewId == 'chatgpt.conversationEditor' || webviewId == 'chatgpt.panelView')",
+          "group": "repoCompanion@4"
         }
       ],
       "commandPalette": [
@@ -192,6 +217,10 @@
         },
         {
           "command": "codexRepoCompanion.starHistoryChat",
+          "when": "false"
+        },
+        {
+          "command": "codexRepoCompanion.chatHistoryColour",
           "when": "false"
         }
       ]
@@ -263,6 +292,16 @@
             "maxLength": 255
           },
           "markdownDescription": "Extra rules filenames to check if a folder has no AGENTS.override.md or AGENTS.md. For example: TEAM_GUIDE.md. Enter filenames only, in the order to check them. Most users can leave this empty."
+        },
+        "codexRepoCompanion.repositoryColours": {
+          "type": "object",
+          "scope": "application",
+          "default": {},
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+          },
+          "markdownDescription": "Colours for repositories across workspaces. Use Repository Colour to choose a preset, custom picker or hex colour. Chats inherit their repositories' colours unless you choose a chat colour."
         }
       }
     }
