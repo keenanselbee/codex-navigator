@@ -149,8 +149,10 @@ The owner also supplied the sandbox customer-portal URL. It is saved with the
 ignored sandbox configuration. Owner screenshots confirm one activation,
 customer-managed activations, no expiry and unlimited usage for Navigator Key
 attached to Codex Navigator - Test. A sandbox purchase shows CA$5.00 subtotal,
-CA$0.60 tax, CA$5.60 total and a granted licence benefit. Portal reachability and
-the corresponding production settings are not verified.
+CA$0.60 tax, CA$5.60 total and a granted licence benefit. Browser inspection now
+verifies the sandbox portal's organization-specific sign-in page. Authenticated
+customer access, portal recovery and the corresponding production settings remain
+unverified.
 The private service is committed independently as `21bcee7`; 18 commercial tests
 pass after relocation, including competing windows, stale replies, process
 termination, original trial retention and missing/corrupt storage. Public source
@@ -264,3 +266,9 @@ layouts in `integration-LgdkdB`. An earlier run failed the existing resize-focus
 assertion; the unchanged rerun passed and exited cleanly. Local receipts retain
 the archive hash, source revisions and working-state qualification. These are
 test artifacts, not the still-pending clean production release.
+
+The supplied sandbox portal opens a page titled Customer Portal | Keenan Selbee |
+Polar, with the sandbox banner and an email sign-in form. Navigation resolves to
+the organization's `/portal/request` page. No email or credentials were entered
+and no account settings changed. This closes portal-URL reachability only;
+authenticated purchase access and activation recovery remain owner-assisted gates.

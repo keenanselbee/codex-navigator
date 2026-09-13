@@ -9,6 +9,9 @@ retains release history. Old patch checks are not evidence for this product.
 Automated checks
 ----------------
 
+- Browser inspection confirms that the supplied sandbox portal URL reaches the
+  Keenan Selbee customer sign-in page with a sandbox banner. This verifies URL
+  reachability only; authenticated purchase access and recovery remain unverified.
 - The private split passes 123 public tests in a source snapshot without the
   private checkout and 20 commercial tests in the private repository. Full
   builds reject missing private source even with stale compiled output.
