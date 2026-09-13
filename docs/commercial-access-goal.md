@@ -236,3 +236,13 @@ The observer now attaches on view activation and uses Navigator's API object.
 No plaintext Navigator key was found in owned test files or logs. Native dialog
 appearance, real Codex goal/hook acceptance, portal recovery, refunds, delivery
 and clean production release artifacts remain separate gates.
+
+The required-hook setup revision removes Continue Without Setup and permanent
+dismissal. Navigator now requires installed, enabled, trusted hooks and recorded
+delivery, returning to setup with the relevant issue if readiness fails. Required
+hooks appear before optional labels and project instructions. The 121 public
+unit tests pass, including a recent collector write failure superseding older
+success. Isolated VS Code acceptance (`integration-B0wePX`) passes the mandatory
+setup view, removal diagnosis, preserved chats, licensing gates, restart and
+two-window checks. Hook trust and events in that acceptance remain fixtures;
+this does not satisfy the separate authenticated Codex acceptance gate.

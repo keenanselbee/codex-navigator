@@ -5,6 +5,14 @@ vm.runInNewContext(fs.readFileSync(require.resolve('../dist/hook-setup'),'utf8')
 const {parseHookTrust,activityCommand,lastHookEvent}=exportsFixture;
 const home=path.resolve('.codex-temp/hooks-trust-home'),cwd=path.resolve('.codex-temp/project');
 const events=['userPromptSubmit','stop','interrupt','sessionEnd'];
+test('chat admission requires all readiness checks and retains delivery evidence during idle time',()=>{
+ const valid={enabled:true,installed:true,nodeAvailable:true,trusted:true,observed:'2026-01-01T00:00:00Z',detail:'',nextStep:'Verified'};
+ assert.equal(exportsFixture.hookReadiness(valid).ready,true,'old successful evidence is valid while idle');
+ for(const change of [{enabled:false},{installed:false},{nodeAvailable:false},{trusted:false},{trusted:undefined},{observed:undefined},{detail:'Cannot read hooks'}]){
+  const result=exportsFixture.hookReadiness({...valid,...change,nextStep:'Repair this issue'});
+  assert.equal(result.ready,false);assert.equal(result.message,'Repair this issue');
+ }
+});
 function response(){return {data:[{cwd,errors:[],warnings:[],hooks:events.map(eventName=>({eventName,handlerType:'command',command:activityCommand(home),sourcePath:path.join(home,'hooks.json'),enabled:true,trustStatus:'trusted'}))}]};}
 test('trust requires all exact Navigator definitions enabled in every requested workspace',()=>{
  const value=response();assert.equal(parseHookTrust(value,home,[cwd]),true);
@@ -18,14 +26,17 @@ test('unsupported metadata, missing events and configuration warnings cannot cla
  const missing=response();missing.data[0].hooks.pop();assert.equal(parseHookTrust(missing,home,[cwd]),false);
  const warning=response();warning.data[0].warnings=['hooks disabled'];assert.equal(parseHookTrust(warning,home,[cwd]),undefined);
 });
-test('event verification ignores old, invalid and failed records and does not invent a test event',async()=>{
+test('event verification rejects recent delivery failures until a successful event arrives',async()=>{
  const directory=fs.mkdtempSync(path.resolve('.codex-temp/hook-verification-'));fs.mkdirSync(path.join(directory,'codex-navigator'));
  const file=path.join(directory,'codex-navigator/activity-diagnostics.jsonl'),now=Date.now();
  const record=(outcome,event,time)=>JSON.stringify({outcome,event,time:new Date(time).toISOString()})+'\n';
  fs.writeFileSync(file,record('recorded','Stop',now-10000)+record('write-failed','Stop',now)+record('recorded','unknown',now));
- assert.equal(await lastHookEvent(directory,now-1000),undefined);
+ await assert.rejects(lastHookEvent(directory,now-1000),/could not save its latest event/);
  fs.appendFileSync(file,record('recorded','UserPromptSubmit',now)+'{partial');
  assert.equal(await lastHookEvent(directory,now-1000),new Date(now).toISOString());
+ fs.appendFileSync(file,'\n'+record('write-failed','Stop',now));
+ await assert.rejects(lastHookEvent(directory,now-1000),/could not save its latest event/);
+ assert.equal(await lastHookEvent(directory,now+1000),undefined,'old failures do not affect a new installation');
 });
 
 test('missing installation memento uses a stable file cutoff across status checks',async()=>{
@@ -47,4 +58,11 @@ test('missing installation memento uses a stable file cutoff across status check
  }
  state.set('activityHooks.installedAt',Date.now());
  assert.equal((await exportsFixture.hookSetupStatus(context,directory)).observed,undefined,'reinstallation excludes earlier events');
+ const cached=await exportsFixture.hookSetupStatus(context,directory,true);
+ assert.equal(await exportsFixture.hookSetupStatus(context,directory,true),cached,'sidebar reuses the latest setup check');
+ fs.writeFileSync(path.join(directory,'hooks.json'),'{}');
+ assert.equal((await exportsFixture.hookSetupStatus(context,directory)).installed,false,'explicit check immediately detects removed definitions');
+ assert.equal((await exportsFixture.hookSetupStatus(context,directory,true)).installed,false,'sidebar sees the explicit result');
+ state.set('activityHooks.enabled',false);
+ assert.equal((await exportsFixture.hookSetupStatus(context,directory,true)).enabled,false,'changed setup preference invalidates the cache');
 });

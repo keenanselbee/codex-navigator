@@ -7,22 +7,22 @@
 </head>
 <body>
 <main>
-<header><h1>Set up Codex Navigator</h1><p>Choose the features you want. Each works independently.</p><div class="actions"><button data-action="showNavigator">Open Navigator</button><button class="secondary" data-action="arrangeNavigator">Arrange Navigator</button></div></header>
+<header><h1>Set up Codex Navigator</h1><p>Install and verify hooks to use Navigator. Automatic labels and project instructions are optional.</p><div class="actions"><button data-action="showNavigator">Open Navigator</button><button class="secondary" data-action="arrangeNavigator">Arrange Navigator</button></div></header>
 <div id="message" role="status" aria-live="polite"></div>
 <div id="stale" hidden>Settings changed elsewhere. <button data-action="refresh" class="secondary">Refresh choices</button><span> This replaces unsaved choices.</span></div>
+<section aria-labelledby="activity-title">
+<div class="heading"><h2 id="activity-title">Activity hooks (required)</h2><span id="activity-status" class="badge">Checking...</span></div>
+<p>See when chats are working or ready. Chats appear after hooks are verified.</p>
+<p id="activity-next"></p>
+<div class="actions"><button id="install-hooks" data-action="installHooks">Install Hooks</button><button id="review-hooks" data-action="reviewHooks" hidden>Open Hook Review</button><button id="reload-hooks" class="secondary" data-action="reload" hidden>Reload Window</button><button id="verify-hooks" class="secondary" data-action="verifyHooks" hidden>Check Status</button></div>
+<details><summary>Details and removal</summary><p id="activity-detail" class="muted"></p><p id="activity-checked" class="hint"></p><p id="install-detail"></p><p id="trust-detail"></p><p id="event-detail"></p><p id="hook-home" class="path"></p><p>Node.js must be on PATH. The review terminal opens in this workspace with the same Codex home. Only Codex can grant hook trust.</p><p>Hooks run locally without AI calls. Message text is discarded; only identifiers, events, status and times are stored. Installation backs up hooks.json and keeps unrelated hooks.</p><div class="actions"><button id="repair-hooks" class="secondary" data-action="installHooks">Reinstall Hooks</button><button class="secondary" data-action="disableHooks">Remove Navigator Hooks</button></div></details>
+</section>
 <section aria-labelledby="labels-title">
 <div class="heading"><h2 id="labels-title">Automatic labels</h2><span id="labels-status" class="badge">Checking...</span></div>
 <p>Let agents report which repository a chat is about.</p>
 <p id="labels-detail" class="hint"></p>
 <div class="actions"><button id="enable-labels" data-action="enableAutomaticLabels">Enable Automatic Labels</button><button id="disable-labels" class="secondary" data-action="disableAutomaticLabels" hidden>Turn Off</button></div>
-<details><summary>Details</summary><p>Adds reporting guidance to your global Codex instructions and installs a local helper. Start a new chat after enabling. Fixed labels stay fixed; manual labels work without setup.</p><p id="labels-file" class="path"></p><p>Optional Detect Chat Focus recognises explicit repository switches when an agent misses a report. It reads local user messages and respects fixed labels and no-write requests.</p><button class="secondary" data-action="focusSettings">Configure Detect Chat Focus</button></details>
-</section>
-<section aria-labelledby="activity-title">
-<div class="heading"><h2 id="activity-title">Activity indicators</h2><span id="activity-status" class="badge">Checking...</span></div>
-<p>See when chats are working or ready.</p>
-<p id="activity-next"></p>
-<div class="actions"><button id="install-hooks" data-action="installHooks">Install Hooks</button><button id="review-hooks" data-action="reviewHooks" hidden>Open Hook Review</button><button id="reload-hooks" class="secondary" data-action="reload" hidden>Reload Window</button><button id="verify-hooks" class="secondary" data-action="verifyHooks" hidden>Check Status</button></div>
-<details><summary>Details and removal</summary><p id="activity-detail" class="muted"></p><p id="activity-checked" class="hint"></p><p id="install-detail"></p><p id="trust-detail"></p><p id="event-detail"></p><p id="hook-home" class="path"></p><p>Node.js must be on PATH. The review terminal opens in this workspace with the same Codex home. Only Codex can grant hook trust.</p><p>Hooks run locally without AI calls. Message text is discarded; only identifiers, events, status and times are stored. Installation backs up hooks.json and keeps unrelated hooks.</p><div class="actions"><button id="repair-hooks" class="secondary" data-action="installHooks">Reinstall Hooks</button><button class="secondary" data-action="disableHooks">Remove Navigator Hooks</button></div></details>
+<details><summary>Details</summary><p>Adds reporting guidance to your global Codex instructions and installs a local helper. Start a new chat after enabling. Fixed labels stay fixed; manual labels do not need reporting guidance.</p><p id="labels-file" class="path"></p><p>Optional Detect Chat Focus recognises explicit repository switches when an agent misses a report. It reads local user messages and respects fixed labels and no-write requests.</p><button class="secondary" data-action="focusSettings">Configure Detect Chat Focus</button></details>
 </section>
 <section aria-labelledby="routing-title">
 <div class="heading"><h2 id="routing-title">Project instructions</h2><span id="routing-status" class="badge">Checking...</span></div>

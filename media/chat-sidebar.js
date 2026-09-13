@@ -200,7 +200,7 @@ window.addEventListener('message', event => {
     return;
   }
   if (message.type === 'goalSettled') { pendingGoals.delete(message.id); render(); return; }
-  if (message.type === 'colour') { el('welcomePage').hidden = true; el('repositoryPage').hidden = true; colourPanel.open(message); return; }
+  if (message.type === 'colour') { if (welcome) return; el('welcomePage').hidden = true; el('repositoryPage').hidden = true; colourPanel.open(message); return; }
   if (message.type === 'colourClosed') { colourPanel.close(repositoryPageActive ? 'repositoryPage' : welcome ? 'welcomePage' : 'chatPage'); sizeSignature = ''; resize(); return; }
   if (message.type === 'repositoryPage') { if (colourPanel.active || welcome) return; repositoryPageActive = true; renderRepositories(); el('chatPage').hidden = true; el('repositoryPage').hidden = false; el('repositoryBack').focus(); return; }
   if ((colourPanel.active || repositoryPageActive || welcome) && ['search', 'filter'].includes(message.type)) return;
@@ -209,8 +209,13 @@ window.addEventListener('message', event => {
   if (message.type === 'error') { el('message').textContent = message.message; return; }
   if (message.type !== 'state') return;
   welcome = !!message.welcome;
+  if (welcome) {
+    if (colourPanel.active) colourPanel.close('welcomePage');
+    repositoryPageActive = false; el('repositoryPage').hidden = true;
+    rows = []; el('chats').replaceChildren(); goals.clear(); visibleSignature = '';
+  }
   el('welcomePage').hidden = !welcome || colourPanel.active || repositoryPageActive;
-  el('activityPrompt').hidden = !message.activityPrompt;
+  el('setupMessage').textContent = message.setupMessage || 'Install and verify Navigator hooks to show your chats.';
   if (!colourPanel.active && !repositoryPageActive) el('chatPage').hidden = !!message.welcome;
   const nextRepositories = message.repositories || [];
   if (JSON.stringify(nextRepositories) !== JSON.stringify(repositories)) { repositories = nextRepositories; renderRepositories(); }
@@ -218,16 +223,15 @@ window.addEventListener('message', event => {
   highlightRecentlyViewedChats = message.highlightRecentlyViewedChats !== false;
   highlightOnlyLastViewedChat = message.highlightOnlyLastViewedChat === true;
   highlightDurationMs = (Number.isInteger(message.highlightDurationSeconds) ? Math.max(1, Math.min(3600, message.highlightDurationSeconds)) : 180) * 1000;
-  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, message.welcome, message.activityPrompt]);
+  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, message.welcome]);
   if (next === signature) return;
   signature = next; rows = message.rows;
   sizeSignature = ''; resize();
   for (const id of goals.keys()) if (!rows.some(row => row.id === id)) goals.delete(id);
   render();
 });
-for (const id of ['welcomeSetup', 'continueWithoutSetup', 'dismissActivityPrompt']) el(id).addEventListener('click', () => send(id));
+el('welcomeSetup').addEventListener('click', () => send('welcomeSetup'));
 for (const control of document.querySelectorAll('[data-license]')) control.addEventListener('click', () => send('license', { action: control.dataset.license }));
-el('activitySetup').addEventListener('click', () => send('settings'));
 el('filter').addEventListener('click', () => { mode = 'recent'; render(); });
 el('closeSearch').addEventListener('click', closeSearch);
 el('search').addEventListener('input', render);

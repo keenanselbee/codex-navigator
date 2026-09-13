@@ -24,6 +24,7 @@ function fixture() {
   const view = { visible: true, webview: { cspSource: 'vscode-webview:', asWebviewUri: v => v.fsPath,
     postMessage: async m => { sent.push(m); return true; }, onDidReceiveMessage: fn => { receive = fn; return { dispose() {} }; } },
     onDidDispose: fn => { disposed = fn; return { dispose() {} }; }, onDidChangeVisibility: fn => { visibleChanged = fn; return { dispose() {} }; } };
+  sidebar.activityReady = async () => ({ ready: true, message: 'Hook delivery is verified.' });
   sidebar.resolveWebviewView(view);
   return { sidebar, calls, sent, id, view, exports, vscode, commands, stored, receive: m => sidebar.receive(m) };
 }
@@ -74,7 +75,7 @@ test('hidden and disposed sidebar views stop history reads', async () => {
 
 test('in-panel colour results are token-bound, validated and cancelled without saving', async () => {
  const f=fixture(); const options={title:'Chat',initial:'#123456',resetLabel:'Automatic',recent:[],repositories:[]};
- const choice=f.sidebar.pickColour(options); await new Promise(setImmediate);
+ await f.sidebar.refresh(); const choice=f.sidebar.pickColour(options); await new Promise(setImmediate);
  const token=f.sent.at(-1).token;
  await f.receive({type:'colourResult',token:'wrong',colour:'#abcdef'});
  await f.receive({type:'colourResult',token,colour:'invalid'});
@@ -132,26 +133,38 @@ test('repository menu actions require a live workspace repository and captured c
  f.sidebar.dispose();
 });
 
-test('welcome can be skipped without setup and the activity reminder is dismissible', async () => {
-  const f = fixture(); await f.receive({type:'ready'});
-  assert.equal(f.sent.at(-1).welcome,true);
-  await f.receive({type:'continueWithoutSetup'});
-  assert.equal(f.sent.at(-1).welcome,false); assert.equal(f.sent.at(-1).activityPrompt,true);
-  assert.equal(f.sent.at(-1).rows.length,1); assert.equal(f.calls.length,0);
-  await f.receive({type:'dismissActivityPrompt'});
-  assert.equal(f.sent.at(-1).activityPrompt,false);
-  await f.sidebar.refresh(); assert.equal(f.sent.at(-1).welcome,false);
+test('missing hooks require setup despite obsolete dismissal flags and stale actions', async () => {
+  const f = fixture();
+  f.sidebar.activityReady=async()=>({ready:false,message:'Install Navigator hooks first.'});
+  f.stored.set('navigatorWelcome.v1',true); f.stored.set('activityPrompt.dismissed',true);
+  await f.receive({type:'ready'});
+  assert.equal(f.sent.at(-1).welcome,true); assert.equal(f.sent.at(-1).rows.length,0);
+  for(const type of ['continueWithoutSetup','dismissActivityPrompt','open']) await f.receive({type,id:f.id});
+  await f.sidebar.showControl('repositoryPage');
+  assert.equal(await f.sidebar.pickColour({}),undefined);
+  assert.equal(f.calls.some(call=>call[0]==='vscode.open'),false);
+  await f.sidebar.refresh(); assert.equal(f.sent.at(-1).welcome,true);
+  assert.match(f.sent.at(-1).setupMessage,/Install Navigator hooks/);
   f.sidebar.dispose();
 });
 
-test('welcome setup opens only the setup page and real event evidence removes the reminder', async () => {
+test('setup remains required until verified and returns with diagnosis after regression', async () => {
   const f = fixture(); await f.receive({type:'welcomeSetup'});
   assert.deepEqual(f.calls,[['codexNavigator.setUp']]);
   assert.equal(f.stored.has('activityHooks.enabled'),false);
-  f.sidebar.activityReady=async()=>true; await f.sidebar.refresh();
-  assert.equal(f.sent.at(-1).activityPrompt,false);
-  f.sidebar.activityReady=async()=>false; await f.sidebar.refresh();
-  assert.equal(f.sent.at(-1).activityPrompt,true);
+  await f.sidebar.refresh(); assert.equal(f.sent.at(-1).welcome,false);
+  assert.equal(f.sent.at(-1).rows.length,1);
+  const colourChoice=f.sidebar.pickColour({title:'Chat',initial:'#123456',recent:[],repositories:[]});
+  await new Promise(setImmediate);
+  f.sidebar.activityReady=async()=>({ready:false,message:'Open Hook Review and trust all Navigator hooks.'});
+  await f.sidebar.refresh();
+  assert.equal(await colourChoice,undefined,'losing readiness cancels an open colour picker');
+  assert.equal(f.sent.at(-1).welcome,true); assert.equal(f.sent.at(-1).rows.length,0);
+  assert.match(f.sent.at(-1).setupMessage,/Setup needs attention.*trust all/);
+  f.sidebar.activityReady=async()=>{throw Error('Offline');};await f.sidebar.refresh();
+  assert.equal(f.sent.at(-1).welcome,true);assert.match(f.sent.at(-1).setupMessage,/could not be checked/);
+  f.sidebar.activityReady=async()=>({ready:true,message:'Verified'});await f.sidebar.refresh();
+  assert.equal(f.sent.at(-1).welcome,false);assert.equal(f.sent.at(-1).rows.length,1);
   f.sidebar.dispose();
 });
 
@@ -162,8 +175,7 @@ test('startup publishes cached chats before live reads settle and keeps actions 
  f.stored.set('routingInvitation.v1',{handled:true});
  const loading=f.sidebar.refresh();await new Promise(setImmediate);
  assert.equal(f.sent.at(-1).rows[0].title,'Saved title');assert.equal(f.sent.at(-1).rows[0].activity,undefined);
- assert.equal(f.sent.at(-1).welcome,true,'obsolete setup flags do not suppress welcome');
- await f.receive({type:'continueWithoutSetup'});assert.equal(f.sent.at(-1).welcome,false);
+ assert.equal(f.sent.at(-1).welcome,false,'verified hooks admit cached chats without another welcome choice');
  rejectLive(new Error('Metadata unavailable'));await loading;
  f.sidebar.readChats=async()=>{throw new Error('Still unavailable');};
  await f.receive({type:'open',id:f.id});assert.ok(f.calls.some(call=>call[0]==='vscode.open'));

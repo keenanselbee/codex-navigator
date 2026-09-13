@@ -53,13 +53,14 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
   private goalDirty = false;
   private goalChanging = false;
   private goals: Record<string, ChatGoal> = {};
+  private setupRequired = true;
   private colour?: { token: string; options: ColourOptions; resolve: (value: string | null | undefined) => void };
 
   constructor(private context: vscode.ExtensionContext, private readChats: () => Promise<SidebarChat[]>,
     private goalHost?: { read(ids: string[]): Promise<Record<string, ChatGoal>>; stop(): void;
       change(id: string, expected: ChatGoal): Promise<ChatGoal> }, private themeChanged?: (background: string) => void,
     private readRepositories: () => { root: string; label: string; colour?: string }[] = () => [],
-    private activityReady: () => Promise<boolean> = async () => false,
+    private activityReady: () => Promise<{ ready: boolean; message: string }> = async () => ({ ready: false, message: 'Install and verify Navigator hooks to show your chats.' }),
     private readStartup?: () => Promise<SidebarChat[]>, private license?: LicenseAccess) {
     for (const action of Object.keys(actions).filter(action => action !== 'star')) {
       this.subscriptions.push(vscode.commands.registerCommand('codexNavigator.sidebar.' + action, async (value: unknown) => {
@@ -131,15 +132,22 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     const recentOnly = vscode.workspace.getConfiguration('codexNavigator').get('recentChatsOnly', true);
     const seen = this.context.globalState.get<Record<string, number>>('activitySeen.v1', {});
     const visible = placePinnedChats(this.rows.filter(row => !Object.hasOwn(hidden, row.id) && (pins[row.id] || !recentOnly || row.recencyAt === undefined || Math.max(row.recencyAt, seen[row.id] || 0) >= Date.now() - 86400000)), pins).map(row => ({ ...row, pinned: !!pins[row.id] }));
-    let activityPrompt = !this.context.globalState.get('activityPrompt.dismissed', false);
-    if (activityPrompt) { try { activityPrompt = !await this.activityReady(); } catch { /* Setup explains missing evidence. */ } }
-    activityPrompt = activityPrompt && !this.context.globalState.get('activityPrompt.dismissed', false);
-    const welcome = !this.context.globalState.get('navigatorWelcome.v1', false);
-    if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome, activityPrompt, rows: visible, repositories: this.readRepositories(), highlightDurationSeconds: vscode.workspace.getConfiguration('codexNavigator').get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: vscode.workspace.getConfiguration('codexNavigator').get('highlightRecentlyViewedChats', true), highlightOnlyLastViewedChat: vscode.workspace.getConfiguration('codexNavigator').get('highlightOnlyLastViewedChat', false), emptyMessage: this.rows.length ? 'No chats to show. Restore hidden chats or turn off Recent Chats Only in Extension Settings.' : 'No saved local chats yet.' }); }
+    let readiness = { ready: false, message: 'Hook status could not be checked. Open setup and choose Check Status.' };
+    try { readiness = await this.activityReady(); } catch { /* Keep setup accessible if diagnostics fail. */ }
+    const welcome = this.setupRequired = !readiness.ready;
+    const setupStarted = this.context.globalState.get('navigatorSetup.started', false)
+      || !!this.context.globalState.get('activityHooks.installedAt', 0);
+    if (welcome) {
+      this.visibleIds = []; this.goals = {}; this.goalHost?.stop();
+      this.colour?.resolve(undefined); this.colour = undefined;
+    }
+    if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome,
+      setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message,
+      rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), highlightDurationSeconds: vscode.workspace.getConfiguration('codexNavigator').get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: vscode.workspace.getConfiguration('codexNavigator').get('highlightRecentlyViewedChats', true), highlightOnlyLastViewedChat: vscode.workspace.getConfiguration('codexNavigator').get('highlightOnlyLastViewedChat', false), emptyMessage: this.rows.length ? 'No chats to show. Restore hidden chats or turn off Recent Chats Only in Extension Settings.' : 'No saved local chats yet.' }); }
   }
 
   private async refreshGoals(): Promise<void> {
-    if (!this.goalHost || this.disposed || !this.view?.visible || this.colour || this.license && !this.license.allowed()) return;
+    if (!this.goalHost || this.disposed || !this.view?.visible || this.colour || this.setupRequired || this.license && !this.license.allowed()) return;
     if (this.goalPending) { this.goalDirty = true; return; }
     this.goalPending = true;
     try {
@@ -147,21 +155,23 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
         this.goalDirty = false;
         const ids = [...this.visibleIds];
         this.goals = await this.goalHost.read(ids);
-        if (!this.disposed && this.view?.visible && (!this.license || this.license.allowed())) await this.view.webview.postMessage({ type: 'goals', ids, goals: this.goals });
-      } while (this.goalDirty && !this.disposed && this.view?.visible && (!this.license || this.license.allowed()));
+        if (!this.disposed && !this.setupRequired && this.view?.visible && (!this.license || this.license.allowed())) await this.view.webview.postMessage({ type: 'goals', ids, goals: this.goals });
+      } while (this.goalDirty && !this.setupRequired && !this.disposed && this.view?.visible && (!this.license || this.license.allowed()));
     } finally { this.goalPending = false; }
   }
 
   async showControl(type: 'search' | 'filter' | 'repositoryPage'): Promise<void> {
     if (this.license && !await this.license.requireAccess()) return;
     await vscode.commands.executeCommand('codexNavigator.chats.focus');
-    if (type === 'repositoryPage') await this.refresh();
+    await this.refresh();
+    if (this.setupRequired) return;
     await this.view?.webview.postMessage({ type });
   }
 
   async pickColour(options: ColourOptions): Promise<string | null | undefined> {
     if (this.license && !await this.license.requireAccess()) return undefined;
     await vscode.commands.executeCommand('codexNavigator.chats.focus');
+    if (this.setupRequired) return undefined;
     if (!this.view || this.disposed) throw new Error('Open Navigator to choose a colour.');
     this.colour?.resolve(undefined);
     return new Promise(resolve => {
@@ -189,13 +199,9 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     if (type === 'license' && typeof action === 'string') { await this.license?.action(action); return; }
     if (this.license && !this.license.allowed()) { await this.refresh(); return; }
     if (this.license && !['ready', 'refresh', 'visibleChats', 'theme'].includes(String(type)) && !await this.license.requireAccess()) return;
-    if (type === 'continueWithoutSetup' || type === 'welcomeSetup') {
-      await this.context.globalState.update('navigatorWelcome.v1', true);
-      if (type === 'welcomeSetup') await vscode.commands.executeCommand('codexNavigator.setUp');
-      await this.refresh(); return;
-    }
-    if (type === 'dismissActivityPrompt') {
-      await this.context.globalState.update('activityPrompt.dismissed', true);
+    if (type === 'welcomeSetup' || type === 'settings') {
+      await this.context.globalState.update('navigatorSetup.started', true);
+      await vscode.commands.executeCommand('codexNavigator.setUp');
       await this.refresh(); return;
     }
     if (type === 'theme') {
@@ -204,6 +210,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       return;
     }
     if (type === 'visibleChats') {
+      if (this.setupRequired) return;
       const ids = (message as { ids?: unknown }).ids;
       if (!Array.isArray(ids) || ids.length > 200) return;
       const next = [...new Set(ids.filter((value): value is string => typeof value === 'string'
@@ -226,8 +233,8 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       if (this.colour) await this.view?.webview.postMessage({ type: 'colour', token: this.colour.token, ...this.colour.options });
       return;
     }
+    if (this.setupRequired) return;
     if (type === 'new') { await vscode.commands.executeCommand('chatgpt.newChat'); return; }
-    if (type === 'settings') { await vscode.commands.executeCommand('codexNavigator.setUp'); return; }
     if (type === 'repositoryColour') {
       const root = (message as { root?: unknown }).root;
       if (typeof root !== 'string' || !this.readRepositories().some(repo => repo.root === root)) return;

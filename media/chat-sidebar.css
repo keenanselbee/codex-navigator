@@ -87,10 +87,9 @@ body[data-layout="list"] .label-row { display: flex; align-items: center; min-wi
 
 #welcomePage { display: flex; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 6px; min-height: 0; height: 100%; overflow: auto; padding: 4px; }
 .welcome-tip { flex-basis: 100%; margin: 8px 0 0; text-align: center; color: var(--vscode-descriptionForeground); }
+#setupMessage { flex-basis: 100%; margin: 0 0 8px; text-align: center; }
 .setup-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); padding: 5px 9px; }
 .setup-primary:hover { background: var(--vscode-button-hoverBackground); }
-#activityPrompt { display: flex; align-items: center; justify-content: space-between; color: var(--vscode-descriptionForeground); font-size: .9em; flex: 0 0 auto; }
-#activityPrompt button:first-child { text-align: left; }
 #licensePage { flex: 1; min-height: 0; overflow: auto; padding: 10px; }
 .license-content { max-width: 520px; margin: auto; }
 .license-content h2 { font-size: 1.15em; margin: 0 0 8px; }

@@ -72,11 +72,15 @@ fails open and must never interrupt the user's turn.
 Setup webview
 -------------
 
-One reusable page offers three independent features: automatic labels, activity
-indicators and project instructions. Each shows its next action, with diagnostics
+One reusable page puts required activity hooks first, with optional automatic
+labels and project instructions. Each shows its next action, with diagnostics
 and options under Details. Arrangement instructions appear only after the action.
-The sidebar owns first-use onboarding, with a continue-without-setup option and a
-dismissible activity reminder; activation does not show an invitation toast.
+The sidebar requires installed, enabled, trusted hooks and successful delivery
+since installation. Missing readiness replaces chats with setup and a relevant
+next step; prior dismissal flags cannot bypass it. Background checks reuse results
+for up to 15 seconds, while explicit setup checks refresh immediately. A recent
+collector write failure supersedes older success until delivery recovers. Idle
+time alone does not invalidate delivery. Activation does not show an invitation toast.
 Automatic labels have a separate managed global instruction block and an
 application-level preference. Disabling reports retains existing assignments;
 explicit corrections and focus detection remain independent. It uses a restrictive

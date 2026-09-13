@@ -4,6 +4,9 @@ Release Notes
 Unreleased
 ----------
 
+- Require verified activity hooks before showing chats. Remove setup bypasses,
+  put hooks first in setup, and explain missing or broken setup on return.
+
 - Add explicit seven-day trial admission and a licence screen for the planned $5 CAD one-time release. Gate Navigator actions on access while preserving data, Codex tasks and setup removal.
 - Keep commercial policy, Polar validation and protected storage in an independent private checkout. Public contracts, interface code and component tests remain available for inspection.
 - Add cross-window storage coordination, daily paid validation, bounded offline grace and explicit recovery without another trial.

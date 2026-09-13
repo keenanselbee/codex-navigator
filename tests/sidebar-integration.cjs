@@ -17,6 +17,7 @@ exports.run = async function (context, fixtureVscode) {
   const root = process.env.REPO_COMPANION_TEST_ROOT;
   let companion, companionProvider, companionContext, probeResolve, fixture, selected, fixtureLoaded = false;
   const stateLog=[];
+  let hooksReady = process.env.REPO_COMPANION_TEST_PHASE === 'restart';
   const id = i => '00000000-0000-0000-0000-' + String(i).padStart(12, '0');
   try {
     fs.writeFileSync(path.join(process.env.CODEX_HOME, 'session_index.jsonl'), Array.from({ length: 12 }, (_, i) => JSON.stringify({
@@ -45,8 +46,9 @@ exports.run = async function (context, fixtureVscode) {
     };
     const original = ChatSidebar.prototype.resolveWebviewView;
     ChatSidebar.prototype.resolveWebviewView = function (view) {
+      this.activityReady = async () => ({ready:hooksReady,message:'Open Hook Review and trust all Navigator hooks.'});
       original.call(this, view); companionProvider = this; companion = view; companionContext = this.context;
-      const post=view.webview.postMessage.bind(view.webview);view.webview.postMessage=message=>{if(message.type==='state'){stateLog.push({welcome:message.welcome,rows:message.rows.length,activityPrompt:message.activityPrompt});}return post(message);};
+      const post=view.webview.postMessage.bind(view.webview);view.webview.postMessage=message=>{if(message.type==='state'){stateLog.push({welcome:message.welcome,rows:message.rows.length,setupMessage:message.setupMessage});}return post(message);};
       view.webview.onDidReceiveMessage(message => { if (message.type === 'fixture:probe') probeResolve?.(message); if (message.type === 'fixture:loaded') fixtureLoaded = true; });
       const nonce = /nonce="([a-f0-9]+)"/.exec(view.webview.html)[1];
       view.webview.html = view.webview.html.replace('</body>', `<script nonce="${nonce}">
@@ -57,7 +59,7 @@ exports.run = async function (context, fixtureVscode) {
         },true);
         window.addEventListener('message', event => {
           const m=event.data;
-          if(m.type==='fixture:probe') api.postMessage({type:'fixture:probe', licenseVisible:!el('licensePage').hidden,licenseText:el('licenseStatus').textContent, welcome:!el('welcomePage').hidden,activityPrompt:!el('activityPrompt').hidden,rows:document.querySelectorAll('.chat').length,
+          if(m.type==='fixture:probe') api.postMessage({type:'fixture:probe', licenseVisible:!el('licensePage').hidden,licenseText:el('licenseStatus').textContent, welcome:!el('welcomePage').hidden,setupMessage:el('setupMessage').textContent,skipPresent:!!el('continueWithoutSetup')||!!el('dismissActivityPrompt'),rows:document.querySelectorAll('.chat').length,
             ids:[...document.querySelectorAll('.chat')].map(n=>JSON.parse(n.dataset.vscodeContext).navigatorChatId),pinOrder:[...(document.querySelector('.label-row')?.children || [])].map(n=>n.className),text:document.getElementById('chats').textContent, label:document.querySelector('.label')?.textContent,repositoryPageHidden:document.getElementById('repositoryPage').hidden,repositoryRoots:[...document.querySelectorAll('.repository')].map(n=>n.dataset.root),customMenuPresent:!!document.getElementById('contextMenu'),
             colour:document.querySelector('.label')?getComputedStyle(document.querySelector('.label')).color:null,
             starColour:document.querySelector('.star')?getComputedStyle(document.querySelector('.star')).color:null,
@@ -179,10 +181,14 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#licenseTrial'});
     await until(async()=>(await probe()).welcome&&!(await probe()).licenseVisible,'explicit trial start opens first-use welcome screen');
     await companion.webview.postMessage({type:'fixture:size',width:320,height:100});
-    await companion.webview.postMessage({type:'fixture:click',selector:'#continueWithoutSetup'});
-    await until(async()=>!(await probe()).welcome&&(await probe()).activityPrompt,'continue exposes chats and optional reminder');
-    await companion.webview.postMessage({type:'fixture:click',selector:'#dismissActivityPrompt'});
-    await until(async()=>!(await probe()).activityPrompt,'dismiss reminder');
+    assert.equal((await probe()).skipPresent,false,'setup has no bypass or dismiss control');
+    assert.equal((await probe()).rows,0,'missing hooks hide saved chats');
+    await companionContext.globalState.update('navigatorWelcome.v1',true);
+    await companionContext.globalState.update('activityPrompt.dismissed',true);
+    await companionProvider.refresh();
+    assert.equal((await probe()).welcome,true,'old dismissals do not admit chats');
+    hooksReady=true; await companionProvider.refresh();
+    await until(async()=>!(await probe()).welcome,'verified hooks expose chats');
     try { await until(async () => {const p=await probe();return p.rows>0&&p.rows<8&&p.fits;}, 'only complete chats in a small view'); }
     catch(error) { throw new Error(error.message+' '+JSON.stringify({probe:await probe(),storedWelcome:companionContext.globalState.get('navigatorWelcome.v1'),stateLog:stateLog.slice(-15)})); }
     assert.ok((await probe()).text.includes('Fixture'),'local chat index renders before metadata or any Codex chat is opened');
@@ -463,6 +469,15 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#repositoryBack'});
     await until(async()=>(await probe()).repositoryPageHidden&&(await probe()).rows>0,'back restores chats');
     const setupChecks = await require('./setup-integration.cjs').run(companionContext, vscode, until);
+    const {hookReadiness,hookSetupStatus}=require('../dist/hook-setup');
+    companionProvider.activityReady=async()=>hookReadiness(await hookSetupStatus(companionContext,process.env.CODEX_HOME,true));
+    await companionProvider.refresh();
+    await until(async()=>{const p=await probe();return p.welcome&&p.rows===0;},'removed hooks replace chats with setup');
+    assert.match((await probe()).setupMessage,/Setup needs attention.*Install Navigator hooks/);
+    companionProvider.activityReady=async()=>({ready:true,message:'Fixture hooks verified'});
+    await companionProvider.refresh();
+    await until(async()=>!(await probe()).welcome,'verified readiness restores preserved chats');
+
     // Only the disposable profile's real SecretStorage is altered by this test.
     // There is no shipping clock override or access bypass.
     const protectedKey='license.production.v1';
@@ -507,7 +522,7 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#licenseBack'});
     await until(async()=>!(await probe()).licenseVisible&&(await probe()).rows>0,'regaining access restores unchanged chats');
     const result = { phase: 'initial', passed: true, vscode: vscode.version,
-      verified: [...setupChecks, 'welcome and continue without setup', 'dismissible activity prompt', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
+      verified: [...setupChecks, 'mandatory setup despite old dismissal flags', 'hook readiness controls chat admission', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
         'native recency order independent of activity', 'recency outage preserves order', 'whole-panel pointer ordering hold', 'safe title text', 'coloured label text', 'automatic distinct repository colours', 'multi-repo Auto default', 'Automatic versus No colour picker', 'star control', 'search',
         'height-driven layouts', 'width-dependent columns', 'resize preserves focus', 'column and fitted row counts survive webview reload', 'native header search',
         'native extension URI dispatch', 'both sidebar views visible', 'no patch bridge',

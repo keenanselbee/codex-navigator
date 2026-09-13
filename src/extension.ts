@@ -12,7 +12,7 @@ import { chooseColour } from './colour-picker';
 import { hideRedundantLabel, readStarredChats } from './model';
 import { RoutingPublisher } from './routing';
 import { setUpAgentHelper, setUpNavigator } from './setup';
-import { lastHookEvent } from './hook-setup';
+import { hookReadiness, hookSetupStatus } from './hook-setup';
 import { Assignment, readRepositoryAliases, readManualTimes, customLabelError, readCustomLabels, assignmentKey, conversationKey, historyContextKey, conversationViewType, isNewPanel, readAssignments, repositoryLabel, sameRoot } from './model';
 import { readRecentConversations, threadIdPattern } from './history';
 import { ChatRecency } from './chat-recency';
@@ -194,8 +194,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }, () => git!.repositories.filter(repo => repo.rootUri.scheme === 'file').map(repo => ({
       root: repo.rootUri.fsPath, label: repositoryLabel(repo.rootUri.fsPath, repositoryNames()),
       colour: repositoryColours()[repositoryColourKey(repo.rootUri.fsPath)],
-    })), async () => context.globalState.get('activityHooks.enabled', false)
-      && !!await lastHookEvent(home, context.globalState.get('activityHooks.installedAt', 0)), () => readSidebarChats(true), license);
+    })), async () => hookReadiness(await hookSetupStatus(context, home, true)), () => readSidebarChats(true), license);
   context.subscriptions.push(sidebar, vscode.window.registerWebviewViewProvider('codexNavigator.chats', sidebar));
   context.subscriptions.push(license.onDidChange(() => {
     if (!license.allowed()) {

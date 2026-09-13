@@ -9,12 +9,13 @@ Setup
 
 Start a trial or activate a licence in Navigator, then run **Codex Navigator:
 Set Up Codex Navigator**. **Open Navigator** opens the view. First use after
-admission shows a setup button and **Continue Without Setup**.
-Continuing exposes chats with a dismissible activity setup reminder. The reminder
-also disappears after a recorded hook event since installation. There is no
-separate startup popup. Setup has three independent sections: Automatic labels,
-Activity indicators and Project instructions. Details and diagnostics are collapsed.
-Manual labels, colours, stars and goals remain usable without setup.
+admission shows a setup button until hooks are installed, enabled, trusted and
+have delivered an event since installation. There is no skip or permanent dismissal.
+If readiness fails later, Navigator replaces chats with setup and the relevant next
+step. Previously started setup is identified as needing attention. Saved chats,
+labels and other preferences remain intact. There is no separate startup popup.
+Setup puts required Activity hooks first, followed by optional Automatic labels
+and Project instructions. Details and diagnostics are collapsed.
 **Arrange Navigator** opens the view and explains how to drag its heading above
 Codex. Release at the insertion indicator and resize the divider. VS Code remembers
 the arrangement. Navigator does not invoke the focus-dependent Move View Up command
@@ -52,6 +53,12 @@ delivery. Unknown APIs, config errors or warnings leave trust unverified.
 **Check Status** refreshes these checks; the visible page also polls every five
 seconds without replacing unsaved routing fields. A recorded event verifies one
 lifecycle delivery, not every hook, every chat, or a successful task result.
+The visible Navigator reuses status results for up to 15 seconds; Check Status
+forces a fresh check. A quiet chat does not invalidate earlier delivery evidence.
+Missing, disabled, changed or untrusted hooks, unavailable Node.js, and unknown
+trust status all require setup. A recent collector write failure also requires
+attention until a successful event arrives. Older dismissal flags no longer bypass
+these checks.
 
 If setup says Node.js needed, install Node.js and restart VS Code. If trust is
 unverified, inspect `/hooks` in the provided terminal. If trusted but no event
@@ -181,7 +188,7 @@ without fresh evidence. A blue ready dot records a completed turn since opening
 through Navigator; native navigation is not tracked reliably.
 
 An active goal also displays one animated circle immediately after its goal icon,
-even between turns or without activity hooks. A working turn shares that spinner;
+even between turns. A working turn shares that spinner;
 pausing the goal removes it only when the chat is not working. When a goal and another activity indicator appear together, the chat title uses
 one line with an ellipsis so the indicators do not add another text row. The full
 title stays in its tooltip. Status dots retain their existing meanings. The goal-only spinner is labelled "Goal running".

@@ -67,7 +67,10 @@ Automated checks
   without the index and keeps chat actions usable after failed refreshes.
   Mouse-focus checks verify empty pins hide after star clicks; keyboard focus
   still reveals controls and both hit areas are 18px tall.
-- First-use welcome and reminder dismissal are exercised in the owned sidebar.
+- Required hook setup, obsolete dismissal flags, missing-hook diagnosis and
+  restoration of saved chats are exercised in the owned sidebar. The current
+  121 public unit tests include the readiness matrix, cached versus explicit
+  checks, recent delivery failures and cancellation of an open colour picker.
   Automatic label setup, report enable/disable behavior, independent routing state
   and collapsed setup details are checked in the real webview.
 - The actual setup webview is exercised through install, review dispatch,

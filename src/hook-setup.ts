@@ -31,15 +31,38 @@ export async function lastHookEvent(home: string, since: number): Promise<string
       await file.read(buffer, 0, buffer.length, start);
       let text = buffer.toString('utf8'); if (start) text = text.slice(text.indexOf('\n') + 1);
       for (const line of text.split('\n').reverse()) {
-        try { const record = JSON.parse(line), time = Date.parse(record.time);
-          if (record.outcome === 'recorded' && hookEvents.includes(record.event) && Number.isFinite(time) && time >= since && time <= Date.now() + 5000) return record.time;
-        } catch { /* Ignore partial diagnostics. */ }
+        let record;
+        try { record = JSON.parse(line); } catch { continue; /* Ignore partial diagnostics. */ }
+        const time = Date.parse(record?.time);
+        if (!Number.isFinite(time) || time < since || time > Date.now() + 5000) continue;
+        if (record.outcome === 'write-failed') throw new Error('The activity collector could not save its latest event. Check the diagnostics in setup, then send a new Codex message.');
+        if (record.outcome === 'recorded' && hookEvents.includes(record.event)) return record.time;
       }
     } finally { await file.close(); }
   } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
 }
 
-export async function hookSetupStatus(context: vscode.ExtensionContext, home: string) {
+type HookStatus = Awaited<ReturnType<typeof readHookSetupStatus>>;
+const statusCache = new WeakMap<vscode.ExtensionContext, { key: string; until: number; pending: Promise<HookStatus> }>();
+
+// Share setup's latest result with the sidebar; bound background runtime checks.
+export function hookSetupStatus(context: vscode.ExtensionContext, home: string, cached = false): Promise<HookStatus> {
+  const key = JSON.stringify([home, context.globalState.get('activityHooks.enabled', false),
+    context.globalState.get('activityHooks.installedAt', 0), vscode.workspace.workspaceFolders?.map(folder => folder.uri.fsPath)]);
+  const previous = statusCache.get(context);
+  if (cached && previous?.key === key && previous.until > Date.now()) return previous.pending;
+  const entry = { key, until: Date.now() + 15000, pending: readHookSetupStatus(context, home) };
+  statusCache.set(context, entry);
+  void entry.pending.catch(() => { if (statusCache.get(context) === entry) statusCache.delete(context); });
+  return entry.pending;
+}
+
+export function hookReadiness(status: HookStatus): { ready: boolean; message: string } {
+  return { ready: status.enabled && status.installed && status.nodeAvailable && status.trusted === true && !!status.observed && !status.detail,
+    message: status.nextStep };
+}
+
+async function readHookSetupStatus(context: vscode.ExtensionContext, home: string) {
   const enabled = context.globalState.get('activityHooks.enabled', false);
   const cwds = (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath).slice(0, 100);
   const installedAt = context.globalState.get<number>('activityHooks.installedAt', 0);
@@ -66,8 +89,12 @@ export async function hookSetupStatus(context: vscode.ExtensionContext, home: st
     const reader = new ChatGoals(path.join(codex.extensionPath, 'bin', 'windows-x86_64', 'codex.exe'), home, () => {});
     try { trusted = parseHookTrust(await reader.readHooks(cwds), home, cwds); } finally { reader.dispose(); }
   }
-  const observed = installed && enabled ? await lastHookEvent(home, since) : undefined;
-  const nextStep = !nodeAvailable ? 'Install Node.js and restart VS Code.' : detail ? 'Resolve the setup problem shown above, then check again.'
+  let observed: string | undefined;
+  if (installed && enabled) {
+    try { observed = await lastHookEvent(home, since); }
+    catch (error) { detail = error instanceof Error ? error.message : String(error); }
+  }
+  const nextStep = !nodeAvailable ? 'Install Node.js and restart VS Code.' : detail ? detail
     : !installed || !enabled ? 'Install Navigator hooks first.'
     : trusted === false ? 'Open Hook Review, type /hooks, and trust all Navigator hooks.'
     : trusted === undefined ? 'Trust could not be verified. Open Hook Review and check Navigator hooks in /hooks.'

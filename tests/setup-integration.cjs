@@ -17,7 +17,7 @@ exports.run=async function(context,vscode,until){
  const probe=async()=>{const result=new Promise(resolve=>receive=resolve);await panel.webview.postMessage({type:'fixture:setupProbe'});return Promise.race([result,new Promise((_,reject)=>setTimeout(()=>reject(Error('Setup probe timed out')),2000))]);};
  const click=async action=>{await until(async()=>{const p=await probe();return p.busy==='false'&&!p.disabledActions.includes(action);},'setup ready for '+action);await panel.webview.postMessage({type:'fixture:setupAction',action});};
  await until(async()=>!['Checking...',''].includes((await probe()).status),'setup renders status');
- assert.ok((await probe()).headings.includes('Activity indicators'));assert.ok(!(await probe()).headings.includes('Chat labels and stars'));
+ assert.ok((await probe()).headings.includes('Activity hooks (required)'));assert.ok(!(await probe()).headings.includes('Chat labels and stars'));
  const initial=await probe();assert.equal(initial.detailsOpen,0);assert.ok(!initial.headerText.includes('Drag the Navigator'));
  assert.equal(initial.headings.length,3);assert.ok(initial.visibleActions.includes('enableAutomaticLabels'));
  assert.ok(initial.visibleActions.includes('installHooks'));assert.ok(!initial.visibleActions.includes('reviewHooks'));
@@ -67,5 +67,5 @@ exports.run=async function(context,vscode,until){
  assert.ok(fs.readFileSync(instructions,'utf8').includes('codex-navigator:start'));
  assert.equal(vscode.workspace.getConfiguration('codexNavigator').get('agentRepositoryLabels'),false,'routing does not re-enable label reports');
  panel.dispose();
- return ['three compact independent setup sections', 'independent label setup and report preference', 'arrangement copy only after click', 'real setup webview','install/trust/event distinction','Codex-owned review dispatch','routing draft preserved','no horizontal overflow','remove own hooks','arrangement guidance without native move command'];
+ return ['required hooks first with two optional setup sections', 'independent label setup and report preference', 'arrangement copy only after click', 'real setup webview','install/trust/event distinction','Codex-owned review dispatch','routing draft preserved','no horizontal overflow','remove own hooks','arrangement guidance without native move command'];
 };

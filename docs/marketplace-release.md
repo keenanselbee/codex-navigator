@@ -7,8 +7,10 @@ License: source available; see LICENSE.md
 
 This release removes the patch integration entirely. It does not migrate data,
 restore old Codex files, alias old commands/settings, or maintain an older Repo
-Companion installation. Setup offers independent automatic labels, activity hooks and project
-instructions. After trial or paid admission, Continue Without Setup opens the sidebar.
+Companion installation. After trial or paid admission, verified activity hooks
+are required to open the chat list. Setup has no bypass and returns with the
+relevant next step if readiness fails. Automatic labels and project instructions
+remain optional.
 
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename

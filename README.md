@@ -24,7 +24,7 @@ What it does
 - **Pinned chats.** Hover beside a label to reveal the pin control.
   Pins hold its list position and bypass the 24-hour filter. Unpin to return
   it to normal ordering. Fixed labels are a separate preference.
-- **Activity at a glance.** Optional hooks show a working spinner and a blue ready
+- **Activity at a glance.** Required local hooks show a working spinner and a blue ready
   dot. Supported runtime signals also show waiting in yellow and errors in red.
 - **Goal controls.** A circle with pause bars shows a running goal; a play triangle
   shows a paused goal. Running goals also show a spinner to the right. Click to
@@ -45,17 +45,17 @@ Get started
 
 1. Install Codex Navigator alongside the OpenAI Codex extension.
 2. Open Navigator and choose **Start 7-Day Trial** or **Activate Licence**.
-   Then choose **Set Up Codex Navigator**, or **Continue Without
-   Setup** to browse immediately. Setup is also available from the Command Palette.
-3. Choose Automatic labels, Activity indicators or Project instructions independently.
-   For activity, select **Install Hooks**, then **Open Hook Review**.
+   Then choose **Set Up Codex Navigator**. Setup is also available from the Command Palette.
+3. Set up the required activity hooks: select **Install Hooks**, then **Open Hook Review**.
    Type `/hooks` in the Codex terminal and review and trust all Navigator hooks.
 4. Reload the window and send a normal chat message. Setup confirms when it
    receives an activity event.
 
 The review terminal opens in the right workspace and Codex home automatically;
 no separate Codex CLI installation or directory command is needed. Activity hooks
-require Node.js on PATH. Labels, colours, stars and goals work without these hooks.
+require Node.js on PATH. Navigator shows chats once hooks are installed, enabled,
+trusted and have delivered an event. If those checks fail later, setup returns
+with the next step. Automatic labels and project instructions are optional.
 
 Choose **Arrange Navigator** in setup, then drag its heading above Codex and resize
 the divider. The view shows as many complete chats as fit, without a scrollbar or
