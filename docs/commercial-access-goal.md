@@ -151,8 +151,8 @@ customer-managed activations, no expiry and unlimited usage for Navigator Key
 attached to Codex Navigator - Test. A sandbox purchase shows CA$5.00 subtotal,
 CA$0.60 tax, CA$5.60 total and a granted licence benefit. Browser inspection now
 verifies the sandbox portal's organization-specific sign-in page. Authenticated
-customer access, portal recovery and the corresponding production settings remain
-unverified.
+customer access and portal recovery remain unverified. Production configuration
+evidence is recorded below separately from sandbox acceptance.
 The private service is committed independently as `21bcee7`; 18 commercial tests
 pass after relocation, including competing windows, stale replies, process
 termination, original trial retention and missing/corrupt storage. Public source
@@ -196,7 +196,19 @@ This confirms the supplied sandbox organization/benefit identity and licence
 limits. Refund/revocation, portal recovery and actual download delivery are still
 outstanding. Configured activation inside the packaged extension is now verified
 through the separate licence-screen test described below.
-Production organization/product/benefit IDs, checkout and portal remain pending.
+The owner has supplied production organization/product/benefit IDs, checkout and
+the live organization slug. Screenshots confirm CAD 5.00 fixed one-time pricing,
+the attached Navigator licence benefit, one activation, customer deactivation,
+no expiry and unlimited usage. The constants are configured only in the private
+checkout; no merchant credentials or customer keys are included. Production
+provider validation, portal reachability and authenticated recovery, checkout tax
+presentation and delivery remain unverified. The production composition builds
+successfully and all 20 commercial tests pass. A disposable package verifies all
+54 archive entries and excludes private source (`package-acceptance-4aHvJP`);
+it is not a versioned production release or evidence of live provider acceptance.
+Isolated VS Code acceptance also passes with this composition
+(`integration-di0F0b`), including trial expiry, protected restart and two-window
+coordination. Provider responses and Codex hooks/goals remain fixtures there.
 Context Suite configuration exists separately; reuse no product-specific IDs.
 CAD tax presentation must be confirmed in checkout. Seven-day trials are local,
 not subscription trials or seven-day expiry on purchased licence keys.
