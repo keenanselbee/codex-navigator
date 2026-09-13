@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator (next commercial release; version not reserved yet)
+Product: Codex Navigator 1.5.1 (commercial release candidate; not published)
 Extension identity: keenanselbee.codex-navigator
 License: source available; see LICENSE.md
 
@@ -38,5 +38,11 @@ Earlier releases and their original license grants remain unchanged. Source
 inspection is allowed; code reuse, modification and redistribution require written
 permission. New commercial releases require trial or paid admission for features.
 Current installed 1.5.0 retains its original permissions; never overwrite it with
-this changed payload. Production configuration and live commerce remain owner-run
-dependencies, not implied by successful local tests.
+this changed payload. The owner supplied production configuration and screenshots
+confirming the selected price and benefit settings. Live commerce acceptance
+remains an owner-run dependency, not implied by successful local tests.
+
+Prepare this candidate from clean, committed public and private checkouts. A
+separate worktree may be used to exclude unrelated local working files without
+changing them. Keep the resulting VSIX and paired revision/hash receipt immutable.
+If further fixes change the packaged payload, reserve the next patch version.

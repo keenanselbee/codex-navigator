@@ -1,8 +1,8 @@
 Release Notes
 =============
 
-Unreleased
-----------
+1.5.1 (release candidate)
+------------------------
 
 - Keep repository labels on one line with an ellipsis and full-label hover text,
   so long labels do not increase chat row height.
@@ -14,7 +14,7 @@ Unreleased
 - Add explicit seven-day trial admission and a licence screen for the planned $5 CAD one-time release. Gate Navigator actions on access while preserving data, Codex tasks and setup removal.
 - Keep commercial policy, Polar validation and protected storage in an independent private checkout. Public contracts, interface code and component tests remain available for inspection.
 - Add cross-window storage coordination, daily paid validation, bounded offline grace and explicit recovery without another trial.
-- Verify release archives against runtime file hashes and record both repository revisions. Production configuration and authenticated commerce acceptance remain pending; no commercial release is published yet.
+- Verify release archives against runtime file hashes and record both repository revisions. Production configuration is supplied; authenticated commerce acceptance remains pending. This candidate is not published or approved for customer distribution.
 - Remember the responsive layout across reloads, including near height thresholds. Ignore hidden startup measurements and refit columns to the restored panel width.
 
 1.5.0

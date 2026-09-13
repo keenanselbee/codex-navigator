@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Find your Codex chats with project labels, colours, stars, activity indicators and goal controls.",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
