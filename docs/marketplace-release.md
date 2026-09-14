@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.5.9 (prepared for owner publication)
+Product: Codex Navigator 1.6.1 (prepared for owner publication)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -51,9 +51,8 @@ authenticated Codex activity hooks, chat switching, automatic labels and goal
 pause/resume. These checks are recorded as owner-verified, not agent-executed.
 They are no longer outstanding acceptance gates for Codex Navigator.
 
-Version 1.5.9 consolidates the local preview notes for release and retains the
-approved extension page. The verified production package is ready for the owner
-to publish. It has not been published by the agent.
+Version 1.6.1 releases the single-line chat names from local preview 1.6.0 and
+retains the approved extension page. Publication remains with the owner.
 
 Prepare this candidate from clean, committed public and private checkouts. A
 separate worktree may be used to exclude unrelated local working files without
@@ -61,8 +60,8 @@ changing them. Keep the resulting VSIX and paired revision/hash receipt immutabl
 If further fixes change the packaged payload, reserve the next patch version.
 
 
-Verified production package (2026-09-13)
-----------------------------------------
+Earlier production package: 1.5.9
+--------------------------------
 
 - Upload artifact: `dist/codex-navigator-1.5.9.vsix`.
 - Keep the paired receipt: `dist/codex-navigator-1.5.9.vsix.json`.

@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.6.1
+-----
+
+- Release the single-line chat names introduced in the 1.6.0 local preview.
+  Long names end with an ellipsis in every sidebar layout; hover for the full
+  text. Goal and activity controls remain visible alongside the name.
+
 1.6.0 (local preview)
 ---------------------
 
