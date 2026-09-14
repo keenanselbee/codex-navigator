@@ -4,6 +4,15 @@ Commercial Access And Private Repository Split
 Status: accepted; implementation in progress
 Date: 2026-09-13
 
+Latest Navigator acceptance (2026-09-13): the owner confirms completing production
+checkout, licence recovery, refund/revocation and customer download delivery, plus
+fresh setup, authenticated Codex activity hooks, chat switching, automatic labels
+and goal pause/resume in the packaged extension. This owner-verified acceptance
+supersedes the outstanding Navigator gates recorded in the earlier evidence below;
+it does not claim agent execution or change Context Suite's separate status.
+Final release metadata, automated checks and a clean production package remain
+pending. See [Release preparation](marketplace-release.md).
+
 Combined goal
 -------------
 

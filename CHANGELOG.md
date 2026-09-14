@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+1.5.9
+-----
+
+- Bring together the commercial release and extension-page refinements from the
+  local previews below: automatic repository labels and colours, custom chat
+  names, favourites, visit highlights, activity indicators and supported goal
+  controls in a compact sidebar.
+- Include a seven-day local trial and a $5 CAD one-time licence with future
+  updates, one transferable active installation and bounded offline access.
+- Require installed, enabled and trusted activity hooks. The old patch
+  integration is removed; old Repo Companion installations and data are not
+  migrated. Existing highlight settings migrate without resetting visit timers.
+- Present the updated compass icon, animated demo and multi-repository workflow
+  description. Selected source is available for inspection; commercial licensing
+  components remain private.
+- Keep Windows x64 as the tested platform, with best-effort macOS/Linux support
+  and a storage persistence check before trial or activation on those platforms.
+
 1.5.8 (local preview)
 ---------------------
 
