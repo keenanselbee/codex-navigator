@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/icon-small.png" alt="Codex Navigator icon" width="104" height="104"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/icon-small.png" alt="Codex Navigator icon" width="104"></p>
 
 <h2 align="center">Codex Navigator</h2>
 
