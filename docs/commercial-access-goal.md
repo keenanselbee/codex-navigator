@@ -10,7 +10,7 @@ fresh setup, authenticated Codex activity hooks, chat switching, automatic label
 and goal pause/resume in the packaged extension. This owner-verified acceptance
 supersedes the outstanding Navigator gates recorded in the earlier evidence below;
 it does not claim agent execution or change Context Suite's separate status.
-Navigator 1.5.9 now has final release metadata, passing automated checks and a
+Navigator 1.6.1 now has final release metadata, passing automated checks and a
 verified production VSIX built from clean public/private revisions. Publication
 is left to the owner. See [Release preparation](marketplace-release.md) for the
 artifact hash, build revisions and installed-package evidence.

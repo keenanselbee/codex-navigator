@@ -60,6 +60,32 @@ changing them. Keep the resulting VSIX and paired revision/hash receipt immutabl
 If further fixes change the packaged payload, reserve the next patch version.
 
 
+Verified production package: 1.6.1
+----------------------------------
+
+- Upload artifact: `dist/codex-navigator-1.6.1.vsix`.
+- Keep the paired receipt: `dist/codex-navigator-1.6.1.vsix.json`.
+- SHA-256: `452c064b12c6d81ddd34406c58b02ca9088c1abb45f16a9f973cd26c56bf4de6`.
+- Public build revision: `5f660577e01d87b3ed85835bb418b41b42e312a4`.
+- Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+
+The production package passed all 57 archive-entry checks from clean independent
+Git roots. Public-only verification passed 132 tests and the missing-private
+build guard (`public-only-8ZwOQ2`); all 24 commercial tests passed. All 53 runtime
+and content files outside the manifest and changelog match the tested 1.6.0
+package. Its single-line title integration checks passed in `integration-EJEuzF`.
+
+The exact 1.6.1 VSIX passed isolated installed and reinstalled acceptance in
+`installed-acceptance-uAaZ6U`, including 54 file hashes plus manifest verification
+and preserved trial expiry after uninstall, settings reset and reinstall. The
+disposable extension was removed. Native platform and owner-verified acceptance
+qualifications above still apply. Publication is left to the owner.
+
+The VSIX and paired receipt are also provided on the owner's Desktop. Upload the
+VSIX only. This evidence update is excluded from the packaged payload and does
+not change its recorded build revision or hash.
+
+
 Earlier production package: 1.5.9
 --------------------------------
 
