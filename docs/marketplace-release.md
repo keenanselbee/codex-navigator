@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.6.3 (verified inputs; commit and packaging pending)
+Product: Codex Navigator 1.6.4 (verified inputs; release commit pending)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -51,9 +51,10 @@ authenticated Codex activity hooks, chat switching, automatic labels and goal
 pause/resume. These checks are recorded as owner-verified, not agent-executed.
 They are no longer outstanding acceptance gates for Codex Navigator.
 
-Version 1.6.3 matches the automatic-layout comparison to the animated demo's
-700-pixel display width. It retains 1.6.2's comparison and Reset Chat Name command
-for renamed chats. Publication remains with the owner.
+Version 1.6.4 lets the animated demo and automatic-layout comparison fill the
+content column using 100% width and automatic height. It retains 1.6.2's
+comparison and Reset Chat Name command for renamed chats. Publication remains
+with the owner.
 Before Marketplace upload, push the public source and confirm that
 `https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/adaptive-layouts.png`
 loads; the new image is hosted from that repository.
@@ -64,8 +65,23 @@ changing them. Keep the resulting VSIX and paired revision/hash receipt immutabl
 If further fixes change the packaged payload, reserve the next patch version.
 
 
-Prepared release inputs: 1.6.3
+Prepared release inputs: 1.6.4
 -----------------------------
+
+Both README images use 100% width with no fixed height. The existing GIF and PNG
+files are unchanged. The manifest, lockfile and release notes identify version
+1.6.4. Production packaging and Desktop staging are pending the reviewed public
+release commit; the private checkout remains unchanged.
+
+All 132 public tests passed. Isolated VS Code integration passed initial and
+restart checks (`integration-dhd1Em`). The disposable package-boundary check
+verified all 57 entries and excluded private source (`package-acceptance-Zm3PrI`).
+Both image URLs returned HTTP 200; responsive image attributes, Markdown
+whitespace and local documentation links passed verification.
+
+
+Verified production package: 1.6.3
+----------------------------------
 
 The README now renders the layout comparison at 700 pixels wide, matching the
 animated demo, with automatic aspect-ratio height (about 167 pixels). The
@@ -79,14 +95,15 @@ Comparison with the verified 1.6.2 package found only the expected README,
 manifest and changelog content changes; other byte differences were line endings.
 Markdown whitespace, local links and the two 700-pixel image attributes passed.
 
-The canonical production packager requires reviewed, committed inputs. No 1.6.3
-production VSIX or Desktop upload copy has been created yet. The private checkout
-is unchanged. Commit the reviewed public release inputs before packaging, then
-inspect the final VSIX and copy it with its receipt to the Desktop.
-
-The hosted layout PNG is reachable but differs from the local image. Push the
-reviewed public changes and confirm the hosted image matches before publishing.
-Packaging and Desktop staging do not authorize GitHub push or Marketplace upload.
+The canonical production packager produced `dist/codex-navigator-1.6.3.vsix` and
+its paired receipt from public revision
+`b7774cbd583aa848ad9e708d387737e37477c2b5` and unchanged private revision
+`279a6513450a108980544c6291bfad7f47343a65`. SHA-256:
+`9346df4d89de37fc5f5eb572afe36e0c39ca8a381d38f31ba8de9703e1f1305f`.
+All 57 production entries and the packaged 700-pixel image attributes were
+verified. The VSIX and receipt were copied to the Desktop and their hashes
+matched. The public commit was pushed, and the hosted layout PNG matched the
+local image. Marketplace upload was left to the owner.
 
 
 Verified production package: 1.6.2

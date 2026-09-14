@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+1.6.4
+-----
+
+- Let the animated demo and layout comparison fill the extension page's content
+  width while preserving their proportions.
+
 1.6.3
 -----
 
