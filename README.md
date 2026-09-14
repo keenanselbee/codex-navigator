@@ -10,7 +10,9 @@
 
 ---
 
-**Codex Navigator** automatically brings your saved Codex conversations together in a compact VS Code sidebar. With automatic labels enabled, project labels and colours follow your conversations, so you can find the right chat at a glance. Let it handle the organisation, or make it yours with custom names, labels, colours and favourites.
+**Codex Navigator** automatically brings your Codex conversations together in a compact VS Code sidebar. With automatic labels enabled, repository labels and colours follow your conversations, so you can find the right chat at a glance. Let it handle the organisation, or make it yours with custom names, labels, colours and favourites.
+
+It was built to make development in a multi-repository workspace more enjoyable, with less time spent hunting for conversations and more time focused on your work.
 
 <p align="center"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/navigator-demo.gif" alt="Animated demonstration of Codex Navigator's project labels and switching between saved conversations" width="700"></p>
 

@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+1.5.8 (local preview)
+---------------------
+
+- Refine the introduction to describe Codex conversations and automatic repository
+  labels and colours.
+
+1.5.7 (local preview)
+---------------------
+
+- Use the GitHub-hosted small icon on the installed extension page.
+- Explain the goal of making development in multi-repository workspaces more
+  enjoyable in the introduction.
+
 1.5.6 (local preview)
 ---------------------
 
