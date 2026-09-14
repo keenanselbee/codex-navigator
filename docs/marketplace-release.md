@@ -63,6 +63,35 @@ changing them. Keep the resulting VSIX and paired revision/hash receipt immutabl
 If further fixes change the packaged payload, reserve the next patch version.
 
 
+Verified production package: 1.6.2
+----------------------------------
+
+- Upload artifact: `dist/codex-navigator-1.6.2.vsix`.
+- Keep the paired receipt: `dist/codex-navigator-1.6.2.vsix.json`.
+- SHA-256: `eb09f2f00520efe7f4d3e9189cc30892cfd6fa0c31a87ae27b12fd2005cd4123`.
+- Public build revision: `69bd9bcb9a3062387603e1fb7fbeed2319b38718`.
+- Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+
+The canonical packager built this universal production VSIX from clean detached
+worktrees under `.codex-temp/release-1.6.2`, preserving the owner's untracked
+`images/2.png` in the working checkout. All 57 archive entries passed inspection.
+Public-only verification passed 132 tests and the missing-private build guard
+(`public-only-0pBcS8`); all 24 commercial tests passed. The contextual rename/reset
+integration passed in `integration-aqeoVv` before release metadata was finalised.
+
+The exact VSIX passed isolated installed and reinstalled acceptance in
+`installed-acceptance-MQZan0`: 54 file hashes plus the manifest matched, and trial
+expiry survived uninstall, settings reset and reinstall. The disposable extension
+was removed; the normal VS Code installation was unchanged. Native platform and
+owner acceptance qualifications above still apply.
+
+The verified VSIX and receipt are also on the owner's Desktop. The remaining
+publication prerequisite is to push the public repository and verify the hosted
+`images/adaptive-layouts.png`: its URL returned HTTP 404 during preparation.
+No GitHub push or Marketplace publication was performed. This evidence update
+is excluded from the packaged payload and preserves its recorded build revision.
+
+
 Earlier production package: 1.6.1
 ----------------------------------
 
