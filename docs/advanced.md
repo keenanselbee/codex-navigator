@@ -24,6 +24,11 @@ or claim that the layout changed.
 Navigator's title-bar overflow menu ends its extension actions with **Extension
 Settings**, which opens VS Code Settings filtered to Codex Navigator.
 
+Settings are grouped into Chat list, Labels and colours, Project instructions,
+and Advanced. Repository Colours and Repository Aliases link to visual pickers.
+Use setup to enable Automatic labels or Project instructions: their settings
+alone do not install the required guidance.
+
 Check Status reports the result and next step, with a last-checked time. Delivery
 requires a recorded event after installation; trust alone does not prove delivery.
 If the saved installation time is missing, collector and hook-file modification
@@ -89,8 +94,9 @@ At the default text size, content heights below 180px use the compact grid,
 around each boundary prevents flicker while resizing. Larger fonts scale these
 thresholds proportionally. Width adds
 readable columns. Text scales within bounded limits. Names wrap to two lines,
-or three in the tall layout, and labels to two lines. Exceptional long text is
-clamped with a full tooltip. Actual rendered bounds determine how many complete
+or three in the tall layout. Repository labels stay on one line with an ellipsis.
+When goal and activity indicators appear together, the chat name also stays on
+one line with an ellipsis. Hover for the full text. Actual rendered bounds determine how many complete
 entries fit. Very small views can show no entries until enlarged.
 
 Order is Codex's `thread/list` with `sortKey: recency_at`, descending, persisted
@@ -124,15 +130,18 @@ selection, never a background update timestamp. Known recency older than 24 hour
 is excluded, including starred chats. Unknown timestamps stay visible. Turn the
 setting off to browse older chats in the existing bounded history cache.
 
-Each successful Navigator open starts its own linear fade (three minutes by default) using the
+Each successful Navigator open starts its own linear fade (three minutes by default).
+Set **Highlight Duration Seconds** to choose from 1 to 3600 seconds for either
+highlight mode. The background uses the
 hover background mixed with 20% of the chat label colour (theme foreground when
 no colour is assigned). It fades only the background, preserves text and icon colours,
 and keeps its elapsed time across rerenders and webview restoration. Selecting another chat leaves existing timers running; revisiting a chat refreshes
-only its own timer. **Highlight Recently Viewed Chats** defaults on; turn it off
-to hide fading backgrounds. **Highlight Only Last Viewed Chat** defaults off;
-when enabled, only the latest Navigator visit is highlighted. The master setting
-must be on. Both settings apply without reloading and preserve elapsed timers;
-neither changes the hover outline. Expired entries are removed on render. These highlights mean
+only its own timer. **Highlight Mode** offers **Off**, **Recently viewed chats**
+(default), or **Last viewed chat only**. Changes apply without reloading and
+preserve elapsed timers; the hover outline is unchanged. Existing highlight
+checkbox choices migrate to the dropdown at their original User, Workspace or
+Folder scope when Navigator starts. An explicitly configured dropdown is kept.
+Expired entries are removed on render. These highlights mean
 recently viewed through Navigator, not
 confirmed currently visible in Codex. Hover uses an inset one-pixel theme outline.
 
@@ -250,6 +259,45 @@ extension does not inspect or alter that installation.
 Verification and release
 ------------------------
 
+Platform support
+~~~~~~~~~~~~~~~~
+
+Windows x64 is the natively tested platform. macOS and Linux on x64 and ARM64
+are best effort; Windows ARM64 is also unverified. Use local desktop VS Code
+1.137 or newer, the matching Codex extension and Node.js on PATH. Remote SSH,
+WSL, containers and browser VS Code are outside this scope.
+
+Navigator uses the Codex extension's bundled runtime for the current OS and
+architecture. Setup reports a missing or non-executable runtime; update or
+reinstall Codex to repair it. No global Codex CLI is substituted. On macOS/Linux,
+Node must be visible to VS Code's environment, including when VS Code is started
+from the desktop. If setup cannot find it, check `node --version` in VS Code's
+terminal and fully quit and reopen VS Code after fixing PATH. Reinstall and
+review Navigator hooks if their generated command changes.
+
+Licensing uses VS Code SecretStorage and Node's built-in SQLite, with the same
+admission and multi-window rules on every OS. Native macOS Keychain and Linux
+desktop keyring behavior still need verification. An unavailable secure store
+must be repaired; do not substitute plaintext licensing storage. See VS Code's
+[keychain troubleshooting](https://code.visualstudio.com/docs/configure/settings-sync#_troubleshooting-keychain-issues).
+
+Before trial or activation on macOS/Linux, Navigator checks that a harmless
+SecretStorage test value survives a new editor session. Fully quit all VS Code
+windows and reopen it when prompted; restarting only the extension host is not
+enough. A failed check asks you to repair the keychain/keyring. The check never
+starts a trial, consumes an activation or rewrites existing licence records.
+Recovery is withheld while the check is pending. This verifies persistence,
+not the encryption backend: VS Code's public extension API does not expose
+whether its user-selected backend provides OS-backed encryption.
+
+The VSIX is universal: it contains JavaScript and webview assets, with no bundled
+native binaries. This makes it installable across desktop platforms, but does
+not certify native behavior. Real-device runtime, setup, secure-storage and
+licence-transfer acceptance remains pending on macOS/Linux.
+
+Build and checks
+~~~~~~~~~~~~~~~~
+
 `npm test` compiles and runs the public unit tests. `npm run test:public-only`
 exports an explicit public source snapshot without `proprietary/`, runs its
 tests and verifies that a full build fails without the private checkout.
@@ -265,6 +313,14 @@ VS Code profile, real Git repositories and fixture chat URIs. Hook events are
 synthetic within that fixture; no authenticated chat or user installation is
 modified. Current native metadata API checks are read-only. Runtime compatibility
 and complete authenticated UI acceptance must be reported separately.
+
+The isolated launchers detect common VS Code locations on each OS. For a custom
+location, set `VSCODE_EXECUTABLE` to the absolute Electron executable, not the
+`code` shell script. Installed-package tests also accept `VSCODE_CLI` for that
+installation's `resources/app/out/cli.js`. Test profiles remain under
+`.codex-temp`; the normal installation is not changed. A desktop session is
+required. Icon regeneration via `tools/render-icon.ps1` remains Windows-only;
+the checked-in PNG is used by builds and packaging on every OS.
 
 `package.json` owns the release version; root lockfile metadata must match.
 `npm run package` requires clean, committed public and private checkouts and
@@ -285,10 +341,10 @@ Development and redistribution permissions are governed by [the license](../LICE
 Licence and transfer
 --------------------
 
-The next commercial release offers seven days (168 elapsed hours) starting only
-when you choose **Start 7-Day Trial**, or a separate $5 CAD one-time Navigator
+Navigator offers a free trial of seven days (168 elapsed hours) starting only
+when you choose **Try for free**, or a separate $5 CAD one-time Navigator
 purchase with all future updates. Hooks do not start the trial. Context Suite
-requires its own purchase. Live checkout and delivery verification are pending.
+requires its own purchase.
 
 Open **License** in Navigator's top menu to activate a purchased key, check paid
 status or deactivate this installation. Deactivate before moving to another

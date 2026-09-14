@@ -90,12 +90,12 @@ body[data-layout="list"] .label-row { display: flex; align-items: center; min-wi
 #setupMessage { flex-basis: 100%; margin: 0 0 8px; text-align: center; }
 .setup-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); padding: 5px 9px; }
 .setup-primary:hover { background: var(--vscode-button-hoverBackground); }
-#licensePage { flex: 1; min-height: 0; overflow: auto; padding: 10px; }
-.license-content { max-width: 520px; margin: auto; }
+#licensePage { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: auto; padding: 10px; }
+.license-content { flex: 0 0 auto; width: 100%; max-width: 520px; margin: auto; text-align: center; }
 .license-content h2 { font-size: 1.15em; margin: 0 0 8px; }
 .license-content p { margin: 6px 0; }
-.license-actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
-#licenseEnds, #licenseOffer, .license-content details { font-size: .92em; color: var(--vscode-descriptionForeground); }
+.license-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin: 8px 0; }
+#licenseEnds, #licenseOffer, #licenseDisclaimer, .license-content details { font-size: .92em; color: var(--vscode-descriptionForeground); }
 #licenseNotice { color: var(--vscode-errorForeground); }
 #licenseNotice:empty, #licenseEnds:empty { display: none; }
 #licenseSandbox { color: var(--vscode-notificationsWarningIcon-foreground); }

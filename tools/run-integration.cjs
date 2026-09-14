@@ -32,6 +32,7 @@ async function main() {
     'scm.repositories.selectionMode': 'multiple', 'security.workspace.trust.enabled': false,
     'telemetry.telemetryLevel': 'off', 'window.restoreWindows': 'none',
     'codexNavigator.instructionRouting': false,
+    'codexNavigator.highlightOnlyLastViewedChat': false,
   } }, null, 2));
   const executable = vscodeExecutable();
   const userDirectory = path.join(testRoot, 'profile', 'User');

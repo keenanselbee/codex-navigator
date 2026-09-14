@@ -1,6 +1,47 @@
 Release Notes
 =============
 
+Unreleased
+----------
+
+- Put the independent-product disclaimer first on the extension page and describe
+  trial and purchase terms in present tense.
+
+1.5.4 (local preview)
+---------------------
+
+- Move the independent-product disclaimer from setup to below the licence buttons.
+
+1.5.3 (local preview)
+---------------------
+
+- Centre the licence screen, shorten the trial button to Try for free, and put
+  the future-updates promise on its own line in licence and setup text.
+
+1.5.2 (local preview)
+---------------------
+
+- Use the owner-selected compass icon.
+
+- Group settings by task, add links to colour/name pickers and setup, and replace
+  the two highlight switches with Highlight Mode. Existing choices migrate at
+  their original scope; duration and visit timers are preserved.
+- Simplify the extension page around browsing, organisation and activity, with
+  clearer setup, trial and platform information. Correct highlight settings and
+  label layout descriptions.
+- Verify licence storage across editor sessions before macOS/Linux trial or
+  activation; explain keyring failures without consuming trial or paid access.
+- Retry pending storage verification from the current editor when an old process
+  ID is still occupied, avoiding repeated restarts tied to that stale ID.
+- Preserve backticks in Unix helper paths inside generated Markdown guidance.
+
+- Add best-effort macOS/Linux x64 and ARM64 runtime discovery, safe Unix helper
+  command quoting and case-sensitive path matching. Windows x64 remains the
+  natively tested platform; other platforms still need real-device acceptance.
+- Package one universal VSIX and allow isolated test hosts on each desktop OS.
+- Explain missing or non-executable Codex runtimes in setup.
+- Show the independent-product disclaimer below the setup tip.
+
 1.5.1 (release candidate)
 ------------------------
 

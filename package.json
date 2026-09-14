@@ -1,8 +1,8 @@
 {
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
-  "description": "Find your Codex chats with project labels, colours, stars, activity indicators and goal controls.",
-  "version": "1.5.1",
+  "description": "Find and organise your Codex chats in a compact sidebar with project colours, favourites and activity indicators.",
+  "version": "1.5.4",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -404,109 +404,172 @@
         }
       ]
     },
-    "configuration": {
-      "title": "Codex Navigator",
-      "properties": {
-        "codexNavigator.detectChatFocus": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Try to spot clear project changes in your messages. When off, wait for Codex to report the project. Open editor tabs do not choose the project."
-        },
-        "codexNavigator.silentMode": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Keep background warnings in the Output panel instead of showing popups. Commands you run still show errors."
-        },
-        "codexNavigator.keepManualLabelsFixed": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Keep new manual label choices fixed. This affects labels only, not chat position or age filtering. Unless explicitly configured, repository selections in multi-repository workspaces stay in Auto; single-repository choices and custom text retain the default below. Existing fixed labels are unchanged until you make another choice."
-        },
-        "codexNavigator.repositoryAliases": {
-          "type": "object",
-          "default": {},
-          "additionalProperties": {
+    "configuration": [
+      {
+        "id": "chatList.codexNavigator",
+        "title": "Chat list",
+        "order": 1,
+        "properties": {
+          "codexNavigator.recentChatsOnly": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show chats used in the last 24 hours. Pinned chats and chats with unknown dates remain visible.",
+            "order": 1
+          },
+          "codexNavigator.highlightMode": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 100
+            "enum": [
+              "off",
+              "recent",
+              "last"
+            ],
+            "enumItemLabels": [
+              "Off",
+              "Recently viewed chats",
+              "Last viewed chat only"
+            ],
+            "default": "recent",
+            "description": "Highlight chats opened through Navigator in their label colour. Does not track switches made inside Codex or change the hover outline.",
+            "enumDescriptions": [
+              "No visit highlights.",
+              "Each visited chat fades independently.",
+              "Only the most recently visited chat fades."
+            ],
+            "order": 2
           },
-          "markdownDescription": "Friendly names for your repositories. Use the Set Repository Alias command to add or change a name."
-        },
-        "codexNavigator.hideRedundantRepositoryLabels": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Hide an automatic label when it only repeats the one repository open here. Keep custom labels and labels you choose."
-        },
-        "codexNavigator.instructionRouting": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Help Codex read the right rules when you switch projects. [Set Up Codex Navigator](command:codexNavigator.setUp) to choose a shared rules file, pick your project folders, and turn this on.\n\nSetup adds a section to your global instructions and keeps your other rules. Turning this off also turns off the backup routing method."
-        },
-        "codexNavigator.mainInstructionsFile": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "Optional shared rules file to read before each project's own rules. Leave blank to use project rules only. This file is read, not changed.\n\n[Set Up Codex Navigator](command:codexNavigator.setUp) lets you choose the file. It should be separate from your global Codex instructions."
-        },
-        "codexNavigator.instructionScope": {
-          "type": "array",
-          "default": [],
-          "maxItems": 64,
-          "items": {
-            "type": "string"
+          "codexNavigator.highlightDurationSeconds": {
+            "type": "integer",
+            "default": 180,
+            "minimum": 1,
+            "maximum": 3600,
+            "description": "How long each chat highlight fades, from 1 to 3600 seconds. Applies to both highlight modes. Revisiting a chat restarts its timer.",
+            "order": 3
+          }
+        }
+      },
+      {
+        "id": "labels.codexNavigator",
+        "title": "Labels and colours",
+        "order": 2,
+        "properties": {
+          "codexNavigator.agentRepositoryLabels": {
+            "type": "boolean",
+            "scope": "application",
+            "default": false,
+            "markdownDescription": "Follow repository reports from Codex. Enable [Automatic labels in setup](command:codexNavigator.setUp) to install the required guidance, then start a new chat. Turning this setting on alone does not install guidance.",
+            "order": 1
           },
-          "markdownDescription": "Project folders that use these rules. Leave empty to use the folders in this workspace. Choose a parent folder to include all projects inside it.\n\n[Set Up Codex Navigator](command:codexNavigator.setUp) can help you choose. Saved choices still work after this window closes."
-        },
-        "codexNavigator.instructionFallbackNames": {
-          "type": "array",
-          "default": [],
-          "maxItems": 16,
-          "items": {
+          "codexNavigator.keepManualLabelsFixed": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Keep new manual labels until you change them. When off, later repository reports can replace them. In multi-repository workspaces, repository choices follow reports unless you explicitly set this preference.",
+            "order": 2
+          },
+          "codexNavigator.hideRedundantRepositoryLabels": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Hide automatic labels that repeat the only repository in this workspace. Labels you choose stay visible.",
+            "order": 3
+          },
+          "codexNavigator.repositoryColours": {
+            "type": "object",
+            "scope": "application",
+            "default": {},
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^(none|#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))$"
+            },
+            "markdownDescription": "Choose colours visually in [Repository Colours](command:codexNavigator.showRepositoryColours). Automatic colours are repeatable across settings resets; custom choices apply across workspaces.",
+            "order": 4
+          },
+          "codexNavigator.repositoryAliases": {
+            "type": "object",
+            "default": {},
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "markdownDescription": "Friendly repository names. [Choose a repository to name](command:codexNavigator.setRepositoryAlias).",
+            "order": 5
+          }
+        }
+      },
+      {
+        "id": "instructions.codexNavigator",
+        "title": "Project instructions",
+        "order": 3,
+        "properties": {
+          "codexNavigator.instructionRouting": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Help Codex find project rules. [Configure Project instructions in setup](command:codexNavigator.setUp) to install the required guidance. Turning this setting on alone does not complete setup.",
+            "order": 1
+          },
+          "codexNavigator.mainInstructionsFile": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 255
+            "default": "",
+            "markdownDescription": "Optional shared rules file to read before project rules. [Choose a file in setup](command:codexNavigator.setUp), or leave blank for project rules only.",
+            "order": 2
           },
-          "markdownDescription": "Extra rules filenames to check if a folder has no AGENTS.override.md or AGENTS.md. For example: TEAM_GUIDE.md. Enter filenames only, in the order to check them. Most users can leave this empty."
-        },
-        "codexNavigator.repositoryColours": {
-          "type": "object",
-          "scope": "application",
-          "default": {},
-          "additionalProperties": {
-            "type": "string",
-            "pattern": "^(none|#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}))$"
+          "codexNavigator.instructionScope": {
+            "type": "array",
+            "default": [],
+            "maxItems": 64,
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Folders covered by project instructions. Empty uses this workspace; a parent folder includes its projects. [Choose folders in setup](command:codexNavigator.setUp).",
+            "order": 3
+          }
+        }
+      },
+      {
+        "id": "advanced.codexNavigator",
+        "title": "Advanced",
+        "order": 4,
+        "properties": {
+          "codexNavigator.detectChatFocus": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Try to detect explicit repository switches in your messages when agent reports are missed. Editor tabs do not choose the repository.",
+            "order": 1
           },
-          "markdownDescription": "Custom repository colours across workspaces, or \"none\" to disable one. Multi-repository workspaces assign stable automatic colours to uncoloured repositories. Repository Colour offers Automatic, Custom and No colour. Chats inherit or blend repository colours unless overridden."
-        },
-        "codexNavigator.highlightRecentlyViewedChats": {
-          "type": "boolean",
-          "default": true,
-          "description": "Highlight chats opened through Navigator with their label colour, fading over Highlight Duration Seconds. Does not affect the hover outline."
-        },
-        "codexNavigator.highlightOnlyLastViewedChat": {
-          "type": "boolean",
-          "default": false,
-          "description": "Highlight only the last chat opened through Navigator. Requires Highlight Recently Viewed Chats. The highlight still fades over three minutes."
-        },
-        "codexNavigator.recentChatsOnly": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show chats with Codex recency or a Navigator selection within the last 24 hours. Chats with unavailable recency remain visible. Hidden chats stay hidden until restored."
-        },
-        "codexNavigator.agentRepositoryLabels": {
-          "type": "boolean",
-          "scope": "application",
-          "default": false,
-          "markdownDescription": "Follow repository reports from agents for chats using Auto labels. Enable Automatic labels in [Set Up Codex Navigator](command:codexNavigator.setUp) to install the reporting guidance, then start a new chat. Independent of activity hooks and project instruction routing. Turning this off keeps existing labels."
-        },
-        "codexNavigator.highlightDurationSeconds": {
-          "type": "integer",
-          "default": 180,
-          "minimum": 1,
-          "maximum": 3600,
-          "description": "How long each chat highlight fades, in seconds (1?3600). Applies to both highlight modes. Revisiting a chat restarts its timer."
+          "codexNavigator.silentMode": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Keep background warnings in Output instead of showing popups. Errors from commands you run still appear.",
+            "order": 2
+          },
+          "codexNavigator.instructionFallbackNames": {
+            "type": "array",
+            "default": [],
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "markdownDescription": "Other rules filenames to try when AGENTS.override.md and AGENTS.md are absent. Most users can leave this empty.",
+            "order": 3
+          },
+          "codexNavigator.highlightRecentlyViewedChats": {
+            "type": "boolean",
+            "default": true,
+            "description": "Highlight chats opened through Navigator with their label colour, fading over Highlight Duration Seconds. Does not affect the hover outline.",
+            "deprecationMessage": "Replaced by codexNavigator.highlightMode. Existing choices are migrated when Navigator starts.",
+            "order": 4
+          },
+          "codexNavigator.highlightOnlyLastViewedChat": {
+            "type": "boolean",
+            "default": false,
+            "description": "Highlight only the last chat opened through Navigator. Requires Highlight Recently Viewed Chats. Uses Highlight Duration Seconds.",
+            "deprecationMessage": "Replaced by codexNavigator.highlightMode. Existing choices are migrated when Navigator starts.",
+            "order": 5
+          }
         }
       }
-    },
+    ],
     "views": {
       "codexSecondaryViewContainer": [
         {

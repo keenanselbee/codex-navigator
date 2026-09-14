@@ -57,12 +57,16 @@ remove another tool's instruction section or hooks. See [advanced help](docs/adv
 Licensing data
 --------------
 
-A trial starts only when you choose Start 7-Day Trial. No card, account or network
+A trial starts only when you choose Try for free. No card, account or network
 request is required to start it. VS Code SecretStorage holds the trial start,
 last observed time, random installation ID and, when activated, the licence key,
 activation ID and validation times. A small local SQLite database coordinates
 workspace windows and records that licensing state exists; it contains no licence
-key. Licensing is separate from ordinary Navigator settings and data resets.
+key. On macOS/Linux it also stores a hash of a random test value and the local
+editor process ID to verify that SecretStorage survives exiting the editor. The
+random test value is stored in SecretStorage, separately from licence records.
+No trial or activation begins during this check. Licensing is separate from
+ordinary Navigator settings and data resets.
 
 Activation and validation send the licence key, product organization and relevant
 activation or random installation identifiers to Polar over HTTPS. They send no

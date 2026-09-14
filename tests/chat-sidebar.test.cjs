@@ -10,13 +10,13 @@ function fixture() {
   let receive, disposed, visibleChanged;
   const uri = value => ({ ...value, fsPath: value.path, toString: () => `${value.scheme}://${value.authority}${value.path}` });
   const vscode = { Uri: { from: uri, file: root => uri({ scheme: 'file', path: root }), joinPath: (base, ...parts) => ({ fsPath: path.join(base.fsPath, ...parts) }) },
-    env: { uriScheme: 'vscode' }, workspace: { isTrusted: true, getConfiguration: () => ({ get: (_key, fallback) => fallback }) }, window: { showInformationMessage: async text => calls.push(['info', text]) },
+    env: { uriScheme: 'vscode' }, workspace: { isTrusted: true, getConfiguration: () => ({ get: (_key, fallback) => fallback, inspect: () => undefined }) }, window: { showInformationMessage: async text => calls.push(['info', text]) },
     extensions: { getExtension: () => ({ activate: async () => {} }) },
     commands: { executeCommand: async (...args) => { calls.push(args); },
       registerCommand: (name, fn) => { commands.set(name, fn); return { dispose: () => commands.delete(name) }; } } };
   const exports = {};
   vm.runInNewContext(fs.readFileSync(require.resolve('../dist/chat-sidebar'), 'utf8'), { exports,
-    require: name => name === 'vscode' ? vscode : name === './chat-pins' ? require('../dist/chat-pins') : name === './history' ? require('../dist/history') : name === './colours' ? require('../dist/colours') : name === './chat-goals' ? require('../dist/chat-goals') : require(name),
+    require: name => name === 'vscode' ? vscode : name === './highlight-settings' ? require('../dist/highlight-settings') : name === './chat-pins' ? require('../dist/chat-pins') : name === './history' ? require('../dist/history') : name === './colours' ? require('../dist/colours') : name === './chat-goals' ? require('../dist/chat-goals') : require(name),
     setInterval: () => 1, clearInterval() {} });
   const stored = new Map();
   const context = { globalState: { get: (key, fallback) => stored.get(key) ?? fallback, update: async (key, value) => { stored.set(key, value); } }, extensionUri: { fsPath: path.resolve('.') }, extensionPath: path.resolve('.') };
@@ -151,7 +151,7 @@ test('24-hour filter uses interaction recency, preserves unknowns and can be dis
   f.sidebar.readChats=async()=>[{id:f.id,title:'Old but working',updatedAt:new Date(now).toISOString(),recencyAt:now-86400001}];
   await f.sidebar.refresh();assert.equal(f.sent.at(-1).rows.length,0);
   f.stored.set('activitySeen.v1',{[f.id]:now});await f.sidebar.refresh();assert.equal(f.sent.at(-1).rows.length,1);
-  f.stored.set('activitySeen.v1',{});f.vscode.workspace.getConfiguration=()=>({get:()=>false});await f.sidebar.refresh();assert.equal(f.sent.at(-1).rows.length,1);
+  f.stored.set('activitySeen.v1',{});f.vscode.workspace.getConfiguration=()=>({get:()=>false,inspect:()=>undefined});await f.sidebar.refresh();assert.equal(f.sent.at(-1).rows.length,1);
 });
 
 test('repository menu actions require a live workspace repository and captured chat identity',async()=>{

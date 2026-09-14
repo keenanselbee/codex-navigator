@@ -1,6 +1,7 @@
 import { chatPins } from './chat-pins';
 import * as vscode from 'vscode';
 import { codexBinary } from './platform';
+import { migrateHighlightSettings } from './highlight-settings';
 import { assignAutomaticColours, resolvedRepositoryColours } from './automatic-colours';
 import { ChatGoals } from './chat-goals';
 import { ChatSidebar } from './chat-sidebar';
@@ -41,6 +42,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(license);
   await license.check();
   const output = vscode.window.createOutputChannel('Codex Navigator');
+  try { await migrateHighlightSettings(vscode.workspace); }
+  catch { output.appendLine('Highlight settings could not be migrated. Existing preferences remain available; check whether your settings file is writable.'); }
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 15);
   status.command = 'codexNavigator.assignRepository';
   const assignments = readAssignments(context.workspaceState.get(assignmentKey));

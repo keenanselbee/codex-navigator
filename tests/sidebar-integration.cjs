@@ -144,6 +144,9 @@ exports.run = async function (context, fixtureVscode) {
     await until(()=>git.repositories.length===2,'multi-repo workspace');
     const extension = vscode.extensions.getExtension('keenanselbee.codex-navigator');
     await extension.activate();
+    const migratedHighlights = vscode.workspace.getConfiguration('codexNavigator');
+    assert.equal(migratedHighlights.inspect('highlightOnlyLastViewedChat').workspaceValue, undefined, 'old workspace highlight switch removed');
+    assert.equal(migratedHighlights.inspect('highlightMode').workspaceValue, 'recent', 'workspace highlight choice migrated');
     await vscode.commands.executeCommand('codexNavigator.chats.focus');
     await until(() => companion?.visible && fixtureLoaded, 'owned sidebar visible and test script loaded');
     assert.equal((await vscode.commands.getCommands(true)).includes('codexNavigator.bridge.setAssignments'), false, 'no Codex patch bridge');
@@ -420,13 +423,12 @@ exports.run = async function (context, fixtureVscode) {
     await until(async()=>(await probe()).selectionTimes[id(3)]>olderVisit,'revisiting refreshes its timer');
     visits=await probe();assert.equal(visits.selectionTimes[id(4)],fourthVisit,'revisit preserves other timer');
     const highlightConfig=vscode.workspace.getConfiguration('codexNavigator');
-    await highlightConfig.update('highlightOnlyLastViewedChat',true,vscode.ConfigurationTarget.Workspace);
+    await highlightConfig.update('highlightMode','last',vscode.ConfigurationTarget.Workspace);
     await until(async()=>(await probe()).selectedCount===1,'last-only mode applies without reload');
     assert.ok(Object.hasOwn((await probe()).selectionDelays,id(3)),'only latest visit highlighted');
-    await highlightConfig.update('highlightRecentlyViewedChats',false,vscode.ConfigurationTarget.Workspace);
+    await highlightConfig.update('highlightMode','off',vscode.ConfigurationTarget.Workspace);
     await until(async()=>(await probe()).selectedCount===0,'master switch disables highlights');
-    await highlightConfig.update('highlightOnlyLastViewedChat',false,vscode.ConfigurationTarget.Workspace);
-    await highlightConfig.update('highlightRecentlyViewedChats',true,vscode.ConfigurationTarget.Workspace);
+    await highlightConfig.update('highlightMode','recent',vscode.ConfigurationTarget.Workspace);
     await until(async()=>(await probe()).selectedCount>=2,'all recent visits restored');
     assert.equal((await probe()).selectionTimes[id(4)],fourthVisit,'changing display settings preserves timers');
 

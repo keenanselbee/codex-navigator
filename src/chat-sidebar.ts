@@ -9,6 +9,7 @@ import { ColourOptions } from './colour-picker';
 import { normaliseColour } from './colours';
 import { chatPins, placePinnedChats } from './chat-pins';
 import { LicenseAccess } from './license-access';
+import { highlightMode } from './highlight-settings';
 
 export interface SidebarChat extends RecentConversation {
   label: string;
@@ -154,9 +155,11 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       this.visibleIds = []; this.goals = {}; this.goalHost?.stop();
       this.colour?.resolve(undefined); this.colour = undefined;
     }
+    const settings = vscode.workspace.getConfiguration('codexNavigator');
+    const highlights = highlightMode(settings);
     if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome,
       setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message,
-      rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), highlightDurationSeconds: vscode.workspace.getConfiguration('codexNavigator').get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: vscode.workspace.getConfiguration('codexNavigator').get('highlightRecentlyViewedChats', true), highlightOnlyLastViewedChat: vscode.workspace.getConfiguration('codexNavigator').get('highlightOnlyLastViewedChat', false), emptyMessage: this.rows.length ? 'No chats to show. Restore hidden chats or turn off Recent Chats Only in Extension Settings.' : 'No saved local chats yet.' }); }
+      rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Restore hidden chats or turn off Recent Chats Only in Extension Settings.' : 'No saved local chats yet.' }); }
   }
 
   private async refreshGoals(): Promise<void> {

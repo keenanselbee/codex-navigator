@@ -12,7 +12,7 @@ Permitted use
 
 You may download, install, run and use unmodified official Codex Navigator
 releases for your own personal or internal business purposes during a seven-day
-(168-hour) trial, starting when you choose Start 7-Day Trial, or under a valid
+(168-hour) trial, starting when you choose Try for free, or under a valid
 paid licence. A $5 CAD one-time purchase includes all future Codex Navigator
 updates and permits one active installation at a time. You may transfer that
 installation by deactivating it before activating another. Context Suite is a

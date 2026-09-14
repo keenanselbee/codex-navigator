@@ -78,9 +78,18 @@ does not make distributed JavaScript tamper-proof or withdraw earlier grants.
 Policy
 ------
 
+Platform audit follow-up: macOS/Linux must prove SecretStorage persistence with
+a harmless probe across full editor exit before trial, activation or recovery.
+A successful write alone is insufficient because VS Code can use in-memory
+fallback storage. The check stores no entitlement in SQLite, starts no trial,
+and makes no Polar request. Windows admission is unchanged. See
+[platform verification](platform-support-goal.md) for the simulated and native
+test boundary. This does not attest the encryption backend, which is not exposed
+by VS Code's public extension API.
+
 Codex Navigator is a separate $5 CAD one-time purchase including all future
 updates, with one active transferable installation. A local trial lasts seven
-days (168 elapsed hours), starting only when the user chooses Start 7-Day Trial.
+days (168 elapsed hours), starting only when the user chooses Try for free.
 No card or Polar account is required for the trial. Hooks are independent of
 trial admission. Paid access refreshes daily while running and allows 30 days
 offline from successful validation, capped by provider expiry. A definitive
