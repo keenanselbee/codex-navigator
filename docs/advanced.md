@@ -93,10 +93,9 @@ At the default text size, content heights below 180px use the compact grid,
 180-339px use two-line columns, and 340px or more use the list. A 12px buffer
 around each boundary prevents flicker while resizing. Larger fonts scale these
 thresholds proportionally. Width adds
-readable columns. Text scales within bounded limits. Names wrap to two lines,
-or three in the tall layout. Repository labels stay on one line with an ellipsis.
-When goal and activity indicators appear together, the chat name also stays on
-one line with an ellipsis. Hover for the full text. Actual rendered bounds determine how many complete
+readable columns. Text scales within bounded limits. Chat names and repository
+labels each stay on one line with an ellipsis in every layout. Hover for the full
+text. Actual rendered bounds determine how many complete
 entries fit. Very small views can show no entries until enlarged.
 
 Order is Codex's `thread/list` with `sortKey: recency_at`, descending, persisted

@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+1.6.0 (local preview)
+---------------------
+
+- Keep chat names on one line with an ellipsis in every sidebar layout. Hover
+  to read the full text.
+
 1.5.9
 -----
 

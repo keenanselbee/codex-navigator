@@ -87,6 +87,8 @@ exports.run = async function (context, fixtureVscode) {
             scrollHeight:document.getElementById('viewport').scrollHeight,viewportHeight:document.getElementById('viewport').clientHeight,
             overflow:getComputedStyle(document.getElementById('viewport')).overflowY,more:!!document.getElementById('more'),
             titleHeight:document.querySelector('.title')?.getBoundingClientRect().height,titleLineHeight:parseFloat(getComputedStyle(document.querySelector('.title')||document.body).lineHeight),
+            titleOverflow: getComputedStyle(document.querySelector('.title')||document.body).textOverflow,
+            titleTruncated: document.querySelector('.title')?.scrollWidth > document.querySelector('.title')?.clientWidth,
             positions:[...document.querySelectorAll('.chat')].map(item=>{const r=item.getBoundingClientRect();return {left:r.left,top:r.top};}),
             message:document.getElementById('message').textContent,dots:document.querySelectorAll('.activity-dot').length, stars:document.querySelector('.star')?.textContent,
             layout:document.body.dataset.layout, columns:getComputedStyle(document.getElementById('chats')).gridTemplateColumns.split(' ').length,
@@ -217,7 +219,7 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:size',width:780,height:100});
     await until(async () => {const p=await probe();return p.layout==='compact'&&p.columns===4;}, 'short compact grid');
     await companion.webview.postMessage({type:'fixture:size',width:700,height:185});
-    await until(async () => {const p=await probe();return p.columns===3&&p.rows>=9&&p.fits;}, 'three columns near threshold with complete wrapped titles');
+    await until(async () => {const p=await probe();return p.columns===3&&p.rows>=9&&p.fits;}, 'three columns near threshold with complete entries');
     const restoredRowCount=(await probe()).rows;
     fixtureLoaded=false;
     companion.webview.html += '\n<!-- reload layout persistence fixture -->';
@@ -229,9 +231,11 @@ exports.run = async function (context, fixtureVscode) {
     await until(async () => (await probe()).columns===1,'narrow width prevents squeezed columns');
     for(const width of [210,280,350]) {
       await companion.webview.postMessage({type:'fixture:size',width,height:180});
-      await until(async () => (await probe()).fits,'wrapped entries fit at '+width);
+      await until(async () => (await probe()).fits,'single-line entries fit at '+width);
       const p=await probe(); assert.ok(p.scrollHeight<=p.viewportHeight+1,'no clipped lower row');
-      if(width===210) assert.ok(p.titleHeight>p.titleLineHeight,'title wraps on a narrow view');
+      assert.ok(p.titleHeight>0&&p.titleHeight<=p.titleLineHeight+1,'title stays on one line at '+width);
+      assert.equal(p.titleOverflow,'ellipsis','overflowing titles use an ellipsis');
+      if(width===210) assert.ok(p.titleTruncated,'long title is truncated in a narrow view');
     }
     await companion.webview.postMessage({type:'fixture:font',size:24});
     await until(async () => {const p=await probe();return p.fits&&p.rows>0&&p.scrollHeight<=p.viewportHeight+1;},'large text refits without scrolling');

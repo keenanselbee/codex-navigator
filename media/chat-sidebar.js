@@ -106,7 +106,6 @@ function render() {
       const dot = document.createElement('span'); dot.className = 'activity-dot ' + row.activity;
       dot.setAttribute('role', 'img'); dot.setAttribute('aria-label', activityText); dot.title = activityText; indicators.append(dot);
     }
-    if (goal && indicators.childElementCount > 1) item.classList.add('condensed-title');
     if (indicators.childElementCount) name.append(indicators);
     item.append(labelRow, name); el('chats').append(item);
   }
