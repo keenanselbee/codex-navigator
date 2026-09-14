@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.6.2 (prepared for owner publication)
+Product: Codex Navigator 1.6.3 (verified inputs; commit and packaging pending)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -51,8 +51,9 @@ authenticated Codex activity hooks, chat switching, automatic labels and goal
 pause/resume. These checks are recorded as owner-verified, not agent-executed.
 They are no longer outstanding acceptance gates for Codex Navigator.
 
-Version 1.6.2 adds the automatic-layout comparison to the extension page and
-shows Reset Chat Name only for renamed chats. Publication remains with the owner.
+Version 1.6.3 matches the automatic-layout comparison to the animated demo's
+700-pixel display width. It retains 1.6.2's comparison and Reset Chat Name command
+for renamed chats. Publication remains with the owner.
 Before Marketplace upload, push the public source and confirm that
 `https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/adaptive-layouts.png`
 loads; the new image is hosted from that repository.
@@ -61,6 +62,31 @@ Prepare this candidate from clean, committed public and private checkouts. A
 separate worktree may be used to exclude unrelated local working files without
 changing them. Keep the resulting VSIX and paired revision/hash receipt immutable.
 If further fixes change the packaged payload, reserve the next patch version.
+
+
+Prepared release inputs: 1.6.3
+-----------------------------
+
+The README now renders the layout comparison at 700 pixels wide, matching the
+animated demo, with automatic aspect-ratio height (about 167 pixels). The
+1192-by-285 source PNG is retained, including the owner's existing local update.
+The manifest, lockfile and release notes identify the next release as 1.6.3.
+
+All 132 public tests passed. The disposable package-boundary test verified all
+57 entries and excluded private source (`package-acceptance-aLFSYZ`). Isolated
+VS Code integration passed its initial and restart phases (`integration-jm64Jf`).
+Comparison with the verified 1.6.2 package found only the expected README,
+manifest and changelog content changes; other byte differences were line endings.
+Markdown whitespace, local links and the two 700-pixel image attributes passed.
+
+The canonical production packager requires reviewed, committed inputs. No 1.6.3
+production VSIX or Desktop upload copy has been created yet. The private checkout
+is unchanged. Commit the reviewed public release inputs before packaging, then
+inspect the final VSIX and copy it with its receipt to the Desktop.
+
+The hosted layout PNG is reachable but differs from the local image. Push the
+reviewed public changes and confirm the hosted image matches before publishing.
+Packaging and Desktop staging do not authorize GitHub push or Marketplace upload.
 
 
 Verified production package: 1.6.2

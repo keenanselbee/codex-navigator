@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+1.6.3
+-----
+
+- Match the layout comparison image to the animated demo's 700-pixel display width.
+
 1.6.2
 -----
 
