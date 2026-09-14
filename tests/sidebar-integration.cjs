@@ -307,6 +307,7 @@ exports.run = async function (context, fixtureVscode) {
     const clickedContext=(await probe()).menuContext;
     assert.equal(clickedContext.navigatorChatId,id(11),'right-click resolves nested title to its own row');
     assert.equal(clickedContext.preventDefaultContextMenuItems,true);
+    assert.equal(clickedContext.navigatorHasCustomName,false,'unnamed chat does not expose reset');
     const navigatorUi=require.cache[require.resolve('../dist/chat-sidebar')].require('vscode');
     const renameInput=navigatorUi.window.showInputBox, nameNotice=navigatorUi.window.showInformationMessage;
     let originalNameShown;
@@ -315,6 +316,8 @@ exports.run = async function (context, fixtureVscode) {
       navigatorUi.window.showInformationMessage=async text=>{originalNameShown=text;};
       await vscode.commands.executeCommand('codexNavigator.sidebar.rename',clickedContext);
       await until(async()=>(await probe()).text.includes('My named chat'),'Navigator displays custom chat name');
+      await companion.webview.postMessage({type:'fixture:menu',selector:'.chat:nth-child(2) .title'});
+      assert.equal((await probe()).menuContext.navigatorHasCustomName,true,'renamed chat exposes reset');
       await vscode.commands.executeCommand('codexNavigator.sidebar.originalName',clickedContext);
       assert.equal(originalNameShown,'Fixture chat 11','native action displays unchanged Codex title');
       await companion.webview.postMessage({type:'fixture:search',value:'Fixture chat 11'});
@@ -322,6 +325,8 @@ exports.run = async function (context, fixtureVscode) {
       await companion.webview.postMessage({type:'fixture:search',value:''});
       await vscode.commands.executeCommand('codexNavigator.sidebar.resetName',clickedContext);
       await until(async()=>{const p=await probe();return !p.text.includes('My named chat')&&p.rows>2;},'reset restores Codex title');
+      await companion.webview.postMessage({type:'fixture:menu',selector:'.chat:nth-child(2) .title'});
+      assert.equal((await probe()).menuContext.navigatorHasCustomName,false,'reset removes the custom-name menu context');
     } finally {navigatorUi.window.showInputBox=renameInput;navigatorUi.window.showInformationMessage=nameNotice;}
 
     await companion.webview.postMessage({type:'fixture:click',selector:'.chat:nth-child(2) .star'});

@@ -72,8 +72,14 @@ test('hidden and disposed sidebar views stop history reads', async () => {
   f.sidebar.dispose(); await f.sidebar.refresh(); assert.equal(f.sent.length, 1);
 });
 
-test('Navigator renames keep the Codex title and can be inspected and reset from native menu actions', async () => {
+test('Navigator renames preserve the Codex title and expose reset only for custom names', async () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+  const menu = manifest.contributes.menus['webview/context'];
+  assert.equal(menu.some(item => item.command === 'codexNavigator.sidebar.originalName'), false);
+  assert.match(menu.find(item => item.command === 'codexNavigator.sidebar.resetName').when, /&& navigatorHasCustomName$/);
+  assert.equal(manifest.contributes.commands.find(item => item.command === 'codexNavigator.sidebar.resetName').title, 'Reset Chat Name');
   const f=fixture();await f.sidebar.refresh();
+  assert.equal(f.sent.at(-1).rows[0].hasCustomName, false);
   const target={webviewSection:'navigatorChat',navigatorChatId:f.id};
   f.vscode.window.showInputBox=async options=>{assert.equal(options.value,'A');assert.match(options.prompt,/Codex name: A/);return 'My chat';};
   await f.commands.get('codexNavigator.sidebar.rename')(target);

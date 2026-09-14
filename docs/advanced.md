@@ -404,9 +404,11 @@ the menu: the supported native menu contributions have static command titles.
 See [VS Code webview context menus](https://code.visualstudio.com/api/extension-guides/webview#context-menus).
 
 Rename Chat saves a Navigator-only name for that chat ID in this VS Code profile.
-It does not change the Codex title or repository label. Original Chat Name opens
-the current Codex title, which also appears in the rename dialog and hover tooltip.
-Search matches either name. Use Codex Name (or a blank rename) removes the override.
+It does not change the Codex title or repository label. The current Codex title
+appears in the rename dialog and hover tooltip. Search matches either name.
+Reset Chat Name appears below Rename Chat only when the chat has a custom name;
+it removes that override and restores the current Codex title. A blank rename
+also removes the override.
 The native menu cannot put a different title directly in its text for each chat.
 
 Associate Custom Label with Repository is available only for custom text labels.

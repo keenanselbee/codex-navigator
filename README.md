@@ -19,6 +19,14 @@ It was built to make development in a multi-repository workspace more enjoyable,
 <p align="center">Recognise your projects and switch between saved chats.<br>
 Recent chat highlights fade over time, showing which conversations you visited most recently.</p>
 
+<h3 align="center">A layout that fits your workspace</h3>
+
+<p align="center">Columns (left) &middot; List (right)</p>
+
+<p align="center"><a href="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/adaptive-layouts.png"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/adaptive-layouts.png" alt="Codex Navigator in columns on the left and a list on the right, showing the same conversations with repository labels, colours and activity indicators" width="1192"></a></p>
+
+<p align="center">Navigator automatically adapts to the available panel space, switching between compact grids, columns and a list.</p>
+
 ---
 
 Features

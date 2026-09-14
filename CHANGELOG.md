@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.6.2
+-----
+
+- Add a comparison of the automatic column and list layouts to the extension page.
+- Replace Original Chat Name in the chat context menu with Reset Chat Name,
+  shown only for renamed chats. Reset restores the current Codex title.
+
 1.6.1
 -----
 
