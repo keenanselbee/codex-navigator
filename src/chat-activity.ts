@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 import { readFile, writeFile, mkdir, rename, unlink, copyFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { activityCommand } from './platform';
 
 export type ChatActivity = 'working' | 'idle' | 'unknown' | 'ready' | 'waiting' | 'error';
 const collector = require('../tools/chat-activity.cjs') as {
@@ -10,10 +11,10 @@ const collector = require('../tools/chat-activity.cjs') as {
 export const readChatActivity = collector.activitySnapshot;
 
 export async function configureActivityHooks(extensionPath: string, home: string, enable: boolean): Promise<void> {
-  if (!path.isAbsolute(home) || /["`$%!\r\n\0]/.test(home)) throw new Error('Codex home must be absolute and contain no shell expansion characters.');
+  if (!path.isAbsolute(home)) throw new Error('Codex home must be absolute.');
   const directory = path.join(home, 'codex-navigator');
   const helper = path.join(directory, 'chat-activity.cjs');
-  const command = `node "${helper}" --home "${home}"`;
+  const command = activityCommand(home);
   const file = path.join(home, 'hooks.json');
   let original: string | undefined;
   try { original = await readFile(file, 'utf8'); }

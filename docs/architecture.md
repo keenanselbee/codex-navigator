@@ -1,7 +1,9 @@
 Architecture
 ============
 
-Codex Navigator is a local Windows VS Code extension. Its own webview renders
+Codex Navigator is a local desktop VS Code extension. Windows x64 is tested;
+macOS/Linux and ARM64 support are best effort pending native verification.
+Its own webview renders
 chat cards, a colour picker, stars, lifecycle indicators and goal controls.
 VS Code owns the view container, native context menus, keyboard focus and theme
 tokens. Chat and repository elements carry validated context data; contributed
@@ -31,6 +33,14 @@ identity and contain roots/IDs/timestamps, not message text.
 
 Metadata reader
 ---------------
+
+`platform.ts` selects Codex's bundled runtime for the host OS and architecture:
+`windows`, `macos` or `linux`, with `x86_64` or `aarch64`. Unsupported hosts do
+not fall back to another architecture or a global CLI. Hook setup checks that
+the runtime exists and, on Unix, is executable. POSIX helper commands quote
+literal paths; Windows retains its existing command format. Hook installation
+and trust verification share the same command builder. Path identity folds case
+only on Windows, so distinct case-sensitive Unix repositories stay distinct.
 
 `ChatGoals` owns a bounded local `codex app-server --stdio` metadata connection.
 It initializes the protocol and reads thread recency, visible goals and setup's

@@ -25,6 +25,8 @@ test('VSIX inspection requires exact runtime bytes and rejects source leaks, sta
   const files = [...required, ...metadata];
   const receipt = await inspectVsix(await archive(files), expected);
   assert.equal(Object.keys(receipt).length, 4);
+  await inspectVsix(await archive(files), expected, { universal: true });
+  await assert.rejects(inspectVsix(await archive([...required, metadata[0], ['extension.vsixmanifest', '<Identity TargetPlatform="win32-x64"/>']]), expected, { universal: true }), /must not restrict/);
   const documented = new Map([...expected, ['extension/README.md', hash('readme')], ['extension/CHANGELOG.md', hash('changelog')]]);
   await inspectVsix(await archive([...files, ['extension/readme.md', 'readme'], ['extension/changelog.md', 'changelog']]), documented);
   for (const name of ['extension/proprietary/src/service.ts', 'extension/dist/commercial/service.js.map', 'extension/.git/config', 'extension/dist/stale.js']) {

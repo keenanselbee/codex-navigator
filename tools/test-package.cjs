@@ -34,9 +34,9 @@ async function createTestPackage(prepareFixture) {
   const archive = path.join(fixture, 'disposable-test.vsix');
   execFileSync(process.execPath, [require.resolve('@vscode/vsce/vsce'), 'package', '--no-dependencies',
     '--no-rewrite-relative-links', '--no-gitHubIssueLinking', '--no-gitLabIssueLinking',
-    '--target', 'win32-x64', '--out', archive], { cwd: fixture, windowsHide: true, timeout: 60000, stdio: 'pipe' });
-  const files = await inspectVsix(archive, expected);
-  const receipt = { testOnly: true, installed: false, fixtureChanges, sha256: hash(fs.readFileSync(archive)), files };
+    '--out', archive], { cwd: fixture, windowsHide: true, timeout: 60000, stdio: 'pipe' });
+  const files = await inspectVsix(archive, expected, { universal: true });
+  const receipt = { testOnly: true, installed: false, target: 'universal', fixtureChanges, sha256: hash(fs.readFileSync(archive)), files };
   fs.writeFileSync(path.join(fixture, 'result.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify({ fixture, verifiedEntries: Object.keys(files).length, privateSourceIncluded: false }));
   return { fixture, archive, receipt };

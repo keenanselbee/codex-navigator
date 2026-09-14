@@ -18,7 +18,8 @@ function verifyPrivate(root) {
   let privateRoot;
   try { privateRoot = execFileSync('git',['-C',directory,'rev-parse','--show-toplevel'],{encoding:'utf8',windowsHide:true,stdio:['ignore','pipe','pipe']}).trim(); }
   catch { throw new Error('proprietary/ must be an independent private Git checkout.'); }
-  if (path.resolve(privateRoot).toLowerCase() !== path.resolve(directory).toLowerCase()) {
+  const normalize = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  if (normalize(privateRoot) !== normalize(directory)) {
     throw new Error('proprietary/ must be an independent private Git checkout.');
   }
   return directory;

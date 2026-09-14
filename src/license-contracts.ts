@@ -8,6 +8,7 @@ export interface LicenseStatus {
   canActivate?: boolean;
   canStartTrial?: boolean;
   canDeactivate?: boolean;
+  storageCheck?: boolean;
 }
 
 export interface LicenseService {

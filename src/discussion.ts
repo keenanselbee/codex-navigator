@@ -1,6 +1,7 @@
 import { open } from 'node:fs/promises';
 import * as path from 'node:path';
 import { ScopeReport } from './scope-store';
+import { sameFilePath } from './platform';
 
 export interface ProjectName { root: string; names: string[] }
 const normalize = (value: string) => value.toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -119,5 +120,5 @@ export class DiscussionReader {
 }
 
 export function projectNames(roots: string[], folders: { fsPath: string; name: string }[]): ProjectName[] {
-  return roots.slice(0, 500).map(root => ({ root, names: [...new Set([path.basename(root), ...folders.filter(folder => path.resolve(folder.fsPath).toLowerCase() === path.resolve(root).toLowerCase()).map(folder => folder.name)])] }));
+  return roots.slice(0, 500).map(root => ({ root, names: [...new Set([path.basename(root), ...folders.filter(folder => sameFilePath(folder.fsPath, root)).map(folder => folder.name)])] }));
 }

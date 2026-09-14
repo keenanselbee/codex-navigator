@@ -174,7 +174,7 @@ window.addEventListener('message', event => {
     el('licenseBack').hidden = !state.allowed;
     el('licensePortal').hidden = !state.canPortal;
     el('licenseDeactivate').hidden = !state.canDeactivate;
-    el('licenseRecover').hidden = !['recovery', 'unavailable'].includes(state.state);
+    el('licenseRecover').hidden = state.storageCheck || !['recovery', 'unavailable'].includes(state.state);
     for (const control of document.querySelectorAll('[data-license]')) control.disabled = !!state.busy;
     if (licenseVisible) {
       if (colourPanel.active) colourPanel.close('licensePage');

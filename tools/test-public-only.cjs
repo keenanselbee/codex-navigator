@@ -11,7 +11,7 @@ for(const relative of publicFiles(root)) {
   fs.copyFileSync(path.join(root,relative),destination);
 }
 // Share only the installed public toolchain, never the private checkout or build output.
-fs.symlinkSync(path.join(root,'node_modules'),path.join(snapshot,'node_modules'),'junction');
+fs.symlinkSync(path.join(root,'node_modules'),path.join(snapshot,'node_modules'),process.platform==='win32'?'junction':'dir');
 function run(args) {
   const result=spawnSync(process.execPath,args,{cwd:snapshot,windowsHide:true,encoding:'utf8'});
   fs.appendFileSync(path.join(snapshot,'checks.log'),(result.stdout||'')+(result.stderr||''));

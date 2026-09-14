@@ -3,21 +3,21 @@ import * as path from 'node:path';
 import { open, readFile, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { ChatGoals } from './chat-goals';
+import { activityCommand, codexBinary, codexRuntimeIssue, sameFilePath } from './platform';
 
 export const hookEvents = ['UserPromptSubmit', 'Stop', 'Interrupt', 'SessionEnd'];
-const samePath = (a: string, b: string) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
-export function activityCommand(home: string) { return `node "${path.join(home, 'codex-navigator', 'chat-activity.cjs')}" --home "${home}"`; }
+export { activityCommand } from './platform';
 
 export function parseHookTrust(value: any, home: string, cwds: string[]) {
   if (!Array.isArray(value?.data) || !value.data.length || value.data.length > 100) return undefined;
   const expected = hookEvents.map(event => event[0].toLowerCase() + event.slice(1));
   const perWorkspace = [];
   for (const cwd of cwds) {
-    const entry = value.data.find((item: any) => typeof item?.cwd === 'string' && samePath(item.cwd, cwd));
+    const entry = value.data.find((item: any) => typeof item?.cwd === 'string' && sameFilePath(item.cwd, cwd));
     if (!entry || !Array.isArray(entry.hooks) || !Array.isArray(entry.errors) || entry.errors.length || !Array.isArray(entry.warnings) || entry.warnings.length) return undefined;
     perWorkspace.push(expected.every(event => entry.hooks.some((hook: any) => hook?.eventName === event
       && hook.handlerType === 'command' && hook.command === activityCommand(home)
-      && typeof hook.sourcePath === 'string' && samePath(hook.sourcePath, path.join(home, 'hooks.json'))
+      && typeof hook.sourcePath === 'string' && sameFilePath(hook.sourcePath, path.join(home, 'hooks.json'))
       && hook.enabled === true && ['trusted', 'managed'].includes(hook.trustStatus))));
   }
   return perWorkspace.length ? perWorkspace.every(Boolean) : undefined;
@@ -85,8 +85,10 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
   const nodeAvailable = await new Promise<boolean>(resolve => execFile('node', ['--version'], { windowsHide: true, timeout: 3000 }, error => resolve(!error)));
   let trusted: boolean | undefined;
   const codex = vscode.extensions.getExtension('openai.chatgpt');
-  if (installed && codex && cwds.length) {
-    const reader = new ChatGoals(path.join(codex.extensionPath, 'bin', 'windows-x86_64', 'codex.exe'), home, () => {});
+  const binary = codexBinary(codex?.extensionPath);
+  if (!detail) detail = codex ? codexRuntimeIssue(binary) : 'Install and enable the Codex extension first.';
+  if (installed && !detail && cwds.length) {
+    const reader = new ChatGoals(binary, home, () => {});
     try { trusted = parseHookTrust(await reader.readHooks(cwds), home, cwds); } finally { reader.dispose(); }
   }
   let observed: string | undefined, deliveryDetail = '';
@@ -108,7 +110,10 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
 export function openHookReview(home: string): void {
   const codex = vscode.extensions.getExtension('openai.chatgpt');
   if (!codex) throw new Error('Install and enable the Codex extension first.');
-  const terminal = vscode.window.createTerminal({ name: 'Codex hook review', shellPath: path.join(codex.extensionPath, 'bin', 'windows-x86_64', 'codex.exe'),
+  const binary = codexBinary(codex.extensionPath);
+  const issue = codexRuntimeIssue(binary);
+  if (issue) throw new Error(issue);
+  const terminal = vscode.window.createTerminal({ name: 'Codex hook review', shellPath: binary,
     cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath, env: { CODEX_HOME: home } });
   terminal.show();
 }

@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync, spawn } = require('node:child_process');
+const { vscodeExecutable } = require('./vscode-runtime.cjs');
 
 async function main() {
   // VS Code terminals may inherit this from a CLI launcher. The test host is Electron.
@@ -32,8 +33,7 @@ async function main() {
     'telemetry.telemetryLevel': 'off', 'window.restoreWindows': 'none',
     'codexNavigator.instructionRouting': false,
   } }, null, 2));
-  const executable = process.env.VSCODE_EXECUTABLE ?? 'C:\\Program Files\\Microsoft VS Code\\Code.exe';
-  if (!fs.existsSync(executable)) { throw new Error('Set VSCODE_EXECUTABLE to an installed VS Code executable.'); }
+  const executable = vscodeExecutable();
   const userDirectory = path.join(testRoot, 'profile', 'User');
   fs.mkdirSync(userDirectory, { recursive: true });
   fs.writeFileSync(path.join(userDirectory, 'settings.json'), JSON.stringify({
@@ -42,7 +42,7 @@ async function main() {
     'telemetry.telemetryLevel': 'off', 'update.mode': 'none',
   }, null, 2));
   console.log(`Isolated integration profile: ${testRoot}`);
-  for (const phase of ['initial', 'restart']) {
+  for (const phase of [...(process.platform === 'win32' ? [] : ['storage']), 'initial', 'restart']) {
     // --extensionTestsPath deliberately forces in-memory VS Code storage. A normal
     // isolated development host is required to test real restart persistence.
     const child = spawn(executable, [workspace,

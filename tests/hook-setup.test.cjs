@@ -60,7 +60,7 @@ test('missing installation memento uses a stable file cutoff across status check
  }
  fs.appendFileSync(path.join(directory,'codex-navigator/activity-diagnostics.jsonl'),JSON.stringify({time:new Date().toISOString(),event:'Stop',outcome:'write-failed'})+'\n');
  const failedDelivery=await exportsFixture.hookSetupStatus(context,directory);
- assert.equal(failedDelivery.detail,'','delivery failures are separate from setup errors');
+ assert.equal(failedDelivery.detail,'Install and enable the Codex extension first.','missing runtime has an actionable setup error, separate from delivery');
  assert.match(failedDelivery.deliveryDetail,/could not save/);assert.equal(failedDelivery.observed,undefined);
  state.set('activityHooks.installedAt',Date.now());
  assert.equal((await exportsFixture.hookSetupStatus(context,directory)).observed,undefined,'reinstallation excludes earlier events');

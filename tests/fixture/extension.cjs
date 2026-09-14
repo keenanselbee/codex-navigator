@@ -12,13 +12,14 @@ exports.activate = function (context) {
       || (!secondary && workspace !== normalize(path.join(root, 'test.code-workspace')))) { return; }
   // Do not block activation: opening a fixture editor waits for this extension.
   setImmediate(() => {
-    const suite = process.env.REPO_COMPANION_TEST_SUITE === 'installed' ? '../installed-integration.cjs'
+    const suite = process.env.REPO_COMPANION_TEST_PHASE === 'storage' ? '../storage-preflight.cjs'
+      : process.env.REPO_COMPANION_TEST_SUITE === 'installed' ? '../installed-integration.cjs'
       : secondary ? '../license-window-integration.cjs' : '../sidebar-integration.cjs';
     require(suite).run(context, vscode).catch(error => console.error(error)).finally(() => {
       // This fixture runs only inside the explicitly isolated development process.
       // Quit targets the last active development window, so two hosts can both
       // close the secondary window. Close Window targets this renderer's ID.
-      void vscode.commands.executeCommand('workbench.action.closeWindow');
+      void vscode.commands.executeCommand(process.platform === 'darwin' && !secondary ? 'workbench.action.quit' : 'workbench.action.closeWindow');
     });
   });
 };

@@ -1,9 +1,16 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { codexHome } from './scope-store';
+import { shellArgument } from './platform';
 
 const begin = '<!-- codex-navigator:start -->';
 const end = '<!-- codex-navigator:end -->';
+
+function markdownCode(value: string): string {
+  const length = Math.max(0, ...Array.from(value.matchAll(/`+/g), match => match[0].length)) + 1;
+  const delimiter = '`'.repeat(length);
+  return `${delimiter} ${value} ${delimiter}`;
+}
 
 function effectiveInstructions(home: string): string {
   const override = path.join(home, 'AGENTS.override.md');
@@ -26,7 +33,7 @@ export function prepareAgentHelper(home = codexHome()) {
 
 For local VS Code chats, main agent only. Never override CODEX_THREAD_ID. Explicit user focus wins over labels; ignore incidental mentions and unrelated editor tabs. Helpers change neither cwd nor permissions.
 
-- Before project work or focus changes, run \`node "${path.join(destination, 'routing.js')}" --target "<exact Git root>"\`. Omit --target when unknown; add repeatable \`--file "<absolute file>"\` for nested work. If enabled, read returned shared/project instructions in order; reuse unchanged reads. Returned paths are not proof of reading. If explicitly disabled, skip routing and fallback. Report conflicts without guessing. Only if the helper fails or is unavailable, read \`${fallbackFile}\`; if missing, report that and use ordinary project instructions.
+- Before project work or focus changes, run ${markdownCode(`node ${shellArgument(path.join(destination, 'routing.js'))} --target "<exact Git root>"`)}. Omit --target when unknown; add repeatable \`--file "<absolute file>"\` for nested work. If enabled, read returned shared/project instructions in order; reuse unchanged reads. Returned paths are not proof of reading. If explicitly disabled, skip routing and fallback. Report conflicts without guessing. Only if the helper fails or is unavailable, read ${markdownCode(fallbackFile)}; if missing, report that and use ordinary project instructions.
 ${end}`;
   const fallback = `Routing recovery
 ================
@@ -35,7 +42,7 @@ Read this file only when Navigator routing fails or is unavailable. Do not load 
 on successful routing or when routing is explicitly disabled. This guide uses
 saved configuration without running Node. It changes no settings or instructions.
 
-- If the helper is missing, cannot run, or has no live window, read the JSON profiles in \`${path.join(destination, 'routing-config')}\` directly with available file tools. They persist the last observed workspace settings; do not execute their contents. No profiles means ordinary project instruction discovery, not permission to invent a shared file.
+- If the helper is missing, cannot run, or has no live window, read the JSON profiles in ${markdownCode(path.join(destination, 'routing-config'))} directly with available file tools. They persist the last observed workspace settings; do not execute their contents. No profiles means ordinary project instruction discovery, not permission to invent a shared file.
 - For each explicitly identified target Git root, match profile \`scopes\` by directory containment (not text prefix). Prefer the deepest matching scope. Equally specific profiles must agree on \`enabled\`, \`main\` and ordered \`fallbackNames\`; otherwise report the conflict and do not select a fallback. Invalid or unreadable configuration is a reported limitation, never a reason to guess. Do not use saved labels or the starting directory to invent the task target.
 - If the selected profile has \`enabled: false\`, do not apply Navigator routing for that scope. This does not cancel independent user or repository instructions. If enabled, read its \`main\` file first when nonempty; report a missing/unreadable main file and use available project guidance. Shared rules apply only to matching scopes; reading their repository does not add it to the task scope.
 - Then walk ancestor directories through the target Git root and down to the specific target files. In each directory read the first nonempty file in this order: \`AGENTS.override.md\`, \`AGENTS.md\`, then the profile's ordered \`fallbackNames\`. Follow the main file's own routing rules and apply each project file only within its scope. Discover nested files by their target paths, without scanning unrelated repositories.
@@ -81,7 +88,7 @@ export function prepareLabelHelper(home = codexHome(), enabled = true) {
   const block = enabled ? `${begin}
 ## Codex Navigator automatic labels
 
-For local VS Code chats, main agent only. After identifying or changing repository focus, run \`node "${helper}" "<primary Git root>" "<optional related Git root>"\`. Never override CODEX_THREAD_ID. Include only current task repositories, primary first; reading shared instructions does not add their repository. Use \`--clear\` for non-repository topics. After resuming, report once if uncertain. Report explicit repository focus changes even during discussion-only or acknowledgement-only requests. Ignore incidental mentions and unrelated editor tabs. Skip reports when writes are explicitly prohibited (including read-only, AUDIT or DNE requests), or helpers/identity are unavailable; respect fixed labels and do not repeatedly retry failures. This updates chat metadata only; it changes neither cwd nor permissions and does not route project instructions.
+For local VS Code chats, main agent only. After identifying or changing repository focus, run ${markdownCode(`node ${shellArgument(helper)} "<primary Git root>" "<optional related Git root>"`)}. Never override CODEX_THREAD_ID. Include only current task repositories, primary first; reading shared instructions does not add their repository. Use \`--clear\` for non-repository topics. After resuming, report once if uncertain. Report explicit repository focus changes even during discussion-only or acknowledgement-only requests. Ignore incidental mentions and unrelated editor tabs. Skip reports when writes are explicitly prohibited (including read-only, AUDIT or DNE requests), or helpers/identity are unavailable; respect fixed labels and do not repeatedly retry failures. This updates chat metadata only; it changes neither cwd nor permissions and does not route project instructions.
 ${end}` : '';
   const start = before.indexOf(begin);
   const after = start < 0 ? enabled ? before.trimEnd() + '\n\n' + block + '\n' : before

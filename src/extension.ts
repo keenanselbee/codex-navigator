@@ -1,5 +1,6 @@
 import { chatPins } from './chat-pins';
 import * as vscode from 'vscode';
+import { codexBinary } from './platform';
 import { assignAutomaticColours, resolvedRepositoryColours } from './automatic-colours';
 import { ChatGoals } from './chat-goals';
 import { ChatSidebar } from './chat-sidebar';
@@ -71,9 +72,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const discussionReader = new DiscussionReader();
   const transcriptActivity = new TranscriptActivity();
   const codexPath = vscode.extensions.getExtension('openai.chatgpt')?.extensionPath;
-  const runtimeActivity = new RuntimeActivity(codexPath ? path.join(codexPath, 'bin', 'windows-x86_64', 'codex.exe') : undefined, home,
+  const runtimeActivity = new RuntimeActivity(!vscode.env.remoteName ? codexBinary(codexPath) : undefined, home,
     message => output.appendLine(JSON.stringify({ time: new Date().toISOString(), event: 'activity-runtime', message })));
-  const chatGoals = new ChatGoals(!vscode.env.remoteName && codexPath ? path.join(codexPath, 'bin', 'windows-x86_64', 'codex.exe') : undefined, home,
+  const chatGoals = new ChatGoals(!vscode.env.remoteName ? codexBinary(codexPath) : undefined, home,
     message => output.appendLine(JSON.stringify({ time: new Date().toISOString(), event: 'chat-goals', message })));
   context.subscriptions.push(runtimeActivity, chatGoals);
   const discussionKeys = new Set<string>();

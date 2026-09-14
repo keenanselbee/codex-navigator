@@ -36,15 +36,15 @@ async function packageExtension(root) {
   try {
     const result = spawnSync(process.execPath, [require.resolve('@vscode/vsce/vsce'), 'package',
       '--no-dependencies', '--no-rewrite-relative-links', '--no-gitHubIssueLinking', '--no-gitLabIssueLinking',
-      '--target', 'win32-x64', '--out', temporary], { cwd: root, windowsHide: true, stdio: 'inherit' });
+      '--out', temporary], { cwd: root, windowsHide: true, stdio: 'inherit' });
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`Packaging failed (${result.status ?? result.signal}).`);
-    const files = await inspectVsix(temporary, expected);
+    const files = await inspectVsix(temporary, expected, { universal: true });
     if (revision(root) !== revisions.public || revision(privateRoot) !== revisions.private
         || JSON.stringify([...payload(root)]) !== JSON.stringify([...expected])) {
       throw new Error('Release inputs changed during packaging. Review and retry with stable inputs.');
     }
-    const receipt = { version: manifest.version, target: 'win32-x64', environment: 'production',
+    const receipt = { version: manifest.version, target: 'universal', environment: 'production',
       revisions, sha256: hash(fs.readFileSync(temporary)), files, createdAt: new Date().toISOString() };
     // Publish without overwriting an artifact produced by another package process.
     fs.linkSync(temporary, output);

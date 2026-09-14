@@ -7,7 +7,8 @@ const yauzl = require('yauzl');
 const hash = data => createHash('sha256').update(data).digest('hex');
 function revision(root) {
   const git = args => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', windowsHide: true }).trim();
-  if (path.resolve(git(['rev-parse', '--show-toplevel'])).toLowerCase() !== path.resolve(root).toLowerCase()) {
+  const normalize = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  if (normalize(git(['rev-parse', '--show-toplevel'])) !== normalize(root)) {
     throw new Error('Release inputs must be independent Git roots.');
   }
   if (git(['status', '--porcelain', '--untracked-files=all'])) throw new Error('Commit reviewed release inputs before packaging: ' + root);
@@ -32,7 +33,7 @@ function payload(root) {
   return files;
 }
 
-function inspectVsix(filename, expected) {
+function inspectVsix(filename, expected, { universal = false } = {}) {
   // VSCE canonicalizes these two documentation names inside the archive.
   expected = new Map([...expected].map(([name, digest]) => [
     ['extension/README.md', 'extension/CHANGELOG.md'].includes(name) ? name.toLowerCase() : name, digest]));
@@ -52,8 +53,17 @@ function inspectVsix(filename, expected) {
       zip.openReadStream(entry, (error, stream) => {
         if (error) return fail(error);
         const digest = createHash('sha256');
-        stream.on('error', fail); stream.on('data', chunk => digest.update(chunk));
-        stream.on('end', () => { actual.set(name, digest.digest('hex')); zip.readEntry(); });
+        const metadata = [];
+        stream.on('error', fail); stream.on('data', chunk => {
+          digest.update(chunk);
+          if (universal && name === 'extension.vsixmanifest') metadata.push(chunk);
+        });
+        stream.on('end', () => {
+          if (metadata.length && /\bTargetPlatform\s*=/.test(Buffer.concat(metadata).toString('utf8'))) {
+            return fail(new Error('Universal VSIX must not restrict the target platform.'));
+          }
+          actual.set(name, digest.digest('hex')); zip.readEntry();
+        });
       });
     });
     zip.on('end', () => {

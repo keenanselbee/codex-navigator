@@ -1,6 +1,8 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 exports.run=async function(context,vscode,until){
  const {ChatGoals}=require('../dist/chat-goals');const hooks=require('../dist/hook-setup');
+ // This isolated extension is a Codex fixture with synthetic metadata, not a bundled runtime.
+ require('../dist/platform').codexRuntimeIssue=()=>'';
  const home=process.env.CODEX_HOME;let trusted=false,reviews=0,receive;
  ChatGoals.prototype.readHooks=async cwds=>({data:cwds.map(cwd=>({cwd,errors:[],warnings:[],hooks:hooks.hookEvents.map(event=>({eventName:event[0].toLowerCase()+event.slice(1),handlerType:'command',command:hooks.activityCommand(home),sourcePath:path.join(home,'hooks.json'),enabled:true,trustStatus:trusted?'trusted':'untrusted'}))}))});
  hooks.openHookReview=()=>{reviews++;};

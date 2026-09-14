@@ -6,6 +6,28 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { prepareAgentHelper, installAgentHelper, prepareLabelHelper, labelHelperStatus } = require('../dist/agent-helper');
 
+test('Unix guidance preserves backticks inside Markdown code spans without writing files', () => {
+  const vm = require('node:vm');
+  for (const platformName of ['darwin', 'linux']) {
+    const platform = {}, helper = {};
+    vm.runInNewContext(fs.readFileSync(require.resolve('../dist/platform'), 'utf8'), {
+      exports: platform, process: { platform: platformName, arch: 'arm64' }, require: name => name === 'node:path' ? path.posix : require(name),
+    });
+    vm.runInNewContext(fs.readFileSync(require.resolve('../dist/agent-helper'), 'utf8'), {
+      exports: helper, __dirname: '/extension/dist', Buffer,
+      require: name => name === 'node:fs' ? { existsSync: () => false, readFileSync: () => Buffer.from('fixture') }
+        : name === 'node:path' ? path.posix : name === './platform' ? platform : name === './scope-store' ? {} : require(name),
+    });
+    const home = '/Users/one`two``three';
+    for (const plan of [helper.prepareAgentHelper(home), helper.prepareLabelHelper(home)]) {
+      const match = plan.after.match(/run (`+) (node .+?) \1\./);
+      assert.ok(match, 'entire command occupies one Markdown code span');
+      assert.equal(match[1], '```'); assert.ok(match[2].includes(home));
+      assert.ok(!match[2].includes('```'), 'delimiter is longer than any run in the command');
+    }
+  }
+});
+
 test('setup preview makes no writes and refuses instruction changes before installation', t => {
   const root = fs.mkdtempSync(path.join(__dirname, '..', '.codex-temp', 'helper-preview-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

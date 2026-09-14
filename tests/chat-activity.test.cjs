@@ -19,7 +19,7 @@ function scratch(t) {
 function setupModule() {
   const exports = {};
   vm.runInNewContext(fs.readFileSync(require.resolve('../dist/chat-activity'), 'utf8'), {
-    exports, require: name => name === 'vscode' ? {} : name === '../tools/chat-activity.cjs' ? require('../tools/chat-activity.cjs') : require(name),
+    exports, require: name => name === 'vscode' ? {} : name.startsWith('./') ? require('../dist/' + name.slice(2)) : require(name),
   });
   return exports;
 }

@@ -3,6 +3,7 @@ const fs = require('node:fs'), path = require('node:path');
 const { execFileSync, spawn } = require('node:child_process');
 const { createTestPackage } = require('./test-package.cjs');
 const { hash } = require('./release-evidence.cjs');
+const { vscodeExecutable, vscodeCli } = require('./vscode-runtime.cjs');
 
 async function testInstalledPackage(prepared, acceptance = {}) {
   const root = path.resolve(__dirname, '..'), scratch = path.join(root, '.codex-temp');
@@ -20,12 +21,8 @@ async function testInstalledPackage(prepared, acceptance = {}) {
     fs.mkdirSync(directory, { recursive: true });
     if (!fs.realpathSync(directory).startsWith(fs.realpathSync(scratch) + path.sep)) throw new Error('Installation fixture escaped scratch.');
   }
-  const executable = process.env.VSCODE_EXECUTABLE ?? 'C:\\Program Files\\Microsoft VS Code\\Code.exe';
-  const bin = path.join(path.dirname(executable), 'bin');
-  const launcher = fs.readFileSync(path.join(bin, 'code.cmd'), 'utf8');
-  const cliRelative = launcher.match(/"%~dp0([^"\r\n]*cli\.js)"/)?.[1];
-  if (!cliRelative) throw new Error('Could not resolve the installed VS Code CLI from code.cmd.');
-  const cli = path.resolve(bin, cliRelative);
+  const executable = vscodeExecutable();
+  const cli = vscodeCli(executable);
   const scoped = ['--user-data-dir=' + profile, '--extensions-dir=' + extensions];
   const command = args => execFileSync(executable, [cli, ...scoped, ...args], { cwd: root, windowsHide: true, timeout: 60000,
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', VSCODE_DEV: '' }, encoding: 'utf8', stdio: 'pipe' });
@@ -43,7 +40,7 @@ async function testInstalledPackage(prepared, acceptance = {}) {
   fs.copyFileSync(path.join(fixture, 'package.json'), path.join(testRoot, 'expected-package.json'));
   const codexHome = path.join(testRoot, 'codex-home'); fs.mkdirSync(codexHome);
   console.log('Installed test profile: ' + testRoot);
-  for (const phase of acceptance.phases ?? ['installed', 'reinstalled']) {
+  for (const phase of acceptance.phases ?? [...(process.platform === 'win32' ? [] : ['storage']), 'installed', 'reinstalled']) {
     if (phase === 'reinstalled') {
       console.log(command(['--uninstall-extension', 'keenanselbee.codex-navigator']));
       if (command(['--list-extensions']).split(/\r?\n/).includes('keenanselbee.codex-navigator')) throw new Error('Fixture uninstall did not remove the extension.');
