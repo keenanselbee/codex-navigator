@@ -91,13 +91,13 @@ the Codex runtime; a ready indicator means a turn finished, not necessarily that
 it succeeded. Visit highlights track chats opened through Navigator, rather than
 which chat is currently visible inside Codex.
 
-See [setup, troubleshooting and advanced options](docs/advanced.md) for detailed
+See [setup, troubleshooting and advanced options](https://github.com/keenanselbee/codex-navigator/blob/main/docs/advanced.md) for detailed
 settings, hook removal, upgrading from Repo Companion, and build instructions.
-[Privacy and local data](PRIVACY.md) explains what is stored and when licence
+[Privacy and local data](https://github.com/keenanselbee/codex-navigator/blob/main/PRIVACY.md) explains what is stored and when licence
 validation connects to Polar.
 
 Source and component tests are available for inspection. Source reuse,
 modification and redistribution require written permission; see the
-[licence terms](LICENSE.md).
+[licence terms](https://github.com/keenanselbee/codex-navigator/blob/main/LICENSE.md).
 
 Made by Keenan Selbee.
