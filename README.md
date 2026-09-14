@@ -1,103 +1,85 @@
-Codex Navigator
-===============
+<p align="center"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/icon-small.png" alt="Codex Navigator icon" width="104" height="104"></p>
 
-Codex Navigator is an independent product, not affiliated with or endorsed by
-OpenAI or Microsoft.
+<h2 align="center">Codex Navigator</h2>
 
-Your Codex chats, at a glance. Find and switch between saved chats in a compact
-VS Code sidebar, with project labels, colours and activity indicators to help
-you pick up where you left off.
+<p align="center"><em>Your Codex chats, at a glance.</em></p>
 
+<p align="center">An independent extension. Not affiliated with or endorsed by OpenAI.</p>
 
-Make your chats easier to find
------------------------------
+<p align="center">Explore more of my work at <a href="https://keenanselbee.com">keenanselbee.com</a>.</p>
 
-- **Browse and search.** Saved chats appear at startup. Resize Navigator to fit
-  your workspace; the layout adjusts automatically. The order stays steady while
-  you interact with the list.
-- **Recognise each project.** Give chats repository labels or custom labels.
-  Repositories in a multi-repository workspace get distinct, repeatable automatic
-  colours, and you can choose your own.
-- **Keep favourites close.** Star chats to filter favourites. Pin a chat to hold
-  its position and keep it visible beyond the default 24-hour recency filter.
-- **Make the list yours.** Rename chats within Navigator while keeping the
-  original Codex name available. Hide chats you no longer need and restore them
-  from the menu without deleting the conversations.
-- **See activity and goals.** Indicators show working, ready, waiting and error
-  states where Codex supplies them. Pause or resume goals directly from Navigator,
-  where supported.
-- **Spot recent visits.** Chats opened through Navigator briefly glow in their
-  label colour. Adjust the fade duration, highlight only the last visited chat,
-  or turn highlights off.
+---
 
-Right-click a chat for naming and label options. Use the **...** menu for
-**Repository Colours**, **Restore Hidden Chats** and **Extension Settings**.
-Turn off **Recent Chats Only** in Settings to include older chats in Navigator's
-saved history list.
+**Codex Navigator** automatically brings your saved Codex conversations together in a compact VS Code sidebar. With automatic labels enabled, project labels and colours follow your conversations, so you can find the right chat at a glance. Let it handle the organisation, or make it yours with custom names, labels, colours and favourites.
 
-Settings are grouped by Chat list, Labels and colours, Project instructions and
-Advanced. **Highlight Mode** chooses which visited chats glow; **Highlight
-Duration Seconds** controls how long they fade.
+<p align="center"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/navigator-demo.gif" alt="Animated demonstration of Codex Navigator's project labels and switching between saved conversations" width="700"></p>
 
+<p align="center">Recognise your projects and switch between saved chats.<br>
+Recent chat highlights fade over time, showing which conversations you visited most recently.</p>
+
+---
+
+Features
+--------
+
+- **Recognise each project:** Give chats repository labels or custom labels. Projects get distinct, repeatable automatic colours, and you can choose your own.
+- **Switch conversations quickly:** Browse and search saved chats from a sidebar that adapts to your available space. The order stays steady while you interact with the list.
+- **Keep favourites close:** Star chats to filter favourites. Pin a chat to hold its position and keep it visible beyond the default 24-hour recency filter.
+- **Make the list yours:** Rename chats while keeping the original Codex name available. Hide conversations you no longer need and restore them without deleting anything.
+- **See activity and goals:** See working, ready, waiting and error states where Codex supplies them. Pause or resume goals from Navigator, where supported.
+- **Spot recent visits:** Chats opened through Navigator briefly glow in their label colour. Adjust the fade, highlight only the last visited chat, or turn highlights off.
+
+---
 
 Get started
 -----------
 
-Requires desktop VS Code 1.137 or newer, the OpenAI Codex extension, and Node.js
-available on PATH.
-
-1. Install Navigator and open its view. Choose **Try for free** or
-   **Activate Licence**. On macOS/Linux, follow the storage check first: fully
-   quit and reopen VS Code when prompted.
+1. Install Navigator and open its view. Choose **Try for free** or **Activate Licence**. On macOS/Linux, follow the storage check first: fully quit and reopen VS Code when prompted.
 2. Choose **Set Up Codex Navigator**, then **Install Hooks**.
-3. Choose **Open Hook Review**, type `/hooks` in the Codex terminal, and review
-   and trust all Navigator hooks.
+3. Choose **Open Hook Review**, type `/hooks` in the Codex terminal, and review and trust all Navigator hooks.
 
-Navigator shows your chats once hooks are installed, enabled and trusted.
-If setup needs attention later, it explains the next step. The review terminal
-uses the Codex extension's bundled CLI; no separate Codex CLI installation is
-needed.
+Navigator shows your chats once hooks are installed, enabled and trusted. If setup needs attention later, it explains the next step.
 
 **Tip:** Drag the Navigator heading above the Codex heading to move it to the top.
 
-Want labels to follow your conversations? Enable **Automatic labels** in setup,
-then start a new Codex chat. Labels follow the repositories the agent reports;
-you can always choose a repository yourself. Optional **Project instructions**
-help Codex find your repository's AGENTS.md and shared rules. Both options are
-independent of the required activity hooks.
+---
 
+Settings
+--------
+
+Right-click a chat for naming and label options. Open the **...** menu for **Repository Colours**, **Restore Hidden Chats** and **Extension Settings**.
+
+- **Automatic labels:** Enable this option in setup, then start a new Codex chat. Labels follow the repositories the agent reports; you can always choose a repository yourself.
+- **Chat history:** Turn off **Recent Chats Only** to include older chats.
+- **Visit highlights:** Choose which visited chats glow and how long the highlight lasts.
+- **Project instructions:** Optionally help Codex find your repository's AGENTS.md and shared rules.
+
+---
 
 Trial and licence
 -----------------
 
-Try Codex Navigator free for **7 days**, then pay **$5 CAD once**.
-One active installation, transferable between devices. Includes all
-future updates. No card is required for the trial.
+Try Codex Navigator free for **7 days**, then pay **$5 CAD once**. No card is required for the trial.
 
-Open **License** from Navigator's menu to activate or transfer your licence.
-Paid access checks daily and allows up to 30 days offline after successful
-validation. If access expires, Navigator shows the licence screen and preserves
-your data. Codex chats and tasks continue independently.
+One active installation, transferable between devices. Includes all future updates.
 
-Support and privacy
--------------------
+Open **License** from Navigator's menu to activate or transfer your licence. Paid access checks daily and allows up to 30 days offline after successful validation. If access expires, Navigator preserves your data. Codex chats and tasks continue independently.
 
-**Windows x64 is tested.** macOS and Linux on x64 or ARM64 have best-effort
-support; native testing is pending. Windows ARM64 is also unverified. Remote SSH,
-WSL, containers and browser VS Code are outside this support scope.
+---
 
-Navigator does not patch Codex or VS Code. Activity and goal controls depend on
-the Codex runtime; a ready indicator means a turn finished, not necessarily that
-it succeeded. Visit highlights track chats opened through Navigator, rather than
-which chat is currently visible inside Codex.
+Requirements and support
+------------------------
 
-See [setup, troubleshooting and advanced options](https://github.com/keenanselbee/codex-navigator/blob/main/docs/advanced.md) for detailed
-settings, hook removal, upgrading from Repo Companion, and build instructions.
-[Privacy and local data](https://github.com/keenanselbee/codex-navigator/blob/main/PRIVACY.md) explains what is stored and when licence
-validation connects to Polar.
+- Desktop VS Code **1.137 or newer**, the OpenAI Codex extension, and Node.js available on PATH.
+- **Windows x64 is tested.** macOS and Linux on x64 or ARM64 have best-effort support; native testing is pending. Windows ARM64 is unverified.
+- Remote SSH, WSL, containers and browser VS Code are outside the current support scope.
 
-Source and component tests are available for inspection. Source reuse,
-modification and redistribution require written permission; see the
-[licence terms](https://github.com/keenanselbee/codex-navigator/blob/main/LICENSE.md).
+Activity and goal controls depend on the Codex runtime. A ready indicator means a turn finished, not necessarily that it succeeded. Visit highlights track chats opened through Navigator.
+
+[Setup and troubleshooting](https://github.com/keenanselbee/codex-navigator/blob/main/docs/advanced.md) · [Privacy and local data](https://github.com/keenanselbee/codex-navigator/blob/main/PRIVACY.md) · [Report an issue](https://github.com/keenanselbee/codex-navigator/issues)
+
+---
+
+Selected source code and component tests are available for inspection. Commercial licensing components remain private. Source reuse, modification and redistribution require written permission. [Licence terms](https://github.com/keenanselbee/codex-navigator/blob/main/LICENSE.md).
 
 Made by Keenan Selbee.

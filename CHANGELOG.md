@@ -1,11 +1,23 @@
 Release Notes
 =============
 
-Unreleased
-----------
+1.5.6 (local preview)
+---------------------
 
-- Put the independent-product disclaimer first on the extension page and describe
-  trial and purchase terms in present tense.
+- Refine the extension page with a dedicated small icon, equal-sized header
+  text, a shorter highlight caption and no divider beneath the title.
+- Clarify that selected source is available for inspection while commercial
+  licensing components remain private.
+
+1.5.5 (local preview)
+---------------------
+
+- Restyle the extension page with centred branding, a prominent animated demo,
+  clearer feature and setup sections, and an OpenAI independence disclaimer.
+- Explain automatic organisation and optional customisation, show the recent-chat
+  highlight caption, and link to keenanselbee.com.
+- Show the demo from its public HTTPS image URL on the extension page.
+- Describe trial and purchase terms in present tense.
 
 1.5.4 (local preview)
 ---------------------
