@@ -16,10 +16,11 @@ function fixture() {
       registerCommand: (name, fn) => { commands.set(name, fn); return { dispose: () => commands.delete(name) }; } } };
   const exports = {};
   vm.runInNewContext(fs.readFileSync(require.resolve('../dist/chat-sidebar'), 'utf8'), { exports,
-    require: name => name === 'vscode' ? vscode : name === './highlight-settings' ? require('../dist/highlight-settings') : name === './chat-pins' ? require('../dist/chat-pins') : name === './history' ? require('../dist/history') : name === './colours' ? require('../dist/colours') : name === './chat-goals' ? require('../dist/chat-goals') : require(name),
+    require: name => name === 'vscode' ? vscode : name.startsWith('./') ? require('../dist/' + name.slice(2)) : require(name),
     setInterval: () => 1, clearInterval() {} });
   const stored = new Map();
   const context = { globalState: { get: (key, fallback) => stored.get(key) ?? fallback, update: async (key, value) => { stored.set(key, value); } }, extensionUri: { fsPath: path.resolve('.') }, extensionPath: path.resolve('.') };
+  context.workspaceState = context.globalState;
   const sidebar = new exports.ChatSidebar(context, async () => [{ id, title: 'A', label: 'Repo', colour: '#123456', starred: false }]);
   const view = { visible: true, webview: { cspSource: 'vscode-webview:', asWebviewUri: v => v.fsPath,
     postMessage: async m => { sent.push(m); return true; }, onDidReceiveMessage: fn => { receive = fn; return { dispose() {} }; } },
@@ -189,7 +190,7 @@ test('missing hooks require setup despite obsolete dismissal flags and stale act
   f.sidebar.dispose();
 });
 
-test('setup remains required until verified and returns with diagnosis after regression', async () => {
+test('verified setup keeps chats and an open colour picker available during hook problems', async () => {
   const f = fixture(); await f.receive({type:'welcomeSetup'});
   assert.deepEqual(f.calls,[['codexNavigator.setUp']]);
   assert.equal(f.stored.has('activityHooks.enabled'),false);
@@ -199,14 +200,15 @@ test('setup remains required until verified and returns with diagnosis after reg
   await new Promise(setImmediate);
   f.sidebar.activityReady=async()=>({ready:false,message:'Open Hook Review and trust all Navigator hooks.'});
   await f.sidebar.refresh();
-  assert.equal(await colourChoice,undefined,'losing readiness cancels an open colour picker');
-  assert.equal(f.sent.at(-1).welcome,true); assert.equal(f.sent.at(-1).rows.length,0);
-  assert.match(f.sent.at(-1).setupMessage,/Setup needs attention.*trust all/);
+  assert.ok(f.sidebar.colour,'losing readiness preserves an open colour picker');
+  assert.equal(f.sent.at(-1).welcome,false); assert.equal(f.sent.at(-1).rows.length,1);
+  assert.match(f.sent.at(-1).activityNotice,/trust all/);
   f.sidebar.activityReady=async()=>{throw Error('Offline');};await f.sidebar.refresh();
-  assert.equal(f.sent.at(-1).welcome,true);assert.match(f.sent.at(-1).setupMessage,/could not be checked/);
+  assert.equal(f.sent.at(-1).welcome,false);assert.equal(f.sent.at(-1).activityNotice,'');
   f.sidebar.activityReady=async()=>({ready:true,message:'Verified'});await f.sidebar.refresh();
   assert.equal(f.sent.at(-1).welcome,false);assert.equal(f.sent.at(-1).rows.length,1);
   f.sidebar.dispose();
+  assert.equal(await colourChoice,undefined);
 });
 
 test('startup publishes cached chats before live reads settle and keeps actions usable on failure', async () => {

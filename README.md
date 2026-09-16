@@ -48,7 +48,7 @@ Get started
 2. Choose **Set Up Codex Navigator**, then **Install Hooks**.
 3. Choose **Open Hook Review**, type `/hooks` in the Codex terminal, and review and trust all Navigator hooks.
 
-Navigator shows your chats once hooks are installed, enabled and trusted. If setup needs attention later, it explains the next step.
+Navigator shows your chats once hooks are installed, enabled and trusted. Later hook problems keep your chats available, with a compact notice when attention is needed.
 
 **Tip:** Drag the Navigator heading above the Codex heading to move it to the top.
 
@@ -57,7 +57,7 @@ Navigator shows your chats once hooks are installed, enabled and trusted. If set
 Settings
 --------
 
-Right-click a chat for naming and label options. Open the **...** menu for **Repository Colours**, **Restore Hidden Chats** and **Extension Settings**.
+Right-click a chat for naming and label options. Matching custom labels share a colour within the workspace; choose Chat Colour to change the label colour or override just one chat. Open the **...** menu for **Repository Colours**, **Restore Hidden Chats** and **Extension Settings**.
 
 - **Automatic labels:** Enable this option in setup, then start a new Codex chat. Labels follow the repositories the agent reports; you can always choose a repository yourself.
 - **Chat history:** Turn off **Recent Chats Only** to include older chats.

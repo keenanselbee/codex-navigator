@@ -208,6 +208,9 @@ window.addEventListener('message', event => {
   if (message.type === 'error') { el('message').textContent = message.message; return; }
   if (message.type !== 'state') return;
   welcome = !!message.welcome;
+  el('activityNotice').hidden = !message.activityNotice;
+  el('activityNoticeText').textContent = message.activityNotice || '';
+  el('activityNoticeText').title = message.activityNotice || '';
   if (welcome) {
     if (colourPanel.active) colourPanel.close('welcomePage');
     repositoryPageActive = false; el('repositoryPage').hidden = true;
@@ -222,7 +225,7 @@ window.addEventListener('message', event => {
   highlightRecentlyViewedChats = message.highlightRecentlyViewedChats !== false;
   highlightOnlyLastViewedChat = message.highlightOnlyLastViewedChat === true;
   highlightDurationMs = (Number.isInteger(message.highlightDurationSeconds) ? Math.max(1, Math.min(3600, message.highlightDurationSeconds)) : 180) * 1000;
-  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, message.welcome]);
+  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, message.welcome, message.activityNotice]);
   if (next === signature) return;
   signature = next; rows = message.rows;
   sizeSignature = ''; resize();
@@ -230,6 +233,7 @@ window.addEventListener('message', event => {
   render();
 });
 el('welcomeSetup').addEventListener('click', () => send('welcomeSetup'));
+el('activitySetup').addEventListener('click', () => send('welcomeSetup'));
 for (const control of document.querySelectorAll('[data-license]')) control.addEventListener('click', () => send('license', { action: control.dataset.license }));
 el('filter').addEventListener('click', () => { mode = 'recent'; render(); });
 el('closeSearch').addEventListener('click', closeSearch);

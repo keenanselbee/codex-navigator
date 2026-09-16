@@ -1,15 +1,16 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.6.4 (verified inputs; release commit pending)
+Product: Codex Navigator 1.6.5 (verified candidate; release commit pending)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
 This release removes the patch integration entirely. It does not migrate data,
 restore old Codex files, alias old commands/settings, or maintain an older Repo
 Companion installation. After trial or paid admission, installed, enabled and
-trusted activity hooks are required to open the chat list. Setup has no bypass
-and returns with the relevant next step if readiness fails. Automatic labels and
+trusted activity hooks are required to complete initial setup. Setup has no
+first-use bypass. After verification, hook failures show nonblocking diagnostics
+and preserve access to established chats. Automatic labels and
 project instructions remain optional.
 
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
@@ -63,6 +64,35 @@ Prepare this candidate from clean, committed public and private checkouts. A
 separate worktree may be used to exclude unrelated local working files without
 changing them. Keep the resulting VSIX and paired revision/hash receipt immutable.
 If further fixes change the packaged payload, reserve the next patch version.
+
+
+Prepared release inputs: 1.6.5
+-----------------------------
+
+Completed setup now persists per workspace. Later hook problems keep chats and
+colour pickers available, with quiet transient retries and a nonblocking notice.
+Warnings remain in setup diagnostics without invalidating exact enabled/trusted
+Navigator entries. Missing collector files cannot count as installed hooks.
+Matching custom labels share workspace colours; legacy colours migrate without
+discarding conflicting chat overrides. Explicit chat-only colours remain available.
+
+All 137 public tests passed in `public-only-lz3H9G`, including the missing-private
+build guard. All 24 commercial tests passed. Isolated VS Code integration passed
+initial, restart and second-window phases (`integration-NuxT9K`), including shared
+colour edits, rename inheritance, explicit overrides and persisted completion
+during a restart outage. The earlier restart assertion failure came from setup's
+test deliberately switching the target to Auto; the fixture now restores its
+custom label before checking persistence. An unrelated activity test encountered
+a transient Windows EPERM on rename; the full public-only rerun passed.
+
+The disposable package verified all 59 archive entries with private source
+excluded (`package-acceptance-a2bDe1`). Isolated production-mode installation and
+reinstallation verified 56 files plus the manifest, preserved expired trial
+state, and removed the disposable extension afterward. No normal-profile
+installation or authenticated provider action was performed. Markdown whitespace
+and local links passed. Final production packaging and Desktop staging require
+the reviewed public commit; the private checkout remains unchanged at
+`279a6513450a108980544c6291bfad7f47343a65`.
 
 
 Prepared release inputs: 1.6.4

@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+1.6.5
+-----
+
+- Keep established chats available when hook checks fail. Retry short outages
+  quietly and show persistent problems without reopening setup.
+- Share custom-label colours across matching labels in a workspace, including
+  renamed labels. Keep an explicit option to colour only one chat.
+
 1.6.4
 -----
 

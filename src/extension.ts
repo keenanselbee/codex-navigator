@@ -10,6 +10,7 @@ import { TranscriptActivity, combineActivity } from './activity-events';
 import { RuntimeActivity } from './activity-runtime';
 import { readChatActivity } from './chat-activity';
 import { inheritedColour, readColours, repositoryColourKey } from './colours';
+import { labelColourKey, migrateLabelColours, readLabelColours } from './label-colours';
 import { chooseColour } from './colour-picker';
 import { hideRedundantLabel, readStarredChats } from './model';
 import { RoutingPublisher } from './routing';
@@ -50,7 +51,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const manualTimes = readManualTimes(context.workspaceState.get('manualLabelTimes.v1'));
   const customLabels = readCustomLabels(context.workspaceState.get('customLabels.v1'));
   const starredChats = readStarredChats(context.workspaceState.get('starredChats.v1'));
-  const chatColours = readColours(context.workspaceState.get('chatColours.v1'), 'chat');
+  let chatColours = readColours(context.workspaceState.get('chatColours.v1'), 'chat');
+  let labelColours = readLabelColours(context.workspaceState.get('customLabelColours.v1'));
   let automaticColours = readColours(context.globalState.get('automaticRepositoryColours.v1'), 'repository');
   let colourBackground = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrastLight ? '#F3F3F3' : '#181818';
   let colourCache = { key: '', value: {} as Record<string, string> };
@@ -137,9 +139,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const roots = effectiveMode(modes[key], assignment) === 'none' ? [] : customLabels[key]
       ? (customRouting[key] ? [customRouting[key]] : [])
       : (assignment?.members ?? (assignment ? [assignment] : [])).map(item => vscode.Uri.parse(item.root).fsPath);
-    const colour = inheritedColour(override, roots, repositories);
+    const labelColour = customLabels[key] ? labelColours[labelColourKey(customLabels[key])] : undefined;
+    const colour = inheritedColour(override || labelColour, roots, repositories);
     const sources = [...new Set(roots.map(repositoryColourKey))].filter(root => repositories[root]);
-    const detail = override ? `Chat colour: ${colour}` : colour
+    const detail = override ? `Chat colour: ${colour}` : labelColour ? `Custom label colour: ${colour}` : colour
       ? `Repository colour${sources.length > 1 ? ' blend' : ''}: ${colour}\n${sources.map(root => `${repositoryLabel(root, folders)}: ${repositories[root]}`).join('\n')}` : '';
     return { colour, detail };
   }
@@ -337,6 +340,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function syncMetadata() {
     if (!license.allowed()) { await routing.publish(); return; }
+    if (!context.workspaceState.get('customLabelColourMigration.v1', false)) {
+      const inherited = Object.fromEntries(Object.keys(customLabels).map(key => [key, colourFor(key, '').colour]));
+      const migrated = migrateLabelColours(customLabels, chatColours, labelColours, inherited);
+      labelColours = migrated.colours; chatColours = migrated.chats;
+      await context.workspaceState.update('customLabelColours.v1', labelColours);
+      await context.workspaceState.update('chatColours.v1', chatColours);
+      await context.workspaceState.update('customLabelColourMigration.v1', true);
+    }
     const custom = readColours(vscode.workspace.getConfiguration('codexNavigator').get('repositoryColours'), 'repository');
     const nextColours = automaticRepositoryColours(custom);
     if (JSON.stringify(nextColours) !== JSON.stringify(automaticColours)) {
@@ -478,6 +489,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (typeof value !== 'string') { throw new Error('Enter a text label.'); }
     const error = customLabelError(value);
     if (error) { throw new Error(error); }
+    const labelKey = labelColourKey(value), previousColour = colourFor(key).colour;
+    if (!labelColours[labelKey] && previousColour) {
+      if (Object.keys(labelColours).length >= 2000) throw new Error('Clear a custom label colour before adding another.');
+      labelColours[labelKey] = previousColour;
+      await context.workspaceState.update('customLabelColours.v1', labelColours);
+    }
     if (!customLabels[key]) {
       delete customRouting[key];
       await context.workspaceState.update('customRouting.v1', customRouting);
@@ -496,13 +513,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await syncMetadata();
     const key = uri instanceof vscode.Uri ? conversationKey(uri) : chat()?.key;
     if (!key) { throw new Error('Focus a saved Codex chat or right-click its title first.'); }
+    const label = customLabels[key];
+    const target = label ? await vscode.window.showQuickPick([
+      { label: `Label: ${label}`, description: 'All chats with this custom label in this workspace', shared: true },
+      { label: 'Only this chat', description: 'Override the shared label colour', shared: false },
+    ], { title: 'Change colour for' }) : { shared: false };
+    if (!target || disposed || !license.allowed() || customLabels[key] !== label) return;
     let title;
     try { title = (await readRecentConversations(home)).find(item => item.id === key.slice(6))?.title; }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') report(error); }
-    const inherited = colourFor(key, '').colour;
-    const colour = await chooseColour(context, title ? `Chat: ${title}` : 'Chat colour', chatColours[key],
-      inherited, inherited ? 'Automatic (from repositories)' : 'Clear', sidebar, { repositories: Object.values(repositoryColours()) });
-    if (colour === undefined || disposed || !license.allowed()) { return; }
+    const inherited = target.shared ? undefined : colourFor(key, '').colour;
+    const labelKey = label ? labelColourKey(label) : '';
+    const colour = await chooseColour(context, target.shared ? `Label: ${label}` : title ? `Chat: ${title}` : 'Chat colour',
+      target.shared ? labelColours[labelKey] : chatColours[key], inherited,
+      target.shared ? 'Clear label colour' : inherited ? label ? 'Use label colour' : 'Automatic (from repositories)' : 'Clear',
+      sidebar, { repositories: [...Object.values(repositoryColours()), ...Object.values(labelColours)] });
+    if (colour === undefined || disposed || !license.allowed() || customLabels[key] !== label) { return; }
+    if (target.shared) {
+      if (colour === null) delete labelColours[labelKey];
+      else {
+        if (!labelColours[labelKey] && Object.keys(labelColours).length >= 2000) throw new Error('Clear a custom label colour before adding another.');
+        labelColours[labelKey] = colour;
+      }
+      await context.workspaceState.update('customLabelColours.v1', labelColours);
+      delete chatColours[key];
+      await context.workspaceState.update('chatColours.v1', chatColours);
+      refresh(true); return;
+    }
     const next = { ...chatColours };
     if (colour === null) { delete next[key]; } else { next[key] = colour; }
     await context.workspaceState.update('chatColours.v1', next);

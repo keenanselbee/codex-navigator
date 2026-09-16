@@ -10,6 +10,7 @@ import { normaliseColour } from './colours';
 import { chatPins, placePinnedChats } from './chat-pins';
 import { LicenseAccess } from './license-access';
 import { highlightMode } from './highlight-settings';
+import { HookAdmission, HookReadiness } from './hook-admission';
 
 export interface SidebarChat extends RecentConversation {
   label: string;
@@ -64,14 +65,16 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
   private goalChanging = false;
   private goals: Record<string, ChatGoal> = {};
   private setupRequired = true;
+  private hookAdmission: HookAdmission;
   private colour?: { token: string; options: ColourOptions; resolve: (value: string | null | undefined) => void };
 
   constructor(private context: vscode.ExtensionContext, private readChats: () => Promise<SidebarChat[]>,
     private goalHost?: { read(ids: string[]): Promise<Record<string, ChatGoal>>; stop(): void;
       change(id: string, expected: ChatGoal): Promise<ChatGoal> }, private themeChanged?: (background: string) => void,
     private readRepositories: () => { root: string; label: string; colour?: string }[] = () => [],
-    private activityReady: () => Promise<{ ready: boolean; message: string }> = async () => ({ ready: false, message: 'Install and verify Navigator hooks to show your chats.' }),
+    private activityReady: () => Promise<HookReadiness> = async () => ({ ready: false, message: 'Install and verify Navigator hooks to show your chats.' }),
     private readStartup?: () => Promise<SidebarChat[]>, private license?: LicenseAccess) {
+    this.hookAdmission = new HookAdmission(context.workspaceState.get('navigatorSetup.completed.v1', false));
     for (const action of [...Object.keys(actions).filter(action => action !== 'star'), ...nameActions]) {
       this.subscriptions.push(vscode.commands.registerCommand('codexNavigator.sidebar.' + action, async (value: unknown) => {
         if (!value || typeof value !== 'object') { return; }
@@ -146,9 +149,13 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       title: names[row.id] || row.title, originalTitle: row.title, hasCustomName: !!names[row.id],
       tooltip: names[row.id] ? [names[row.id], 'Codex name: ' + row.title,
         ...(row.tooltip || '').split('\n').filter(line => line !== row.title)].filter(Boolean).join('\n') : row.tooltip }));
-    let readiness = { ready: false, message: 'Hook status could not be checked. Open setup and choose Check Status.' };
+    let readiness: HookReadiness = { ready: false, transient: true, message: 'Hook status could not be checked. Open setup and choose Check Status.' };
     try { readiness = await this.activityReady(); } catch { /* Keep setup accessible if diagnostics fail. */ }
-    const welcome = this.setupRequired = !readiness.ready;
+    const { welcome, notice } = this.hookAdmission.update(readiness);
+    this.setupRequired = welcome;
+    if (readiness.ready && !this.context.workspaceState.get('navigatorSetup.completed.v1', false)) {
+      await this.context.workspaceState.update('navigatorSetup.completed.v1', true);
+    }
     const setupStarted = this.context.globalState.get('navigatorSetup.started', false)
       || !!this.context.globalState.get('activityHooks.installedAt', 0);
     if (welcome) {
@@ -158,7 +165,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     const settings = vscode.workspace.getConfiguration('codexNavigator');
     const highlights = highlightMode(settings);
     if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome,
-      setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message,
+      setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message, activityNotice: notice,
       rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Restore hidden chats or turn off Recent Chats Only in Extension Settings.' : 'No saved local chats yet.' }); }
   }
 

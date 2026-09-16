@@ -54,7 +54,8 @@ function showActivity(activity) {
       ? 'Open Hook Review, type /hooks, and trust all Navigator hooks. Then reload and send a chat message.'
       : 'Reload this window and send a normal chat message to verify activity.';
   el('activity-status').textContent = activity.label;
-  el('activity-detail').textContent = activity.detail || activity.deliveryDetail || '';
+  el('activity-detail').textContent = [activity.detail, activity.deliveryDetail,
+    ...(activity.warnings || []).map(warning => typeof warning === 'string' ? warning : JSON.stringify(warning))].filter(Boolean).join('\n');
   el('activity-checked').textContent = 'Last checked: ' + new Date(activity.checkedAt).toLocaleTimeString();
   el('install-detail').textContent = !activity.nodeAvailable ? 'Install Node.js and restart VS Code so Codex can run the collector.' : activity.installed && activity.enabled ? 'Navigator hooks and collector are installed.' : 'Install four small hooks for activity updates.';
   el('install-hooks').textContent = activity.installed && activity.enabled ? 'Reinstall Hooks' : 'Install Hooks';

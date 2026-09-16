@@ -11,8 +11,10 @@ Start a trial or activate a licence in Navigator, then run **Codex Navigator:
 Set Up Codex Navigator**. **Open Navigator** opens the view. First use after
 admission shows a setup button until hooks are installed, enabled and trusted.
 Delivery verification is diagnostic and never blocks the chat list. There is no skip or permanent dismissal.
-If readiness fails later, Navigator replaces chats with setup and the relevant next
-step. Previously started setup is identified as needing attention. Saved chats,
+After setup has been verified in this workspace, hook problems leave chats
+available, including after restarting VS Code. Short verification outages retry
+quietly; after 30 seconds a compact notice offers setup. Confirmed missing,
+disabled or untrusted hooks show a nonblocking next step immediately. Saved chats,
 labels and other preferences remain intact. There is no separate startup popup.
 Setup puts required Activity hooks first, followed by optional Automatic labels
 and Project instructions. Details and diagnostics are collapsed.
@@ -62,7 +64,10 @@ lifecycle delivery, not every hook, every chat, or a successful task result.
 The visible Navigator reuses status results for up to 15 seconds; Check Status
 forces a fresh check. A quiet chat does not invalidate earlier delivery evidence.
 Missing, disabled, changed or untrusted hooks, unavailable Node.js, and unknown
-trust status all require setup. Missing event evidence and collector write failures
+trust status prevent initial setup completion. After completion they affect
+activity diagnostics, never access to the saved chat list. Unrelated warnings
+do not invalidate exact enabled/trusted Navigator entries and remain in setup
+diagnostics. Missing event evidence and collector write failures
 are shown only as activity diagnostics; neither hides chats. Older dismissal flags
 no longer bypass installation and trust checks.
 
@@ -167,6 +172,13 @@ are part of the current task. The active editor, Source Control selection and
 chat starting directory do not assign a repository. Keep current labels fixed holds scope fixed;
 Clear selects None, suppressing automatic labels. Custom labels can optionally
 be associated with an exact repository for routing and colour inheritance.
+Matching custom labels share a colour in this workspace (ignoring case and outer
+whitespace). Renaming a label to UBC inherits the existing UBC colour. Chat Colour
+offers the shared label or only this chat; an explicit chat override wins until
+you reset it to Use label colour. Choosing the shared label clears the selected
+chat's override, while other deliberate overrides remain. Legacy matching
+colours become shared; conflicting explicit colours stay as chat overrides.
+Colour sharing never copies repository associations or instruction routing.
 
 Multi-repository workspaces default new repository selections to Auto unless
 `keepManualLabelsFixed` was explicitly set. Single-repository choices and custom labels

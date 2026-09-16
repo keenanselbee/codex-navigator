@@ -23,10 +23,29 @@ test('trust requires all exact Navigator definitions enabled in every requested 
  }
  assert.equal(parseHookTrust(response(),home,[cwd,path.resolve('missing')]),undefined);
 });
-test('unsupported metadata, missing events and configuration warnings cannot claim trust',()=>{
+test('unsupported metadata and missing events cannot claim trust; warnings retain exact enabled trust',()=>{
  for(const value of [undefined,{}, {data:[]}])assert.equal(parseHookTrust(value,home,[cwd]),undefined);
  const missing=response();missing.data[0].hooks.pop();assert.equal(parseHookTrust(missing,home,[cwd]),false);
- const warning=response();warning.data[0].warnings=['hooks disabled'];assert.equal(parseHookTrust(warning,home,[cwd]),undefined);
+ const warning=response();warning.data[0].warnings=['Unrelated hook warning'];assert.equal(parseHookTrust(warning,home,[cwd]),true);
+ warning.data[0].hooks[0].enabled=false;assert.equal(parseHookTrust(warning,home,[cwd]),false);
+ const error=response();error.data[0].errors=['Cannot load hook configuration'];assert.equal(parseHookTrust(error,home,[cwd]),undefined);
+});
+
+test('completed setup survives outages and explicit hook problems without granting trust',()=>{
+ const {HookAdmission}=require('../dist/hook-admission'), admission=new HookAdmission();
+ const unknown={ready:false,transient:true,message:'Trust unavailable'};
+ assert.equal(admission.update(unknown,0).welcome,true,'new installations still require verified setup');
+ assert.equal(admission.update({ready:true,message:'Ready'},100).welcome,false);
+ assert.equal(admission.update(unknown,1000).notice,'','short failures are quiet');
+ const persistent=admission.update(unknown,31000);
+ assert.equal(persistent.welcome,false);assert.match(persistent.notice,/unavailable/);
+ assert.equal(unknown.ready,false,'browsing admission is not evidence of trust');
+ assert.equal(admission.update({ready:true,message:'Ready'},32000).notice,'');
+ assert.equal(admission.update(unknown,33000).notice,'','recovery resets the delay');
+ const removed=admission.update({ready:false,message:'Install hooks'},34000);
+ assert.equal(removed.welcome,false);assert.equal(removed.notice,'Install hooks');
+ const restored=new HookAdmission(admission.completed);
+ assert.equal(restored.update(unknown,35000).welcome,false,'completion survives extension restart');
 });
 test('event verification rejects recent delivery failures until a successful event arrives',async()=>{
  const directory=fs.mkdtempSync(path.resolve('.codex-temp/hook-verification-'));fs.mkdirSync(path.join(directory,'codex-navigator'));
@@ -66,6 +85,8 @@ test('missing installation memento uses a stable file cutoff across status check
  assert.equal((await exportsFixture.hookSetupStatus(context,directory)).observed,undefined,'reinstallation excludes earlier events');
  const cached=await exportsFixture.hookSetupStatus(context,directory,true);
  assert.equal(await exportsFixture.hookSetupStatus(context,directory,true),cached,'sidebar reuses the latest setup check');
+ fs.unlinkSync(path.join(directory,'codex-navigator/chat-activity.cjs'));
+ assert.equal((await exportsFixture.hookSetupStatus(context,directory)).installed,false,'definitions alone do not count as an installed collector');
  fs.writeFileSync(path.join(directory,'hooks.json'),'{}');
  assert.equal((await exportsFixture.hookSetupStatus(context,directory)).installed,false,'explicit check immediately detects removed definitions');
  assert.equal((await exportsFixture.hookSetupStatus(context,directory,true)).installed,false,'sidebar sees the explicit result');

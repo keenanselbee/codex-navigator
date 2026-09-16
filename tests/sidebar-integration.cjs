@@ -71,6 +71,8 @@ exports.run = async function (context, fixtureVscode) {
             pinOpacity:document.querySelector('.pin')?getComputedStyle(document.querySelector('.pin')).opacity:null,
             controlHeights:[...document.querySelectorAll('.chat:first-child .star,.chat:first-child .pin')].map(n=>n.getBoundingClientRect().height),
             spinnerStroke:document.querySelector('.spinner')?getComputedStyle(document.querySelector('.spinner')).borderTopWidth:null,readyDots:document.querySelectorAll('.activity-dot.ready').length,
+            rowColours:Object.fromEntries([...document.querySelectorAll('.chat')].map(row=>[JSON.parse(row.dataset.vscodeContext).navigatorChatId,getComputedStyle(row.querySelector('.label')).color])),
+            activityNotice:el('activityNoticeText').textContent,activityNoticeHidden:el('activityNotice').hidden,
             pickerHidden:document.getElementById('colourPage').hidden,pickerHex:document.getElementById('colour-hex')?.value,
             pickerNative:document.getElementById('colour-native')?.value,pickerDisabled:document.getElementById('colour-apply')?.disabled,
             pickerNoColour:el('colour-native')?.classList.contains('no-colour'),pickerPreview:el('colour-preview')?.style.color,
@@ -163,6 +165,13 @@ exports.run = async function (context, fixtureVscode) {
       assert.equal(persisted.installationId, expected.installationId, 'restart retains the installation identity');
       assert.equal(persisted.trialStartedAt, expected.trialStartedAt, 'restart does not start another trial');
       await until(async()=>{const p=await probe();return !p.licenseVisible&&p.rows>0;}, 'restart immediately restores admitted chat view');
+      companionProvider.activityReady=async()=>({ready:false,transient:true,message:'Temporary hook check outage'});
+      await companionProvider.refresh();
+      assert.equal((await probe()).welcome,false,'persisted setup completion admits chats during a restart outage');
+      companionProvider.activityReady=async()=>({ready:true,message:'Fixture hooks verified'});
+      const restoredColours=(await probe()).rowColours;
+      assert.equal(restoredColours[id(11)],'rgb(255, 0, 0)','chat-only override survives restart');
+      assert.equal(restoredColours[id(12)],'rgb(102, 85, 255)','shared label colour survives restart');
       const { createLicenseService } = require('../dist/license-service');
       const service = createLicenseService({ directory: companionContext.globalStorageUri.fsPath, secrets: companionContext.secrets });
       await assert.rejects(service.manager.startTrial(), 'repeated start cannot replace the protected record');
@@ -515,12 +524,42 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#colour-cancel'});await alreadySelected;
     await companion.webview.postMessage({type:'fixture:click',selector:'#repositoryBack'});
     await until(async()=>(await probe()).repositoryPageHidden&&(await probe()).rows>0,'back restores chats');
+    const labelPicker = navigatorUi.window.showQuickPick;
+    const routingBefore = JSON.stringify(companionContext.workspaceState.get('customRouting.v1'));
+    const labelColour = async (uri, hex, shared) => {
+      navigatorUi.window.showQuickPick = async items => (await items).find(item => item.shared === shared);
+      const changing = vscode.commands.executeCommand('codexNavigator.setChatColour', uri);
+      await until(async()=>!(await probe()).pickerHidden,'custom label colour picker');
+      await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:hex});
+      await companion.webview.postMessage({type:'fixture:click',selector:'#colour-apply'});
+      await changing;
+      await until(async()=>(await probe()).pickerHidden,'custom label colour saved');
+    };
+    try {
+      await vscode.commands.executeCommand('codexNavigator.setCustomLabel',target,'UBC');
+      await labelColour(target,'#6655FF',true);
+      await vscode.commands.executeCommand('codexNavigator.setCustomLabel',defaultTarget,'Other label');
+      await vscode.commands.executeCommand('codexNavigator.setCustomLabel',defaultTarget,' ubc ');
+      await until(async()=>{const c=(await probe()).rowColours;return c[id(11)]==='rgb(102, 85, 255)'&&c[id(12)]===c[id(11)];},'renamed label inherits existing UBC colour');
+      await labelColour(defaultTarget,'#00AA00',true);
+      await until(async()=>{const c=(await probe()).rowColours;return c[id(11)]==='rgb(0, 170, 0)'&&c[id(12)]===c[id(11)];},'shared colour updates both UBC chats');
+      await labelColour(defaultTarget,'#FF0000',false);
+      await labelColour(target,'#6655FF',true);
+      await until(async()=>{const c=(await probe()).rowColours;return c[id(11)]==='rgb(255, 0, 0)'&&c[id(12)]==='rgb(102, 85, 255)';},'explicit chat override survives shared colour changes');
+      assert.equal(JSON.stringify(companionContext.workspaceState.get('customRouting.v1')),routingBefore,'matching labels never copy repository routing');
+    } finally { navigatorUi.window.showQuickPick = labelPicker; }
     const setupChecks = await require('./setup-integration.cjs').run(companionContext, vscode, until);
+    // Setup's automatic-label test deliberately replaces this chat's custom label.
+    await vscode.commands.executeCommand('codexNavigator.setCustomLabel',target,'UBC');
     const {hookReadiness,hookSetupStatus}=require('../dist/hook-setup');
     companionProvider.activityReady=async()=>hookReadiness(await hookSetupStatus(companionContext,process.env.CODEX_HOME,true));
     await companionProvider.refresh();
-    await until(async()=>{const p=await probe();return p.welcome&&p.rows===0;},'removed hooks replace chats with setup');
-    assert.match((await probe()).setupMessage,/Setup needs attention.*Install Navigator hooks/);
+    await until(async()=>{const p=await probe();return !p.welcome&&p.rows>0;},'removed hooks preserve established chats');
+    assert.match(stateLog.at(-1).setupMessage,/Install Navigator hooks/);
+    assert.match((await probe()).activityNotice,/Install Navigator hooks/);
+    companionProvider.activityReady=async()=>{throw Error('Temporary metadata outage');};
+    await companionProvider.refresh();
+    assert.equal((await probe()).welcome,false,'an inconclusive background check cannot reopen onboarding');
     companionProvider.activityReady=async()=>({ready:true,message:'Fixture hooks verified'});
     await companionProvider.refresh();
     await until(async()=>!(await probe()).welcome,'verified readiness restores preserved chats');
@@ -569,7 +608,7 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#licenseBack'});
     await until(async()=>!(await probe()).licenseVisible&&(await probe()).rows>0,'regaining access restores unchanged chats');
     const result = { phase: 'initial', passed: true, vscode: vscode.version,
-      verified: [...setupChecks, 'mandatory setup despite old dismissal flags', 'hook readiness controls chat admission', 'Navigator rename and original-title lookup/search/reset', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
+      verified: [...setupChecks, 'mandatory initial setup despite old dismissal flags', 'hook outages preserve established chats with nonblocking diagnosis', 'shared custom-label colours and explicit chat overrides', 'Navigator rename and original-title lookup/search/reset', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
         'native recency order independent of activity', 'recency outage preserves order', 'whole-panel pointer ordering hold', 'safe title text', 'coloured label text', 'automatic distinct repository colours', 'multi-repo Auto default', 'Automatic versus No colour picker', 'star control', 'search',
         'height-driven layouts', 'width-dependent columns', 'resize preserves focus', 'column and fitted row counts survive webview reload', 'native header search',
         'native extension URI dispatch', 'both sidebar views visible', 'no patch bridge',

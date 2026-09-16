@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { open, readFile, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { ChatGoals } from './chat-goals';
+import { HookReadiness } from './hook-admission';
 import { activityCommand, codexBinary, codexRuntimeIssue, sameFilePath } from './platform';
 
 export const hookEvents = ['UserPromptSubmit', 'Stop', 'Interrupt', 'SessionEnd'];
@@ -14,7 +15,7 @@ export function parseHookTrust(value: any, home: string, cwds: string[]) {
   const perWorkspace = [];
   for (const cwd of cwds) {
     const entry = value.data.find((item: any) => typeof item?.cwd === 'string' && sameFilePath(item.cwd, cwd));
-    if (!entry || !Array.isArray(entry.hooks) || !Array.isArray(entry.errors) || entry.errors.length || !Array.isArray(entry.warnings) || entry.warnings.length) return undefined;
+    if (!entry || !Array.isArray(entry.hooks) || !Array.isArray(entry.errors) || entry.errors.length || !Array.isArray(entry.warnings)) return undefined;
     perWorkspace.push(expected.every(event => entry.hooks.some((hook: any) => hook?.eventName === event
       && hook.handlerType === 'command' && hook.command === activityCommand(home)
       && typeof hook.sourcePath === 'string' && sameFilePath(hook.sourcePath, path.join(home, 'hooks.json'))
@@ -57,9 +58,9 @@ export function hookSetupStatus(context: vscode.ExtensionContext, home: string, 
   return entry.pending;
 }
 
-export function hookReadiness(status: HookStatus): { ready: boolean; message: string } {
+export function hookReadiness(status: HookStatus): HookReadiness {
   return { ready: status.enabled && status.installed && status.nodeAvailable && status.trusted === true && !status.detail,
-    message: status.nextStep };
+    message: status.nextStep, transient: status.enabled && (!!status.detail || !status.nodeAvailable || status.installed && status.trusted === undefined) };
 }
 
 async function readHookSetupStatus(context: vscode.ExtensionContext, home: string) {
@@ -81,15 +82,23 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
       // A lost memento must not move the event cutoff forward on every check.
       if (!since) since = Math.max((await stat(helper)).mtimeMs, (await stat(path.join(home, 'hooks.json'))).mtimeMs);
     }
-  } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') detail = error instanceof Error ? error.message : String(error); }
+  } catch (error) {
+    installed = false;
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') detail = error instanceof Error ? error.message : String(error);
+  }
   const nodeAvailable = await new Promise<boolean>(resolve => execFile('node', ['--version'], { windowsHide: true, timeout: 3000 }, error => resolve(!error)));
   let trusted: boolean | undefined;
+  let warnings: unknown[] = [];
   const codex = vscode.extensions.getExtension('openai.chatgpt');
   const binary = codexBinary(codex?.extensionPath);
   if (!detail) detail = codex ? codexRuntimeIssue(binary) : 'Install and enable the Codex extension first.';
   if (installed && !detail && cwds.length) {
     const reader = new ChatGoals(binary, home, () => {});
-    try { trusted = parseHookTrust(await reader.readHooks(cwds), home, cwds); } finally { reader.dispose(); }
+    try {
+      const response = await reader.readHooks(cwds) as { data?: { warnings?: unknown[] }[] } | undefined;
+      trusted = parseHookTrust(response, home, cwds);
+      if (Array.isArray(response?.data)) warnings = response.data.flatMap(entry => Array.isArray(entry?.warnings) ? entry.warnings : []).slice(0, 100);
+    } finally { reader.dispose(); }
   }
   let observed: string | undefined, deliveryDetail = '';
   if (installed && enabled) {
@@ -103,7 +112,7 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
     : deliveryDetail ? 'Navigator is ready. Activity needs attention: ' + deliveryDetail
     : observed ? 'Hook delivery is verified. No further setup is needed.'
     : 'Navigator is ready. Activity indicators will update when a Codex chat runs. You can optionally reload and send a message to check delivery.';
-  return { enabled, installed, nodeAvailable, trusted, observed, home, detail, deliveryDetail, nextStep, checkedAt: Date.now(),
+  return { enabled, installed, nodeAvailable, trusted, observed, home, detail, deliveryDetail, warnings, nextStep, checkedAt: Date.now(),
     label: !nodeAvailable ? 'Node.js needed' : detail ? 'Needs attention' : !installed || !enabled ? 'Not installed' : trusted === false ? 'Review needed' : trusted === undefined ? 'Trust not verified' : deliveryDetail ? 'Activity needs attention' : observed ? 'Event received' : 'Ready' };
 }
 

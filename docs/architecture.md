@@ -20,6 +20,12 @@ own global instruction marker. There is no old identity or patch migration.
 Existing project URLs may retain their repository slug until the hosting project
 is renamed; a display-name change does not silently change a remote repository.
 
+Custom-label colours use trimmed, case-insensitive text keys in workspace state.
+Legacy explicit colours seed the shared palette deterministically; conflicting
+chat overrides remain explicit. Label edits inherit the destination colour, and
+colour edits offer shared-label or chat-only scope. Label colour sharing never
+changes repository associations or routing.
+
 Saved chat IDs are validated UUIDs from local metadata. Sidebar actions carry
 that exact ID, independent of native Codex selection. Existing editor chat URIs
 can identify saved tabs through VS Code's API; generic launchers are never used
@@ -69,8 +75,9 @@ It never writes hook trust. Codex owns trust for exact definitions.
 
 `hookSetupStatus` distinguishes installed bytes/configuration, Node availability,
 Codex enabled/trusted status in each workspace folder, and actual collector events
-since installation. Unknown schemas, warnings/errors and missing data do not become
-trusted. A local lifecycle event proves delivery, not successful task execution.
+since installation. Unknown schemas, errors and missing data do not become
+trusted. Warnings remain visible in setup diagnostics; exact enabled/trusted
+Navigator definitions determine trust independently of unrelated warnings. A local lifecycle event proves delivery, not successful task execution.
 Setup starts a visible Codex terminal only after Open Hook Review; the user runs
 `/hooks`. Polling stays local and never submits prompts or continues a turn.
 
@@ -85,11 +92,15 @@ Setup webview
 One reusable page puts required activity hooks first, with optional automatic
 labels and project instructions. Each shows its next action, with diagnostics
 and options under Details. Arrangement instructions appear only after the action.
-The sidebar requires installed, enabled and trusted hooks. Missing readiness replaces chats with setup and a relevant
-next step; prior dismissal flags cannot bypass it. Background checks reuse results
-for up to 15 seconds, while explicit setup checks refresh immediately. Delivery
-verification and collector failures are activity diagnostics, not chat admission
-requirements. Activation does not show an invitation toast.
+Initial setup requires installed, enabled and trusted hooks; old dismissal flags
+cannot bypass it. Verified completion is saved per workspace and admits browsing
+after restart, independently of current hook trust. Later failures never replace
+the chat list or cancel a colour picker. Unknown status retries quietly for 30
+seconds before a nonblocking notice; confirmed configuration problems show their
+next action immediately. Background checks reuse results for up to 15 seconds,
+while explicit setup checks refresh immediately. Completion never grants trust.
+Delivery verification and collector failures remain activity diagnostics.
+Activation does not show an invitation toast.
 Automatic labels have a separate managed global instruction block and an
 application-level preference. Disabling reports retains existing assignments;
 explicit corrections and focus detection remain independent. It uses a restrictive
