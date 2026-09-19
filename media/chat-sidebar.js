@@ -2,6 +2,7 @@
 const api = acquireVsCodeApi(), el = id => document.getElementById(id);
 const colourPanel = createNavigatorColour(api);
 const saved = api.getState() || {};
+let profileId, profileViewSignature = '';
 const chooseLayout = createNavigatorLayout(saved.layout);
 let rows = [], mode = saved.mode === 'starred' ? 'starred' : 'recent', signature = '', layout, sizeSignature = '';
 const selectedChats = new Map(Object.entries(saved.selectedChats || {}).filter(([id, at]) =>
@@ -14,7 +15,7 @@ let repositories = [], repositoryPageActive = false, welcome = false;
 let licenseVisible = false;
 let heldOrder = null, pointerInside = false, visibleSignature = '';
 const goals = new Map(), pendingGoals = new Set();
-const send = (type, extra = {}) => api.postMessage({ type, ...extra });
+const send = (type, extra = {}) => api.postMessage({ type, profileId, ...extra });
 el('search').value = typeof saved.search === 'string' ? saved.search : '';
 if (el('search').value) { el('searchBox').hidden = false; }
 function button(text, title, click) {
@@ -34,6 +35,7 @@ function render() {
   if (heldOrder) for (const row of rows) if (!heldOrder.has(row.id)) heldOrder.set(row.id, heldOrder.size);
   if (heldOrder) matches.sort((left, right) => (heldOrder.get(left.id) ?? Infinity) - (heldOrder.get(right.id) ?? Infinity));
   const focus = document.activeElement?.matches(':focus-visible') ? document.activeElement.dataset?.focus : undefined;
+  el('chats').style.gridAutoRows = '';
   el('chats').replaceChildren();
   el('message').textContent = !rows.length ? emptyMessage : !matches.length ? 'No matching chats.' : '';
   el('filter').hidden = mode !== 'starred';
@@ -44,7 +46,7 @@ function render() {
       const age = Math.max(0, Date.now() - selectedChats.get(row.id));
       if (age < highlightDurationMs) { item.classList.add('selected'); item.style.animationDuration = highlightDurationMs + 'ms'; item.style.animationDelay = '-' + age + 'ms'; }
     }
-    item.dataset.vscodeContext = JSON.stringify({ webviewSection: 'navigatorChat', navigatorChatId: row.id,
+    item.dataset.vscodeContext = JSON.stringify({ webviewSection: 'navigatorChat', navigatorChatId: row.id, navigatorProfileId: profileId,
       preventDefaultContextMenuItems: true, navigatorHasCustomLabel: !!row.hasCustomLabel, navigatorHasCustomName: !!row.hasCustomName });
     if (/^#[0-9a-f]{6}$/i.test(row.colour ?? '')) item.style.setProperty('--chat-colour', row.colour);
     const activityText = row.activityDetail || ({ working: 'Working', ready: 'Finished since last viewed', waiting: 'Waiting for your input', error: 'Turn failed', unknown: 'Activity status unavailable' }[row.activity] || '');
@@ -126,6 +128,10 @@ function render() {
     item.classList.toggle('separator-right', index % columns !== columns - 1 && index + 1 < fitted.length);
     item.classList.toggle('separator-bottom', index + columns < fitted.length);
   });
+  if (fitted.length) {
+    const natural = Math.max(...fitted.map(item => item.getBoundingClientRect().height));
+    chats.style.gridAutoRows = fittedRowHeight(el('viewport').clientHeight, Math.ceil(fitted.length / columns), natural) + 'px';
+  }
   const visibleIds = fitted.map(item => JSON.parse(item.dataset.vscodeContext).navigatorChatId);
   const nextVisible = JSON.stringify(visibleIds);
   if (nextVisible !== visibleSignature) { visibleSignature = nextVisible; send('visibleChats', { ids: visibleIds }); }
@@ -134,6 +140,11 @@ function render() {
     const target = buttons.find(item => item.dataset.focus === focus)
       || buttons.filter(item => item.dataset.focus?.endsWith(focus.endsWith(':star') ? ':star' : focus.endsWith(':pin') ? ':pin' : ':open')).at(-1);
     (target || el('viewport')).focus({ preventScroll: true });
+  }
+  const viewSignature = JSON.stringify([profileId, mode, el('search').value]);
+  if (profileId && viewSignature !== profileViewSignature) {
+    profileViewSignature = viewSignature;
+    send('profileView', { profileId, value: { mode, search: el('search').value.slice(0, 200) } });
   }
   api.setState({ mode, search: el('search').value, selectedChats: Object.fromEntries(selectedChats), layout: layout || saved.layout });
 }
@@ -207,6 +218,17 @@ window.addEventListener('message', event => {
   if (message.type === 'filter') { mode = mode === 'starred' ? 'recent' : 'starred'; render(); return; }
   if (message.type === 'error') { el('message').textContent = message.message; return; }
   if (message.type !== 'state') return;
+  if (message.profileId && message.profileId !== profileId) {
+    const changed = profileId !== undefined;
+    profileId = message.profileId;
+    const preferences = message.profileView || {};
+    mode = preferences.mode === 'starred' ? 'starred' : 'recent';
+    el('search').value = typeof preferences.search === 'string' ? preferences.search : '';
+    el('searchBox').hidden = !el('search').value;
+    heldOrder = null; signature = ''; sizeSignature = '';
+    if (changed) selectedChats.clear();
+  }
+  el('workspaceFilter').hidden = !message.workspaceOnly;
   welcome = !!message.welcome;
   el('activityNotice').hidden = !message.activityNotice;
   el('activityNoticeText').textContent = message.activityNotice || '';
@@ -225,7 +247,7 @@ window.addEventListener('message', event => {
   highlightRecentlyViewedChats = message.highlightRecentlyViewedChats !== false;
   highlightOnlyLastViewedChat = message.highlightOnlyLastViewedChat === true;
   highlightDurationMs = (Number.isInteger(message.highlightDurationSeconds) ? Math.max(1, Math.min(3600, message.highlightDurationSeconds)) : 180) * 1000;
-  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, message.welcome, message.activityNotice]);
+  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, message.welcome, message.activityNotice, message.workspaceOnly]);
   if (next === signature) return;
   signature = next; rows = message.rows;
   sizeSignature = ''; resize();
@@ -235,6 +257,7 @@ window.addEventListener('message', event => {
 el('welcomeSetup').addEventListener('click', () => send('welcomeSetup'));
 el('activitySetup').addEventListener('click', () => send('welcomeSetup'));
 for (const control of document.querySelectorAll('[data-license]')) control.addEventListener('click', () => send('license', { action: control.dataset.license }));
+el('workspaceFilter').addEventListener('click', () => send('workspaceFilter'));
 el('filter').addEventListener('click', () => { mode = 'recent'; render(); });
 el('closeSearch').addEventListener('click', closeSearch);
 el('search').addEventListener('input', render);

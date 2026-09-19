@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.6.5 (verified candidate; release commit pending)
+Product: Codex Navigator 1.7.0 (verified candidate; production packaging pending)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -230,3 +230,30 @@ management page for `keenanselbee`. Keep its receipt locally; it is not an uploa
 artifact. After publication, verify installation from Marketplace and inspect the
 page, onboarding and purchase/support links before announcing the release.
 See the [official publishing guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension).
+
+
+Prepared release inputs: 1.7.0
+-----------------------------
+
+Shared Default organisation, optional named chat profiles, workspace relevance
+filtering and bounded row expansion are implemented. Migration imports each
+workspace when opened and keeps original snapshots for conflict recovery. Profile
+switching preserves the separately published routing scope and active Codex work.
+The README adds one feature bullet and short layout/menu updates.
+
+Public-only verification passed 146 tests and the missing-private guard in
+`public-only-z5djLj`; all 24 commercial tests passed. Real isolated VS Code
+integration passed initial, restart and second-window phases in
+`integration-K6DKYr`, including profile commands, independent labels, unchanged
+routing, persisted workspace selection, shared browsing admission and independent
+concurrent edits. An earlier two-window failure exposed a stale-snapshot overwrite;
+object-bound edit snapshots fix it, with regression coverage.
+
+The disposable package check verified all 60 entries and excluded private source
+in `package-acceptance-d4ipsC`. Installed/reinstalled acceptance passed in
+`installed-acceptance-r9rrJR`, including persisted profile stars and trial expiry.
+The normal VS Code installation and live provider were unchanged. Final production
+packaging will record the clean reviewed public revision and unchanged private
+revision `279a6513450a108980544c6291bfad7f47343a65`, followed by verification of the
+exact release archive and Desktop copy. Marketplace publication remains with the
+owner.

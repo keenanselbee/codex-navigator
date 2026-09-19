@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+1.7.0
+-----
+
+- Keep chat organisation across workspaces with a shared Default profile and
+  optional named profiles. Remember each workspace's choice and retain original
+  workspace customisations for recovery when migration finds conflicts.
+- Add a workspace relevance filter, explicit saved selections and profile search
+  preferences. Favourites and saved selections now survive the recency cutoff.
+- Let complete chat rows share spare frame height without changing text sizes
+  or the three automatic layouts. Limit expansion for sparse lists.
+- Preserve established browsing across workspace hook-check problems, and merge
+  independent organisation edits safely between open windows.
+
 1.6.5
 -----
 

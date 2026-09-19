@@ -1,3 +1,4 @@
+import { ChatProfiles } from './chat-profiles';
 import { chatPins } from './chat-pins';
 import * as vscode from 'vscode';
 import { codexBinary } from './platform';
@@ -47,16 +48,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   catch { output.appendLine('Highlight settings could not be migrated. Existing preferences remain available; check whether your settings file is writable.'); }
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 15);
   status.command = 'codexNavigator.assignRepository';
-  const assignments = readAssignments(context.workspaceState.get(assignmentKey));
-  const manualTimes = readManualTimes(context.workspaceState.get('manualLabelTimes.v1'));
-  const customLabels = readCustomLabels(context.workspaceState.get('customLabels.v1'));
-  const starredChats = readStarredChats(context.workspaceState.get('starredChats.v1'));
-  let chatColours = readColours(context.workspaceState.get('chatColours.v1'), 'chat');
-  let labelColours = readLabelColours(context.workspaceState.get('customLabelColours.v1'));
+  const home = codexHome();
+  const workspaceIdentity = vscode.workspace.workspaceFile?.toString() || vscode.workspace.workspaceFolders?.map(folder => folder.uri.toString()).join('|') || 'empty-window';
+  const profiles = new ChatProfiles(context.globalStorageUri.fsPath, workspaceIdentity, home);
+  profiles.migrate(context.workspaceState, context.globalState);
+  const selectedProfile = context.workspaceState.get<string>('chatProfile.v1', 'default');
+  if (profiles.list().some(item => item.id === selectedProfile)) profiles.select(selectedProfile);
+  let profileEpoch = 0, activeActions = 0;
+  const assignments = readAssignments(profiles.get(assignmentKey));
+  const manualTimes = readManualTimes(profiles.get('manualLabelTimes.v1'));
+  const customLabels = readCustomLabels(profiles.get('customLabels.v1'));
+  const starredChats = readStarredChats(profiles.get('starredChats.v1'));
+  let chatColours = readColours(profiles.get('chatColours.v1'), 'chat');
+  let labelColours = readLabelColours(profiles.get('customLabelColours.v1'));
   let automaticColours = readColours(context.globalState.get('automaticRepositoryColours.v1'), 'repository');
   let colourBackground = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrastLight ? '#F3F3F3' : '#181818';
   let colourCache = { key: '', value: {} as Record<string, string> };
-  const modes = readModes(context.workspaceState.get(modeKey));
+  const modes = readModes(profiles.get(modeKey));
   // Remove old guesses before publishing labels or routing, preserving manual choices.
   const detectOnStartup = vscode.workspace.getConfiguration('codexNavigator').get('detectChatFocus', false);
   for (const [key, assignment] of license.allowed() ? Object.entries(assignments) : []) {
@@ -65,8 +73,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       delete assignments[key];
     }
   }
-  if (license.allowed()) await context.workspaceState.update(assignmentKey, assignments);
-  const home = codexHome();
+  if (license.allowed()) await profiles.update(assignmentKey, assignments);
   const routing = new RoutingPublisher(home);
   const customRouting: Record<string, string> = Object.create(null);
   const savedRouting = context.workspaceState.get<Record<string, unknown>>('customRouting.v1', {});
@@ -147,21 +154,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     return { colour, detail };
   }
 
-  const recency = new ChatRecency(context.workspaceState.get('chatRecencyOrder.v1'));
+  const recency = new ChatRecency(profiles.shared('chatRecencyOrder.v1', []));
   async function readSidebarChats(startup = false) {
-    if (!license.allowed()) return [];
+    hydrateProfile();
+    if (!license.allowed() || disposed) return [];
     let index: Awaited<ReturnType<typeof readRecentConversations>> = [];
     try { index = await readRecentConversations(home); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { if (!startup) throw error; report(error); } }
     const previous = JSON.stringify(recency.snapshot);
-    if (!license.allowed()) return [];
+    if (!license.allowed() || disposed) return [];
     const nativeRecent = startup ? undefined : await chatGoals.readRecency();
-    if (!license.allowed()) return [];
+    if (!license.allowed() || disposed) return [];
     const recent = recency.update(nativeRecent, index);
-    if (JSON.stringify(recency.snapshot) !== previous) await context.workspaceState.update('chatRecencyOrder.v1', recency.snapshot);
+    if (JSON.stringify(recency.snapshot) !== previous) await profiles.updateShared('chatRecencyOrder.v1', recency.snapshot);
     // Keep explicitly pinned chats even when they fall out of bounded native history.
-    for (const pin of Object.values(chatPins(context.globalState.get('pinnedChats.v1')))) {
+    for (const pin of Object.values(chatPins(profiles.get('pinnedChats.v1')))) {
       if (!recent.some(item => item.id === pin.chat.id)) recent.push(pin.chat);
+    }
+    for (const [key, title] of Object.entries(starredChats)) {
+      const id = key.slice(6);
+      if (threadIdPattern.test(id) && !recent.some(item => item.id === id)) recent.push({ id, title, updatedAt: new Date(0).toISOString() });
+    }
+    const selected = profiles.get<Record<string, { id: string; title: string; updatedAt: string }>>('profileSelection.v1');
+    for (const item of Object.values(selected ?? {})) {
+      if (threadIdPattern.test(item.id) && !recent.some(row => row.id === item.id)) recent.push(item);
     }
     let updated = false;
     for (const item of startup ? [] : recent.slice(0, 8)) {
@@ -169,7 +185,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       knownKeys.add(key);
       if (await updateAutoScope(key)) { updated = true; }
     }
-    if (updated) { await context.workspaceState.update(assignmentKey, assignments); }
+    if (updated) { await profiles.update(assignmentKey, assignments); }
     const folders = repositoryNames(), colours = repositoryColours();
     const activityEnabled = !startup && context.globalState.get('activityHooks.enabled', false);
     const runtime = activityEnabled ? await runtimeActivity.read(new Set(recent.map(item => item.id))) : new Map();
@@ -177,7 +193,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const items = [];
     // Sequential metadata lookups share the bounded session index. Unchanged tails are cached.
     for (const item of recent) {
-      if (!license.allowed()) return [];
+      if (!license.allowed() || disposed) return [];
       const key = 'local/' + item.id, display = displayFor(key, folders, true), colour = colourFor(key, chatColours[key], colours, folders);
       let activity;
       if (activityEnabled) {
@@ -189,7 +205,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (live) activity = { ...live, workedAt: Math.max(activity.workedAt, live.workedAt) };
         if (activity.status === 'ready' && (activity.completedAt || 0) <= (seen[item.id] || 0)) activity = { ...activity, status: 'idle', detail: undefined };
       }
-      items.push({ ...item, label: display.label, hasCustomLabel: !!customLabels[key], colour: colour.colour, starred: !!starredChats[key],
+      items.push({ ...item, roots: scopeRoots(key), label: display.label, hasCustomLabel: !!customLabels[key], colour: colour.colour, starred: !!starredChats[key],
         activity: activity?.status, activityDetail: activity?.detail, completedAt: activity?.completedAt,
         tooltip: [item.title, display.tooltip, colour.detail].filter(Boolean).join('\n') });
     }
@@ -201,7 +217,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }, () => git!.repositories.filter(repo => repo.rootUri.scheme === 'file').map(repo => ({
       root: repo.rootUri.fsPath, label: repositoryLabel(repo.rootUri.fsPath, repositoryNames()),
       colour: repositoryColours()[repositoryColourKey(repo.rootUri.fsPath)],
-    })), async () => hookReadiness(await hookSetupStatus(context, home, true)), () => readSidebarChats(true), license);
+    })), async () => hookReadiness(await hookSetupStatus(context, home, true)), () => readSidebarChats(true), license, profiles);
+  function hydrateProfile(reset = false) {
+    if (profiles.current.id !== profiles.activeId) {
+      profiles.select('default'); reset = true; profileEpoch++;
+      void context.workspaceState.update('chatProfile.v1', 'default');
+      sidebar.profileChanged();
+    }
+    for (const [key, value] of [[assignmentKey, assignments], ['manualLabelTimes.v1', manualTimes], ['customLabels.v1', customLabels],
+      ['starredChats.v1', starredChats], ['chatColours.v1', chatColours], ['customLabelColours.v1', labelColours], [modeKey, modes],
+      ['customRouting.v1', customRouting], ['discussionScopes.v1', discussionScopes]] as const) profiles.refreshInto(key, value, reset);
+    if (reset) routingBaseline = Object.fromEntries([...knownKeys].map(key => [key, scopeRoots(key)]));
+  }
+  function scopeRoots(key: string): string[] {
+    const assignment = assignments[key];
+    return effectiveMode(modes[key], assignment) === 'none' ? [] : customLabels[key]
+      ? (customRouting[key] ? [customRouting[key]] : [])
+      : (assignment?.members ?? (assignment ? [assignment] : [])).map(item => vscode.Uri.parse(item.root).fsPath);
+  }
+  let routingBaseline = Object.fromEntries([...knownKeys].map(key => [key, scopeRoots(key)]));
   context.subscriptions.push(sidebar, vscode.window.registerWebviewViewProvider('codexNavigator.chats', sidebar));
   context.subscriptions.push(license.onDidChange(() => {
     if (!license.allowed()) {
@@ -223,12 +257,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       manualTimes[key] = Math.max(Date.now(), (manualTimes[key] ?? 0) + 1, discussionScopes[id]?.reportedAt ?? 0, ...reports.map(report => report?.reportedAt ?? 0));
       modes[key] = 'auto';
     }
-    await context.workspaceState.update('manualLabelTimes.v1', manualTimes);
-    await context.workspaceState.update(modeKey, modes);
+    await profiles.update('manualLabelTimes.v1', manualTimes);
+    await profiles.update(modeKey, modes);
   }
 
   async function updateAutoScope(key: string): Promise<boolean> {
     if (!license.allowed()) return false;
+    const epoch = profileEpoch;
     const manualTime = manualTimes[key];
     if ((customLabels[key] && !manualTime) || !key.startsWith('local/') || effectiveMode(modes[key], assignments[key]) !== 'auto') { return false; }
     const id = key.slice(6);
@@ -240,10 +275,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const filename = await sessions.fileFor(id);
       if (filename) {
         const detected = await discussionReader.read(filename, id, projectNames(git!.repositories.map(repo => repo.rootUri.fsPath), folders));
-        if (!license.allowed()) return false;
+        if (!license.allowed() || epoch !== profileEpoch) return false;
         if (detected && detected.reportedAt > (discussionScopes[id]?.reportedAt ?? 0)) {
           discussionScopes[id] = detected;
-          await context.workspaceState.update('discussionScopes.v1', discussionScopes);
+          await profiles.update('discussionScopes.v1', discussionScopes);
         }
       }
     }
@@ -269,13 +304,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       next = scopeAssignment(roots, chosen.source, folders);
     }
     // A manual correction made while metadata was being read always wins.
-    if (!license.allowed() || manualTimes[key] !== manualTime || (customLabels[key] && !manualTime) || effectiveMode(modes[key], assignments[key]) !== 'auto' || disposed) { return false; }
+    if (!license.allowed() || epoch !== profileEpoch || manualTimes[key] !== manualTime || (customLabels[key] && !manualTime) || effectiveMode(modes[key], assignments[key]) !== 'auto' || disposed) { return false; }
     if (chosen.source === 'agent' && !vscode.workspace.getConfiguration('codexNavigator').get('agentRepositoryLabels', false)) return false;
     const replacedCustom = Boolean(customLabels[key]);
     if (manualTime) {
       delete customLabels[key]; delete manualTimes[key];
-      await context.workspaceState.update('customLabels.v1', customLabels);
-      await context.workspaceState.update('manualLabelTimes.v1', manualTimes);
+      await profiles.update('customLabels.v1', customLabels);
+      await profiles.update('manualLabelTimes.v1', manualTimes);
     }
     if (JSON.stringify(next) === JSON.stringify(assignments[key])) { return replacedCustom; }
     if (next) { assignments[key] = next; } else { delete assignments[key]; }
@@ -295,7 +330,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           pendingKeys.delete(item);
           try { changed = await updateAutoScope(item) || changed; } catch (error) { report(error); }
         }
-        if (changed) { await context.workspaceState.update(assignmentKey, assignments); }
+        if (changed) { await profiles.update(assignmentKey, assignments); }
       }).then(() => refresh()).catch(error => report(error));
     }, 150);
   }
@@ -340,13 +375,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function syncMetadata() {
     if (!license.allowed()) { await routing.publish(); return; }
-    if (!context.workspaceState.get('customLabelColourMigration.v1', false)) {
+    if (!profiles.get('customLabelColourMigration.v1', false)) {
       const inherited = Object.fromEntries(Object.keys(customLabels).map(key => [key, colourFor(key, '').colour]));
       const migrated = migrateLabelColours(customLabels, chatColours, labelColours, inherited);
       labelColours = migrated.colours; chatColours = migrated.chats;
-      await context.workspaceState.update('customLabelColours.v1', labelColours);
-      await context.workspaceState.update('chatColours.v1', chatColours);
-      await context.workspaceState.update('customLabelColourMigration.v1', true);
+      await profiles.update('customLabelColours.v1', labelColours);
+      await profiles.update('chatColours.v1', chatColours);
+      await profiles.update('customLabelColourMigration.v1', true);
     }
     const custom = readColours(vscode.workspace.getConfiguration('codexNavigator').get('repositoryColours'), 'repository');
     const nextColours = automaticRepositoryColours(custom);
@@ -359,14 +394,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const workspace = vscode.workspace.workspaceFile?.scheme === 'file' ? vscode.workspace.workspaceFile.fsPath
         : vscode.workspace.workspaceFolders?.find(folder => folder.uri.scheme === 'file')?.uri.fsPath;
       if (workspace && !vscode.env.remoteName) {
-        const chats: Record<string, string[]> = Object.create(null);
-        for (const key of [...knownKeys].slice(-2000)) {
-          if (!key.startsWith('local/')) { continue; }
-          const assignment = assignments[key];
-          chats[key] = effectiveMode(modes[key], assignment) === 'none' ? [] : customLabels[key]
-            ? (customRouting[key] ? [customRouting[key]] : [])
-            : (assignment?.members ?? (assignment ? [assignment] : [])).map(item => vscode.Uri.parse(item.root).fsPath);
+        const next = Object.fromEntries([...knownKeys].slice(-2000).filter(key => key.startsWith('local/')).map(key => [key, scopeRoots(key)]));
+        // Switching profiles resets the comparison baseline. Only actual scope edits publish routing changes.
+        const previous = profiles.shared<Record<string, string[]>>('routingScopes.v1', {});
+        const chats = { ...previous };
+        for (const [key, roots] of Object.entries(next)) {
+          if (!Object.hasOwn(previous, key) || JSON.stringify(roots) !== JSON.stringify(routingBaseline[key])) chats[key] = roots;
         }
+        await profiles.updateShared('routingScopes.v1', chats, previous);
+        routingBaseline = next;
         const scopes = config.get<string[]>('instructionScope', []);
         const main = config.get('mainInstructionsFile', '');
         await routing.publish({ version: 2, pid: process.pid, main, chats, profile: {
@@ -435,7 +471,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         knownKeys.add(active.key);
         discussionKeys.add(active.key);
         if (await updateAutoScope(active.key)) {
-          await context.workspaceState.update(assignmentKey, assignments);
+          await profiles.update(assignmentKey, assignments);
           await syncMetadata();
         }
       }
@@ -464,14 +500,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (repositoryUri && !picked) { throw new Error('The requested repository is not an open local Git repository.'); }
     if (!picked || !license.allowed() || disposed) { return; }
     delete customRouting[current.key];
-    await context.workspaceState.update('customRouting.v1', customRouting);
+    await profiles.update('customRouting.v1', customRouting);
     delete customLabels[current.key];
-    await context.workspaceState.update('customLabels.v1', customLabels);
+    await profiles.update('customLabels.v1', customLabels);
     assignments[current.key] = picked.assignment;
     await saveManualChoice(current.key, true);
     knownKeys.add(current.key);
-    await context.workspaceState.update(modeKey, modes);
-    await context.workspaceState.update(assignmentKey, assignments);
+    await profiles.update(modeKey, modes);
+    await profiles.update(assignmentKey, assignments);
     refresh(true);
     await queue;
   }
@@ -493,17 +529,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!labelColours[labelKey] && previousColour) {
       if (Object.keys(labelColours).length >= 2000) throw new Error('Clear a custom label colour before adding another.');
       labelColours[labelKey] = previousColour;
-      await context.workspaceState.update('customLabelColours.v1', labelColours);
+      await profiles.update('customLabelColours.v1', labelColours);
     }
     if (!customLabels[key]) {
       delete customRouting[key];
-      await context.workspaceState.update('customRouting.v1', customRouting);
+      await profiles.update('customRouting.v1', customRouting);
     }
     customLabels[key] = value.trim();
     await saveManualChoice(key);
     knownKeys.add(key);
-    await context.workspaceState.update('customLabels.v1', customLabels);
-    await context.workspaceState.update(modeKey, modes);
+    await profiles.update('customLabels.v1', customLabels);
+    await profiles.update(modeKey, modes);
     refresh(true);
     await queue;
   }
@@ -515,7 +551,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!key) { throw new Error('Focus a saved Codex chat or right-click its title first.'); }
     const label = customLabels[key];
     const target = label ? await vscode.window.showQuickPick([
-      { label: `Label: ${label}`, description: 'All chats with this custom label in this workspace', shared: true },
+      { label: `Label: ${label}`, description: 'All chats with this custom label in this profile', shared: true },
       { label: 'Only this chat', description: 'Override the shared label colour', shared: false },
     ], { title: 'Change colour for' }) : { shared: false };
     if (!target || disposed || !license.allowed() || customLabels[key] !== label) return;
@@ -535,14 +571,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (!labelColours[labelKey] && Object.keys(labelColours).length >= 2000) throw new Error('Clear a custom label colour before adding another.');
         labelColours[labelKey] = colour;
       }
-      await context.workspaceState.update('customLabelColours.v1', labelColours);
+      await profiles.update('customLabelColours.v1', labelColours);
       delete chatColours[key];
-      await context.workspaceState.update('chatColours.v1', chatColours);
+      await profiles.update('chatColours.v1', chatColours);
       refresh(true); return;
     }
     const next = { ...chatColours };
     if (colour === null) { delete next[key]; } else { next[key] = colour; }
-    await context.workspaceState.update('chatColours.v1', next);
+    await profiles.update('chatColours.v1', next);
     if (colour === null) { delete chatColours[key]; } else { chatColours[key] = colour; }
     knownKeys.add(key);
     refresh(true);
@@ -573,11 +609,69 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     refresh(true);
   }
 
-  context.subscriptions.push(output, status, { dispose: () => { disposed = true; generation++; clearTimeout(discussionTimer); void queue.finally(() => routing.dispose()); } });
+  context.subscriptions.push(output, status, { dispose: () => { disposed = true; generation++; clearTimeout(discussionTimer); void queue.finally(async () => { await routing.dispose(); profiles.dispose(); }); } });
+  async function selectProfile(id: string) {
+    if (activeActions || sidebar.busy) throw new Error('Finish the open Navigator action before switching profiles.');
+    await queue;
+    if (!license.allowed() || activeActions || sidebar.busy) return;
+    profileEpoch++;
+    profiles.select(id); hydrateProfile(true);
+    knownKeys.clear(); pendingKeys.clear(); discussionKeys.clear();
+    for (const key of new Set([...Object.keys(assignments), ...Object.keys(customLabels), ...Object.keys(chatColours)])) knownKeys.add(key);
+    routingBaseline = Object.fromEntries([...knownKeys].map(key => [key, scopeRoots(key)]));
+    await context.workspaceState.update('chatProfile.v1', id);
+    sidebar.profileChanged();
+    refresh(true); await sidebar.refresh();
+  }
+  let profileMenuOpen = false;
+  async function manageProfiles() {
+    if (profileMenuOpen) return;
+    profileMenuOpen = true;
+    try { await showProfileMenu(); } finally { profileMenuOpen = false; }
+  }
+  async function showProfileMenu() {
+    const picked = await vscode.window.showQuickPick([
+      ...profiles.list().map(item => ({ label: item.name, description: item.id === profiles.activeId ? 'Current profile' : '', id: item.id })),
+      { label: 'Create Profile...', id: 'create' }, { label: 'Create Profile for This Workspace...', id: 'workspace' },
+      { label: 'Choose Chats for This Profile...', id: 'chats' }, { label: 'Include All Recent Chats', id: 'all' }, { label: 'Rename Current Profile...', id: 'rename' },
+      { label: 'Remove Current Profile...', id: 'remove' }, { label: 'Restore Workspace Organisation...', id: 'restore' },
+    ], { title: 'Chat Profile', placeHolder: 'Your choice is remembered for this workspace' });
+    if (!picked || !license.allowed()) return;
+    if (activeActions || sidebar.busy) throw new Error('Finish the open Navigator action before changing profiles.');
+    if (profiles.list().some(item => item.id === picked.id)) { await selectProfile(picked.id); return; }
+    const epoch = profileEpoch;
+    if (picked.id === 'all') { await profiles.update('profileSelection.v1', undefined); await sidebar.refresh(); return; }
+    if (picked.id === 'chats') { await sidebar.chooseProfileChats(); return; }
+    if (picked.id === 'restore') {
+      const snapshot = await vscode.window.showQuickPick(profiles.legacy().map(item => ({ label: item.workspace, description: item.conflict ? 'Conflicting customisations preserved' : 'Original workspace snapshot', data: item.data })), { title: 'Restore into a new profile' });
+      if (!snapshot || !license.allowed() || epoch !== profileEpoch) return;
+      const name = await vscode.window.showInputBox({ title: 'Name for restored profile', value: 'Recovered workspace' });
+      if (name && license.allowed() && epoch === profileEpoch) await selectProfile(profiles.create(name, false, snapshot.data));
+      return;
+    }
+    if (picked.id === 'remove') {
+      if (profiles.activeId === 'default') throw new Error('The Default profile cannot be removed.');
+      const answer = await vscode.window.showWarningMessage(`Remove profile ${profiles.current.name}?`, { modal: true, detail: 'Conversations remain in Codex. Other workspaces using this profile return to Default.' }, 'Remove Profile');
+      if (answer === 'Remove Profile' && license.allowed() && epoch === profileEpoch) { profiles.remove(); await selectProfile('default'); }
+      return;
+    }
+    const name = await vscode.window.showInputBox({ title: picked.id === 'rename' ? 'Rename Chat Profile' : 'New Chat Profile',
+      value: picked.id === 'rename' ? profiles.current.name : picked.id === 'workspace' ? vscode.workspace.name : '',
+      prompt: 'Use a unique name of up to 60 characters' });
+    if (!name || !license.allowed() || epoch !== profileEpoch) return;
+    if (picked.id === 'rename') { profiles.rename(name); await sidebar.refresh(); return; }
+    const source = await vscode.window.showQuickPick([{ label: 'Copy current organisation', copy: true }, { label: 'Start with an empty selection', copy: false }], { title: 'Initial profile contents' });
+    if (!source || !license.allowed() || epoch !== profileEpoch) return;
+    await selectProfile(profiles.create(name, source.copy));
+    if (picked.id === 'workspace') await sidebar.setWorkspaceFilter(true);
+  }
+
   const commands: [string, (...args: any[]) => unknown][] = [
     ['setUp', () => setUpNavigator(context, () => license.requireAccess())],
     ['license', () => license.show()],
     ['openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:keenanselbee.codex-navigator')],
+    ['chatProfiles', () => manageProfiles()],
+    ['workspaceChats', () => sidebar.toggleWorkspaceFilter()],
     ['showChats', () => vscode.commands.executeCommand('codexNavigator.chats.focus')],
     ['refreshChats', () => sidebar.refresh()],
     ['restoreHiddenChats', () => sidebar.restoreHidden()],
@@ -604,7 +698,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (!license.allowed() || disposed) return;
         starredChats[key] = (title || 'Saved chat ' + key.slice(6)).replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 500);
       }
-      await context.workspaceState.update('starredChats.v1', starredChats);
+      await profiles.update('starredChats.v1', starredChats);
       await syncMetadata();
       void sidebar.refresh();
     }],
@@ -633,7 +727,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       ], { title: 'Repository for custom-label instruction routing', matchOnDescription: true });
       if (!picked || !license.allowed() || disposed) { return; }
       if (picked.root) { customRouting[key] = picked.root; } else { delete customRouting[key]; }
-      await context.workspaceState.update('customRouting.v1', customRouting);
+      await profiles.update('customRouting.v1', customRouting);
       refresh(true);
     }],
     ['setRepositoryAlias', async () => {
@@ -686,10 +780,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (picked.action === 'none') { delete assignments[key]; }
       }
       if (picked.action !== 'pin') { delete customLabels[key]; }
-      await context.workspaceState.update('manualLabelTimes.v1', manualTimes);
-      await context.workspaceState.update('customLabels.v1', customLabels);
-      await context.workspaceState.update(modeKey, modes);
-      await context.workspaceState.update(assignmentKey, assignments);
+      await profiles.update('manualLabelTimes.v1', manualTimes);
+      await profiles.update('customLabels.v1', customLabels);
+      await profiles.update(modeKey, modes);
+      await profiles.update(assignmentKey, assignments);
       scheduleScopeRefresh(key);
     }],
     ['useAutomaticScope', async (uri?: vscode.Uri) => {
@@ -698,11 +792,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const key = uri instanceof vscode.Uri ? conversationKey(uri) : chat()?.key;
       if (!key) { throw new Error('Open a saved chat first.'); }
       delete customLabels[key]; delete manualTimes[key];
-      await context.workspaceState.update('manualLabelTimes.v1', manualTimes);
-      await context.workspaceState.update('customLabels.v1', customLabels);
+      await profiles.update('manualLabelTimes.v1', manualTimes);
+      await profiles.update('customLabels.v1', customLabels);
       modes[key] = 'auto';
       discussionKeys.add(key);
-      await context.workspaceState.update(modeKey, modes);
+      await profiles.update(modeKey, modes);
       scheduleScopeRefresh(key);
     }],
     ['clearRepository', async (uri?: vscode.Uri) => {
@@ -711,12 +805,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const key = uri instanceof vscode.Uri ? conversationKey(uri) : chat()?.key;
       if (!key) { throw new Error('Focus a saved Codex conversation first.'); }
       delete customLabels[key]; delete manualTimes[key];
-      await context.workspaceState.update('manualLabelTimes.v1', manualTimes);
-      await context.workspaceState.update('customLabels.v1', customLabels);
+      await profiles.update('manualLabelTimes.v1', manualTimes);
+      await profiles.update('customLabels.v1', customLabels);
       delete assignments[key];
       modes[key] = 'none';
-      await context.workspaceState.update(modeKey, modes);
-      await context.workspaceState.update(assignmentKey, assignments);
+      await profiles.update(modeKey, modes);
+      await profiles.update(assignmentKey, assignments);
       refresh(true);
     }],
     ['diagnostics', async () => {
@@ -740,7 +834,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   for (const [name, action] of commands) {
     const alwaysAvailable = ['license', 'setUp', 'setUpActivity', 'setUpAgentHelper', 'openSettings', 'showChats'];
     context.subscriptions.push(vscode.commands.registerCommand(`codexNavigator.${name}`, (...args) => Promise.resolve().then(async () => {
-      if (alwaysAvailable.includes(name) || await license.requireAccess()) return action(...args);
+      if (alwaysAvailable.includes(name) || await license.requireAccess()) {
+        if (name === 'chatProfiles') return action(...args);
+        activeActions++;
+        try { return await action(...args); } finally { activeActions--; }
+      }
     }).catch(error => report(error, true))));
   }
   context.subscriptions.push(

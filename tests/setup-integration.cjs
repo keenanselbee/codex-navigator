@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-exports.run=async function(context,vscode,until){
+exports.run=async function(context,vscode,until,profiles){
  const {ChatGoals}=require('../dist/chat-goals');const hooks=require('../dist/hook-setup');
  // This isolated extension is a Codex fixture with synthetic metadata, not a bundled runtime.
  require('../dist/platform').codexRuntimeIssue=()=>'';
@@ -40,12 +40,12 @@ exports.run=async function(context,vscode,until){
  const {writeScopeReport}=require('../dist/scope-store');const {assignmentKey}=require('../dist/model');
  const repo=path.join(process.env.REPO_COMPANION_TEST_ROOT,'parent');
  await writeScopeReport(home,target,[repo]);
- await until(()=>context.workspaceState.get(assignmentKey,{})['local/'+target]?.source==='agent','agent report applies');
- const assignment=JSON.stringify(context.workspaceState.get(assignmentKey,{})['local/'+target]);
+ await until(()=>profiles.get(assignmentKey,{})['local/'+target]?.source==='agent','agent report applies');
+ const assignment=JSON.stringify(profiles.get(assignmentKey,{})['local/'+target]);
  await click('disableAutomaticLabels');await until(async()=>(await probe()).labels==='Off','label setup turns off separately');
  await writeScopeReport(home,target,[path.join(repo,'private')]);
  await vscode.commands.executeCommand('codexNavigator.refreshChats');
- assert.equal(JSON.stringify(context.workspaceState.get(assignmentKey,{})['local/'+target]),assignment,'disabled reporting retains the label');
+ assert.equal(JSON.stringify(profiles.get(assignmentKey,{})['local/'+target]),assignment,'disabled reporting retains the label');
  assert.ok(!fs.readFileSync(instructions,'utf8').includes('codex-navigator-labels:start'));
  assert.equal(vscode.workspace.getConfiguration('codexNavigator').get('instructionRouting'),routingBefore);
  await click('installHooks');

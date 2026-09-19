@@ -25,10 +25,10 @@ exports.run = async function (_fixtureContext, vscode) {
     const { ChatGoals } = require(path.join(extension.extensionUri.fsPath, 'dist/chat-goals'));
     ChatGoals.prototype.readRecency = async () => [];
     ChatGoals.prototype.read = async () => ({});
-    let context, license;
+    let context, license, profiles;
     const original = ChatSidebar.prototype.resolveWebviewView;
     ChatSidebar.prototype.resolveWebviewView = function (view) {
-      original.call(this, view); context = this.context; license = this.license;
+      original.call(this, view); context = this.context; license = this.license; profiles = this.profiles;
     };
     await extension.activate();
     await vscode.commands.executeCommand('codexNavigator.chats.focus');
@@ -48,7 +48,7 @@ exports.run = async function (_fixtureContext, vscode) {
     const secretKey = 'license.' + environment + '.v1';
     assert.equal(await context.secrets.get('license.' + (environment === 'sandbox' ? 'production' : 'sandbox') + '.v1'), undefined,
       'the other environment has no protected record in this isolated profile');
-    const star = { 'local/00000000-0000-0000-0000-000000000001': true };
+    const star = { 'local/00000000-0000-0000-0000-000000000001': 'Saved fixture chat' };
     let record;
     if (phase === 'installed') {
       assert.equal(license.allowed(), false);
@@ -56,7 +56,7 @@ exports.run = async function (_fixtureContext, vscode) {
       record = JSON.parse(await context.secrets.get(secretKey));
       record.trialStartedAt = Date.now() - 8*86400000; record.observedAt = Date.now();
       await context.secrets.store(secretKey, JSON.stringify(record));
-      await context.workspaceState.update('starredChats.v1', star);
+      await profiles.update('starredChats.v1', star);
       await until(() => !license.allowed());
       fs.writeFileSync(path.join(root, 'expected-installation.json'), JSON.stringify({ installationId: record.installationId, trialStartedAt: record.trialStartedAt }));
     } else {
@@ -68,7 +68,7 @@ exports.run = async function (_fixtureContext, vscode) {
       await license.action('startTrial');
       assert.equal(license.allowed(), false, 'settings reset and reinstall do not start another trial');
       assert.equal(JSON.parse(await context.secrets.get(secretKey)).trialStartedAt, prior.trialStartedAt);
-      assert.deepEqual(context.workspaceState.get('starredChats.v1'), star, 'saved Navigator data survives reinstall');
+      assert.deepEqual(profiles.get('starredChats.v1'), star, 'saved Navigator data survives reinstall');
     }
     fs.writeFileSync(path.join(root, 'result-' + phase + '.json'), JSON.stringify({ phase, passed: true, vscode: vscode.version,
       verifiedFiles, manifestVerified: true, environment, installedVersion: installedManifest.version, mode: 'Production', expired: !license.allowed(),

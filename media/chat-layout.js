@@ -27,4 +27,9 @@ function createNavigatorLayout(saved) {
     return current;
   };
 }
-if (typeof module !== 'undefined') { module.exports = { navigatorLayout, createNavigatorLayout }; }
+// Fill spare frame space with padding, preserving readable text and bounded sparse rows.
+function fittedRowHeight(height, rowCount, naturalHeight) {
+  if (rowCount < 1 || height <= 0) return naturalHeight;
+  return Math.max(naturalHeight, Math.min(height / rowCount, naturalHeight * 1.5));
+}
+if (typeof module !== 'undefined') { module.exports = { navigatorLayout, createNavigatorLayout, fittedRowHeight }; }

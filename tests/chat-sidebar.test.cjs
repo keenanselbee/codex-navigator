@@ -224,3 +224,38 @@ test('startup publishes cached chats before live reads settle and keeps actions 
  await f.receive({type:'open',id:f.id});assert.ok(f.calls.some(call=>call[0]==='vscode.open'));
  f.sidebar.dispose();
 });
+
+
+test('workspace filter uses exact repository associations and keeps unassigned and saved old chats', async t => {
+  const f = fixture(); t.after(() => f.sidebar.dispose());
+  fs.mkdirSync(path.join(__dirname, '..', '.codex-temp'), { recursive: true });
+  const directory = fs.mkdtempSync(path.join(__dirname, '..', '.codex-temp', 'navigator-sidebar-profiles-'));
+  const { ChatProfiles } = require('../dist/chat-profiles');
+  const profiles = new ChatProfiles(directory, 'workspace', directory);
+  t.after(() => { profiles.dispose(); fs.rmSync(directory, {recursive:true,force:true}); });
+  f.sidebar.profiles = profiles;
+  await profiles.update('profileView.v1', { workspaceOnly: true });
+  const ids = [1,2,3,4].map(i => '00000000-0000-0000-0000-' + String(i).padStart(12,'0'));
+  f.sidebar.readRepositories = () => [{ root: '/repo' }];
+  f.sidebar.readChats = async () => ids.map((id,i) => ({ id,title:'Chat '+i,label:'Same display label',starred:i===0,recencyAt:1,
+    roots:i===0?['/repo']:i===1?['/repository']:i===2?[]:['/repo/private'] }));
+  await profiles.update('profileSelection.v1', Object.fromEntries(ids.map(id => [id,{id}])));
+  await f.sidebar.refresh();
+  assert.deepEqual(f.sent.at(-1).rows.map(row=>row.id), [ids[0],ids[2]], 'paths match exactly; unassigned remains available');
+  await f.sidebar.setWorkspaceFilter(false);
+  assert.equal(f.sent.at(-1).rows.length,4,'explicit selections bypass the age cutoff');
+  const other=profiles.create('Other'); profiles.select(other); f.sidebar.profileChanged(); await f.sidebar.refresh();
+  assert.equal(f.sent.at(-1).rows.length,1,'only favourite retained from supplied profile rows');
+  await f.receive({type:'action',id:ids[0],action:'hide',profileId:'default'});
+  assert.equal(profiles.get('hiddenChats.v1'),undefined,'stale profile menu cannot hide in new profile');
+});
+
+test('completed browsing in another workspace does not grant hook trust or hide chats', async t => {
+  const f=fixture();t.after(()=>f.sidebar.dispose());
+  f.sidebar.profiles={shared:()=>true,current:{id:'default',name:'Default'},get:(_key,fallback)=>fallback};
+  f.sidebar.activityReady=async()=>({ready:false,message:'Review hooks in this workspace.'});
+  await f.sidebar.refresh();
+  assert.equal(f.sent.at(-1).welcome,false);
+  assert.equal(f.sent.at(-1).rows.length,1);
+  assert.equal(f.sent.at(-1).activityNotice,'Review hooks in this workspace.');
+});

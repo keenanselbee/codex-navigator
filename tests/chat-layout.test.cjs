@@ -64,3 +64,12 @@ test('wide views keep adding columns in every height mode', () => {
     assert.ok(navigatorLayout(3600, height).capacity > navigatorLayout(1900, height).capacity);
   }
 });
+
+
+test('frame fitting fills normal rows without enlarging sparse rows beyond the cap', () => {
+  const { fittedRowHeight } = require('../media/chat-layout');
+  assert.equal(fittedRowHeight(120, 3, 36), 40);
+  assert.equal(fittedRowHeight(125, 3, 40), 125 / 3);
+  assert.equal(fittedRowHeight(500, 1, 36), 54);
+  assert.equal(fittedRowHeight(0, 0, 36), 36);
+});

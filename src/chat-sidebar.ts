@@ -1,3 +1,5 @@
+import { ChatProfiles, SavedState } from './chat-profiles';
+import { sameRoot } from './model';
 import * as vscode from 'vscode';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -14,6 +16,7 @@ import { HookAdmission, HookReadiness } from './hook-admission';
 
 export interface SidebarChat extends RecentConversation {
   label: string;
+  roots?: string[];
   colour?: string;
   starred: boolean;
   pinned?: boolean;
@@ -65,6 +68,11 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
   private goalChanging = false;
   private goals: Record<string, ChatGoal> = {};
   private setupRequired = true;
+  private actionCount = 0;
+  private profileVersion = 0;
+  private publishedProfile = '';
+  get busy() { return this.actionCount > 0; }
+  private get saved(): SavedState { return this.profiles ?? this.context.globalState; }
   private hookAdmission: HookAdmission;
   private colour?: { token: string; options: ColourOptions; resolve: (value: string | null | undefined) => void };
 
@@ -73,14 +81,14 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       change(id: string, expected: ChatGoal): Promise<ChatGoal> }, private themeChanged?: (background: string) => void,
     private readRepositories: () => { root: string; label: string; colour?: string }[] = () => [],
     private activityReady: () => Promise<HookReadiness> = async () => ({ ready: false, message: 'Install and verify Navigator hooks to show your chats.' }),
-    private readStartup?: () => Promise<SidebarChat[]>, private license?: LicenseAccess) {
-    this.hookAdmission = new HookAdmission(context.workspaceState.get('navigatorSetup.completed.v1', false));
+    private readStartup?: () => Promise<SidebarChat[]>, private license?: LicenseAccess, private profiles?: ChatProfiles) {
+    this.hookAdmission = new HookAdmission(profiles?.shared('browsingCompleted', false) || context.workspaceState.get('navigatorSetup.completed.v1', false));
     for (const action of [...Object.keys(actions).filter(action => action !== 'star'), ...nameActions]) {
       this.subscriptions.push(vscode.commands.registerCommand('codexNavigator.sidebar.' + action, async (value: unknown) => {
         if (!value || typeof value !== 'object') { return; }
         const target = value as Record<string, unknown>;
         if (target.webviewSection !== 'navigatorChat') { return; }
-        await this.receive({ type: 'action', id: target.navigatorChatId, action });
+        await this.receive({ type: 'action', id: target.navigatorChatId, profileId: target.navigatorProfileId, action });
       }));
     }
     this.subscriptions.push(vscode.commands.registerCommand('codexNavigator.sidebar.repositoryColour', async (value: unknown) => {
@@ -125,12 +133,18 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     try {
       if (!this.startupRead && this.readStartup) {
         this.startupRead = true;
-        this.rows = await this.readStartup();
+        const version = this.profileVersion;
+        const rows = await this.readStartup();
+        if (version === this.profileVersion) this.rows = rows;
+        else this.dirty = true;
         await this.publishState();
       }
       do {
         this.dirty = false;
-        this.rows = await this.readChats();
+        const version = this.profileVersion;
+        const rows = await this.readChats();
+        if (version !== this.profileVersion) { this.dirty = true; continue; }
+        this.rows = rows;
         await this.publishState();
       } while (this.dirty && !this.disposed && (!this.license || this.license.allowed()));
     } catch (error) {
@@ -139,19 +153,33 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
   }
 
   private async publishState(): Promise<void> {
-    if (this.license && !this.license.allowed()) return;
-    const pins = chatPins(this.context.globalState.get('pinnedChats.v1'));
-    const hidden = this.context.globalState.get<Record<string, string>>('hiddenChats.v1', {});
+    if (this.disposed || this.license && !this.license.allowed()) return;
+    const version = this.profileVersion;
+    const pins = chatPins(this.saved.get('pinnedChats.v1'));
+    const hidden = this.saved.get<Record<string, string>>('hiddenChats.v1', {})!;
     const recentOnly = vscode.workspace.getConfiguration('codexNavigator').get('recentChatsOnly', true);
     const seen = this.context.globalState.get<Record<string, number>>('activitySeen.v1', {});
-    const names = chatNames(this.context.globalState.get('chatNames.v1'));
-    const visible = placePinnedChats(this.rows.filter(row => !Object.hasOwn(hidden, row.id) && (pins[row.id] || !recentOnly || row.recencyAt === undefined || Math.max(row.recencyAt, seen[row.id] || 0) >= Date.now() - 86400000)), pins).map(row => ({ ...row, pinned: !!pins[row.id],
+    const names = chatNames(this.saved.get('chatNames.v1'));
+    const profile = this.profiles?.current;
+    const selection = this.profiles?.get<Record<string, RecentConversation>>('profileSelection.v1');
+    const preferences = this.profiles?.get<{ workspaceOnly?: boolean }>('profileView.v1', {}) ?? {};
+    const roots = this.readRepositories().map(repo => repo.root);
+    const eligible = this.rows.filter(row => (!selection || Object.hasOwn(selection, row.id) || pins[row.id] || row.starred)
+      && (!preferences.workspaceOnly || !row.roots?.length || row.roots.some(root => roots.some(other => sameRoot(root, other)))));
+    const visible = placePinnedChats(eligible.filter(row => !Object.hasOwn(hidden, row.id) && (pins[row.id] || row.starred || selection?.[row.id] || !recentOnly || row.recencyAt === undefined || Math.max(row.recencyAt, seen[row.id] || 0) >= Date.now() - 86400000)), pins).map(row => ({ ...row, pinned: !!pins[row.id],
       title: names[row.id] || row.title, originalTitle: row.title, hasCustomName: !!names[row.id],
       tooltip: names[row.id] ? [names[row.id], 'Codex name: ' + row.title,
         ...(row.tooltip || '').split('\n').filter(line => line !== row.title)].filter(Boolean).join('\n') : row.tooltip }));
     let readiness: HookReadiness = { ready: false, transient: true, message: 'Hook status could not be checked. Open setup and choose Check Status.' };
     try { readiness = await this.activityReady(); } catch { /* Keep setup accessible if diagnostics fail. */ }
+    if (this.disposed || version !== this.profileVersion) { this.dirty = true; return; }
+    if (this.profiles?.shared('browsingCompleted', false)) this.hookAdmission.completed = true;
     const { welcome, notice } = this.hookAdmission.update(readiness);
+    if (readiness.ready && this.profiles && !this.profiles.shared('browsingCompleted', false)) await this.profiles.updateShared('browsingCompleted', true);
+    if (this.view) this.view.description = [profile && profile.id !== 'default' ? profile.name : '', preferences.workspaceOnly ? 'Workspace' : '', selection ? 'Selected chats' : ''].filter(Boolean).join(' / ');
+    const profileToken = profile?.id ?? 'default';
+    const profileChanged = profileToken !== this.publishedProfile;
+    this.publishedProfile = profileToken;
     this.setupRequired = welcome;
     if (readiness.ready && !this.context.workspaceState.get('navigatorSetup.completed.v1', false)) {
       await this.context.workspaceState.update('navigatorSetup.completed.v1', true);
@@ -164,9 +192,9 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     }
     const settings = vscode.workspace.getConfiguration('codexNavigator');
     const highlights = highlightMode(settings);
-    if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome,
+    if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome, profileId: profileToken, profileChanged, profileView: this.profiles?.get('profileView.v1', {}), workspaceOnly: !!preferences.workspaceOnly,
       setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message, activityNotice: notice,
-      rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Restore hidden chats or turn off Recent Chats Only in Extension Settings.' : 'No saved local chats yet.' }); }
+      rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Check Chat Profile, workspace filtering, hidden chats or Recent Chats Only.' : 'No saved local chats yet.' }); }
   }
 
   private async refreshGoals(): Promise<void> {
@@ -205,19 +233,26 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
 
   async restoreHidden(): Promise<void> {
     if (this.license && !await this.license.requireAccess()) return;
-    const hidden = this.context.globalState.get<Record<string, string>>('hiddenChats.v1', {});
-    const names = chatNames(this.context.globalState.get('chatNames.v1'));
+    const hidden = this.saved.get<Record<string, string>>('hiddenChats.v1', {})!;
+    const names = chatNames(this.saved.get('chatNames.v1'));
     const choices = Object.entries(hidden).filter(([id]) => threadIdPattern.test(id)).map(([id, title]) => ({ label: names[id] || title || 'Untitled chat', id }));
     if (!choices.length) { void vscode.window.showInformationMessage('No hidden chats to restore.'); return; }
     const selected = await vscode.window.showQuickPick(choices, { title: 'Restore Hidden Chats', canPickMany: true, placeHolder: 'Choose chats to restore. The 24-hour filter still applies.' });
     if (!selected?.length || this.license && !this.license.allowed()) return;
-    const current = this.context.globalState.get<Record<string, string>>('hiddenChats.v1', {});
+    const current = this.saved.get<Record<string, string>>('hiddenChats.v1', {})!;
     for (const chat of selected) delete current[chat.id];
-    await this.context.globalState.update('hiddenChats.v1', current);
+    await this.saved.update('hiddenChats.v1', current);
     await this.refresh();
   }
 
   private async receive(message: unknown): Promise<void> {
+    const interactive = !!message && typeof message === 'object' && ['action', 'goal', 'open', 'repositoryColour', 'assignRepository', 'workspaceFilter'].includes(String((message as any).type));
+    if (interactive && this.profiles && (message as any).profileId !== undefined && (message as any).profileId !== this.profiles.activeId) return;
+    if (interactive) this.actionCount++;
+    try { await this.handleMessage(message); } finally { if (interactive) this.actionCount--; }
+  }
+
+  private async handleMessage(message: unknown): Promise<void> {
     if (!message || typeof message !== 'object' || this.disposed) { return; }
     const { type, id, action } = message as Record<string, unknown>;
     if (type === 'license' && typeof action === 'string') { await this.license?.action(action); return; }
@@ -258,6 +293,15 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       return;
     }
     if (this.setupRequired) return;
+    if (type === 'profileView') {
+      const value = (message as any).value;
+      if (this.profiles && (message as any).profileId === this.profiles.activeId && value && typeof value.search === 'string' && value.search.length <= 200) {
+        const current = this.profiles.get<Record<string, unknown>>('profileView.v1', {});
+        await this.profiles.update('profileView.v1', { ...current, search: value.search, mode: value.mode === 'starred' ? 'starred' : 'recent' });
+      }
+      return;
+    }
+    if (type === 'workspaceFilter') { await this.toggleWorkspaceFilter(); return; }
     if (type === 'new') { await vscode.commands.executeCommand('chatgpt.newChat'); return; }
     if (type === 'repositoryColour') {
       const root = (message as { root?: unknown }).root;
@@ -272,7 +316,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
         await vscode.window.showInformationMessage(row.title, { modal: true, detail: 'Original Codex chat name. Navigator renames do not change it.' });
         return;
       }
-      const names = chatNames(this.context.globalState.get('chatNames.v1'));
+      const names = chatNames(this.saved.get('chatNames.v1'));
       const value = action === 'resetName' ? '' : await vscode.window.showInputBox({ title: 'Rename Chat in Navigator',
         value: names[id] || row.title, prompt: 'Codex name: ' + row.title,
         placeHolder: 'Leave blank to use the Codex name',
@@ -281,13 +325,13 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       const name = value.trim();
       if (name.length > 200 || /[\x00-\x1f\x7f]/.test(name)) return;
       // Re-read after the input dialog so another rename is not overwritten.
-      const current = chatNames(this.context.globalState.get('chatNames.v1'));
+      const current = chatNames(this.saved.get('chatNames.v1'));
       if (!name || name === row.title) delete current[id];
       else {
         if (!current[id] && Object.keys(current).length >= 2000) throw new Error('Clear a renamed chat before adding another name.');
         current[id] = name;
       }
-      await this.context.globalState.update('chatNames.v1', current);
+      await this.saved.update('chatNames.v1', current);
       await this.refresh(); return;
     }
     if (type === 'goal') {
@@ -321,7 +365,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       await this.refresh(); return;
     }
     if (type === 'action' && action === 'pin') {
-      const pins = chatPins(this.context.globalState.get('pinnedChats.v1'));
+      const pins = chatPins(this.saved.get('pinnedChats.v1'));
       if (pins[id]) delete pins[id];
       else {
         const position = (message as { position?: number }).position;
@@ -330,13 +374,13 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
         const row = this.rows.find(row => row.id === id)!;
         pins[id] = { position: position!, chat: { id, title: row.title, updatedAt: row.updatedAt } };
       }
-      await this.context.globalState.update('pinnedChats.v1', pins);
+      await this.saved.update('pinnedChats.v1', pins);
       await this.refresh(); return;
     }
     if (type === 'action' && action === 'hide') {
-      const hidden = this.context.globalState.get<Record<string, string>>('hiddenChats.v1', {});
+      const hidden = this.saved.get<Record<string, string>>('hiddenChats.v1', {})!;
       hidden[id] = this.rows.find(row => row.id === id)!.title;
-      await this.context.globalState.update('hiddenChats.v1', hidden);
+      await this.saved.update('hiddenChats.v1', hidden);
       await this.refresh(); return;
     }
     if (type === 'open') {
@@ -352,6 +396,36 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     const uri = vscode.Uri.from({ scheme: 'openai-codex', authority: 'route', path: '/local/' + id });
     await vscode.commands.executeCommand('codexNavigator.' + actions[action], uri);
     await this.refresh();
+  }
+
+  profileChanged(): void {
+    this.profileVersion++; this.rows = []; this.visibleIds = []; this.goals = {}; this.dirty = true;
+    this.colour?.resolve(undefined); this.colour = undefined;
+  }
+
+  async setWorkspaceFilter(enabled: boolean): Promise<void> {
+    if (!this.profiles || this.license && !await this.license.requireAccess()) return;
+    const current = this.profiles.get<Record<string, unknown>>('profileView.v1', {});
+    await this.profiles.update('profileView.v1', { ...current, workspaceOnly: enabled });
+    await this.refresh();
+  }
+
+  async toggleWorkspaceFilter(): Promise<void> {
+    const current = this.profiles?.get<{ workspaceOnly?: boolean }>('profileView.v1', {});
+    await this.setWorkspaceFilter(!current?.workspaceOnly);
+  }
+
+  async chooseProfileChats(): Promise<void> {
+    if (!this.profiles || this.license && !await this.license.requireAccess()) return;
+    this.actionCount++;
+    try {
+      const selected = this.profiles.get<Record<string, RecentConversation>>('profileSelection.v1');
+      const picks = await vscode.window.showQuickPick(this.rows.map(row => ({ label: row.title, description: row.label, picked: !selected || !!selected[row.id], row })),
+        { title: 'Chats saved in this profile', canPickMany: true, placeHolder: 'Selected chats stay available beyond the recency filter. Pins and favourites are also retained.' });
+      if (!picks || this.license && !this.license.allowed()) return;
+      await this.profiles.update('profileSelection.v1', Object.fromEntries(picks.map(({ row }) => [row.id, { id: row.id, title: row.title, updatedAt: row.updatedAt }])));
+      await this.refresh();
+    } finally { this.actionCount--; }
   }
 
   dispose(): void {

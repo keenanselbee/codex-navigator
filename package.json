@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Find and organise your Codex chats in a compact sidebar with project colours, favourites and activity indicators.",
-  "version": "1.6.5",
+  "version": "1.7.0",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -219,6 +219,16 @@
         "command": "codexNavigator.sidebar.resetName",
         "title": "Reset Chat Name",
         "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.chatProfiles",
+        "title": "Chat Profile...",
+        "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.workspaceChats",
+        "title": "Show Chats Relevant to This Workspace",
+        "category": "Codex Navigator"
       }
     ],
     "menus": {
@@ -396,6 +406,16 @@
           "command": "codexNavigator.restoreHiddenChats",
           "when": "view == codexNavigator.chats",
           "group": "1_navigator@6"
+        },
+        {
+          "command": "codexNavigator.chatProfiles",
+          "when": "view == codexNavigator.chats",
+          "group": "1_profiles@1"
+        },
+        {
+          "command": "codexNavigator.workspaceChats",
+          "when": "view == codexNavigator.chats",
+          "group": "1_profiles@2"
         }
       ]
     },

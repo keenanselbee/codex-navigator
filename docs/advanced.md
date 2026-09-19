@@ -11,7 +11,7 @@ Start a trial or activate a licence in Navigator, then run **Codex Navigator:
 Set Up Codex Navigator**. **Open Navigator** opens the view. First use after
 admission shows a setup button until hooks are installed, enabled and trusted.
 Delivery verification is diagnostic and never blocks the chat list. There is no skip or permanent dismissal.
-After setup has been verified in this workspace, hook problems leave chats
+After setup has been verified in any workspace using this local Navigator store, hook problems leave chats
 available, including after restarting VS Code. Short verification outages retry
 quietly; after 30 seconds a compact notice offers setup. Confirmed missing,
 disabled or untrusted hooks show a nonblocking next step immediately. Saved chats,
@@ -114,7 +114,7 @@ The pointer holds order anywhere in Navigator's webview content, including blank
 space and controls. Keyboard focus in the list also holds order. Leaving releases
 the latest order. The native VS Code view heading is outside the webview.
 Indicators continue to refresh while held. Search covers the bounded cache, not
-an exhaustive archive. Search and starred filtering persist within this extension.
+an exhaustive archive. Search and starred filtering persist in the chat profile.
 
 Selecting a chat uses `vscode://openai.chatgpt/local/<chat-id>`. This is an existing
 Codex URI handler, not a promise of an enduring public API. VS Code may request
@@ -125,13 +125,13 @@ Chat visibility and selection
 -----------------------------
 
 Hide Chat is the last chat context action. Hidden IDs and names are stored in
-Navigator global state; Codex conversations remain intact. Restore Hidden Chats
+the current chat profile; Codex conversations remain intact. Restore Hidden Chats
 in the title menu supports selecting several chats. Restoring removes the manual
 hide flag; it does not bypass the recency filter.
 
 Recent Chats Only defaults on. It uses native recencyAt or a more recent Navigator
 selection, never a background update timestamp. Known recency older than 24 hours
-is excluded, including starred chats. Unknown timestamps stay visible. Turn the
+is excluded unless the chat is pinned, starred or explicitly saved in the profile. Unknown timestamps stay visible. Turn the
 setting off to browse older chats in the existing bounded history cache.
 
 Each successful Navigator open starts its own linear fade (three minutes by default).
@@ -172,7 +172,7 @@ are part of the current task. The active editor, Source Control selection and
 chat starting directory do not assign a repository. Keep current labels fixed holds scope fixed;
 Clear selects None, suppressing automatic labels. Custom labels can optionally
 be associated with an exact repository for routing and colour inheritance.
-Matching custom labels share a colour in this workspace (ignoring case and outer
+Matching custom labels share a colour in this chat profile (ignoring case and outer
 whitespace). Renaming a label to UBC inherits the existing UBC colour. Chat Colour
 offers the shared label or only this chat; an explicit chat override wins until
 you reset it to Use label colour. Choosing the shared label clears the selected
@@ -258,8 +258,9 @@ Settings use the `codexNavigator` namespace. Common settings include
 `instructionRouting`, `mainInstructionsFile`, `instructionScope`,
 `instructionFallbackNames`, `hideRedundantRepositoryLabels` and `silentMode`.
 Use VS Code Settings for descriptions. Chat labels, stars, modes, colours and
-recency IDs and pinned chat identity/title snapshots are saved in extension state. Generated repository colours live in
-the local profile. Helper reports, routing configuration, diagnostics and backups
+recency IDs and pinned chat identity/title snapshots are saved locally in
+Navigator's profile database. Generated repository colours live in the local
+VS Code profile. Helper reports, routing configuration, diagnostics and backups
 live under `<CODEX_HOME>/codex-navigator`. Custom repository colours use user settings.
 
 There is no migration from the old Repo Companion extension, settings namespace,
@@ -415,7 +416,7 @@ which Codex chat is visible. Repository names are no longer listed directly in
 the menu: the supported native menu contributions have static command titles.
 See [VS Code webview context menus](https://code.visualstudio.com/api/extension-guides/webview#context-menus).
 
-Rename Chat saves a Navigator-only name for that chat ID in this VS Code profile.
+Rename Chat saves a Navigator-only name for that chat ID in the current chat profile.
 It does not change the Codex title or repository label. The current Codex title
 appears in the rename dialog and hover tooltip. Search matches either name.
 Reset Chat Name appears below Rename Chat only when the chat has a custom name;
@@ -442,3 +443,47 @@ then start a fresh chat. An empty global instructions file has no such guidance;
 hooks report activity and do not report repository scope. Reporting is best effort,
 respects fixed labels and explicit no-write requests, and never uses unrelated
 editor tabs to guess the task repository.
+
+
+Chat profiles and workspace filtering
+------------------------------------
+
+Every workspace initially uses Default. Open **Chat Profile** from the **...**
+menu to create, copy, select, rename or remove a profile. The current workspace
+remembers its selection; other windows keep theirs. A custom profile name appears
+beside Navigator's title. Profiles share existing Codex conversations, never
+copy messages, and do not change running goals, permissions or instruction routing
+merely by switching. Organisation changes in a shared profile appear in other
+visible windows on their next refresh.
+
+New profiles can copy current organisation or start with an empty selection.
+**Choose Chats for This Profile** saves an explicit selection; these chats,
+favourites and pins remain available beyond the 24-hour filter. **Include All
+Recent Chats** restores automatic discovery from the bounded recent history.
+Hiding still hides a saved chat. Removing a profile leaves Codex conversations
+untouched and returns its other windows to Default when they next refresh.
+
+**Show Chats Relevant to This Workspace** filters by exact associated Git roots,
+including nested repositories individually. Unassigned chats remain visible so
+new or unlabelled conversations are accessible. Custom label text alone is not
+repository evidence. The filter has a visible Clear button and is remembered in
+the profile; its repository matches follow the current workspace.
+
+Older workspace organisation is imported once as each workspace is opened.
+Nonconflicting entries join Default. Conflicting entries keep the existing Default
+value and remain recoverable through **Restore Workspace Organisation**, which
+creates a separate profile from the original snapshot. Original VS Code state is
+retained. Global renames, hides and pins are imported once, not revived on every
+workspace visit. Profiles and cached recency use a local transactional SQLite
+store under VS Code's extension storage, separated by Codex home. This shares
+across workspaces within the same VS Code user profile; it is not cloud sync.
+
+Verified browsing setup follows that shared store. Each workspace still checks
+its own hook configuration and trust; problems show a notice without hiding
+established chats. Remembered completion never grants hook trust.
+
+Compact, column and list layouts retain their existing thresholds. Complete rows
+fit the actual available frame, including search and notices, then share spare
+height up to 1.5 times their natural height. Fonts and controls do not scale.
+Sparse lists may retain blank space to avoid oversized cards. VS Code still owns
+the outer view's minimum height and divider position.

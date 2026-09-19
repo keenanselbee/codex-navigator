@@ -86,6 +86,7 @@ exports.run = async function (context, fixtureVscode) {
             separators:[...document.querySelectorAll('.separator-right')].map(item=>({width:getComputedStyle(item,'::after').width,pointer:getComputedStyle(item,'::after').pointerEvents})),
             ids:[...document.querySelectorAll('.chat')].map(item=>JSON.parse(item.dataset.vscodeContext).navigatorChatId),
             fits:[...document.querySelectorAll('.chat')].every(item=>{const r=item.getBoundingClientRect(),v=document.getElementById('viewport').getBoundingClientRect();return r.bottom<=v.bottom+0.5&&r.right<=v.right+0.5&&r.left>=v.left-0.5;}),
+            rowHeight:document.querySelector('.chat')?.getBoundingClientRect().height,gridHeight:document.getElementById('chats').getBoundingClientRect().height,
             scrollHeight:document.getElementById('viewport').scrollHeight,viewportHeight:document.getElementById('viewport').clientHeight,
             overflow:getComputedStyle(document.getElementById('viewport')).overflowY,more:!!document.getElementById('more'),
             titleHeight:document.querySelector('.title')?.getBoundingClientRect().height,titleLineHeight:parseFloat(getComputedStyle(document.querySelector('.title')||document.body).lineHeight),
@@ -186,6 +187,15 @@ exports.run = async function (context, fixtureVscode) {
         return fs.existsSync(windowMarker(name));
       };
       await until(() => windowReached('ready'), 'second real VS Code window shares the installation');
+      const profileNames = companionProvider.profiles.get('chatNames.v1', {});
+      fs.writeFileSync(windowMarker('profile-start'), '{}');
+      profileNames[id(90)] = 'First window edit';
+      await companionProvider.profiles.update('chatNames.v1', profileNames);
+      await until(() => windowReached('profile-edited'), 'second window writes independent organisation');
+      const mergedNames = companionProvider.profiles.get('chatNames.v1');
+      assert.equal(mergedNames[id(90)], 'First window edit');
+      assert.equal(mergedNames[id(91)], 'Second window edit');
+
       const originalRecord = await companionContext.secrets.get('license.production.v1');
       const expiredRecord = { ...JSON.parse(originalRecord), trialStartedAt: Date.now()-8*86400000, observedAt: Date.now() };
       await companionContext.secrets.store('license.production.v1', JSON.stringify(expiredRecord));
@@ -193,7 +203,7 @@ exports.run = async function (context, fixtureVscode) {
       await companionContext.secrets.store('license.production.v1', originalRecord);
       await until(() => windowReached('passed'), 'access restoration propagates to the second window');
       fs.writeFileSync(path.join(root, 'result-restart.json'), JSON.stringify({ phase:'restart', passed:true, vscode:vscode.version,
-        verified:['protected record survives real VS Code process restart', 'same installation and original trial deadline', 'no second trial', 'startup chat view restored before live metadata', 'second real window shares installation and observes expiry and restoration'],
+        verified:['protected record survives real VS Code process restart', 'same installation and original trial deadline', 'no second trial', 'startup chat view restored before live metadata', 'second real window shares installation and observes expiry and restoration', 'new workspace shares Default labels and browsing admission', 'two real windows merge independent organisation edits'],
         scope:'Same isolated local profile after full host exit. No uninstall/reinstall or paid provider requests.' }, null, 2));
       return;
     }
@@ -264,7 +274,7 @@ exports.run = async function (context, fixtureVscode) {
     assert.equal(new Set(Object.values(automatic)).size,2,'distinct automatic colours');
     const defaultTarget=vscode.Uri.from({scheme:'openai-codex',authority:'route',path:'/local/'+id(11)});
     await vscode.commands.executeCommand('codexNavigator.assignRepository',defaultTarget,vscode.Uri.file(path.join(root,'parent')));
-    assert.equal(companionContext.workspaceState.get('repositoryModes.v1')['local/'+id(11)],'auto','multi-repo selections default to Auto');
+    assert.equal(companionProvider.profiles.get('repositoryModes.v1')['local/'+id(11)],'auto','multi-repo selections default to Auto');
     assert.deepEqual(companionContext.globalState.get('automaticRepositoryColours.v1'),automatic,'assigning a chat does not reshuffle colours');
     const noColourPick=companionProvider.pickColour({title:'Repository fixture',resetLabel:'Automatic',allowNone:true,initialNone:true,recent:[],repositories:Object.values(automatic)});
     await until(async()=>(await probe()).pickerHidden===false,'repository colour picker');
@@ -468,7 +478,7 @@ exports.run = async function (context, fixtureVscode) {
     await until(async()=>(await probe()).ids.includes(id(4)),'pin target visible');
     const pinnedPosition=(await probe()).ids.indexOf(id(4));
     await companion.webview.postMessage({type:'fixture:click',selector:'.pin[data-focus="'+id(4)+':pin"]'});
-    await until(()=>companionContext.globalState.get('pinnedChats.v1',{})[id(4)],'pin persisted');
+    await until(()=>companionProvider.profiles.get('pinnedChats.v1',{})[id(4)],'pin persisted');
     assert.deepEqual((await probe()).pinOrder,['label','star','pin'],'pin follows star');
     await companion.webview.postMessage({type:'fixture:leave'});
     nativeRecent=(await readRecentConversations(process.env.CODEX_HOME)).filter(row=>row.id!==id(4)).reverse();
@@ -489,7 +499,7 @@ exports.run = async function (context, fixtureVscode) {
       await vscode.commands.executeCommand('codexNavigator.sidebar.repositories',repoMenu.menuContext);
     } finally { vscode.window.showQuickPick=originalPicker; }
     assert.equal(offered.length,2,'repository picker includes both workspace Git roots');
-    await until(()=>companionContext.workspaceState.get('repositoryAssignments.v1',{})['local/'+selectedId]?.root===offered[1].assignment.root,'native repository command preserves clicked chat identity');
+    await until(()=>companionProvider.profiles.get('repositoryAssignments.v1',{})['local/'+selectedId]?.root===offered[1].assignment.root,'native repository command preserves clicked chat identity');
     await vscode.commands.executeCommand('codexNavigator.showRepositoryColours');
     await until(async()=>!(await probe()).repositoryPageHidden&&(await probe()).repositoryRoots.length===2,'repository colours replaces chat contents');
     const colourRoot=(await probe()).repositoryRoots[0];
@@ -525,7 +535,7 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#repositoryBack'});
     await until(async()=>(await probe()).repositoryPageHidden&&(await probe()).rows>0,'back restores chats');
     const labelPicker = navigatorUi.window.showQuickPick;
-    const routingBefore = JSON.stringify(companionContext.workspaceState.get('customRouting.v1'));
+    const routingBefore = JSON.stringify(companionProvider.profiles.get('customRouting.v1'));
     const labelColour = async (uri, hex, shared) => {
       navigatorUi.window.showQuickPick = async items => (await items).find(item => item.shared === shared);
       const changing = vscode.commands.executeCommand('codexNavigator.setChatColour', uri);
@@ -546,9 +556,32 @@ exports.run = async function (context, fixtureVscode) {
       await labelColour(defaultTarget,'#FF0000',false);
       await labelColour(target,'#6655FF',true);
       await until(async()=>{const c=(await probe()).rowColours;return c[id(11)]==='rgb(255, 0, 0)'&&c[id(12)]==='rgb(102, 85, 255)';},'explicit chat override survives shared colour changes');
-      assert.equal(JSON.stringify(companionContext.workspaceState.get('customRouting.v1')),routingBefore,'matching labels never copy repository routing');
+      assert.equal(JSON.stringify(companionProvider.profiles.get('customRouting.v1')),routingBefore,'matching labels never copy repository routing');
     } finally { navigatorUi.window.showQuickPick = labelPicker; }
-    const setupChecks = await require('./setup-integration.cjs').run(companionContext, vscode, until);
+    const filled = await probe();
+    assert.ok(filled.fits, 'frame filling keeps complete chat cells within bounds');
+    assert.ok(filled.rowHeight <= 70, 'frame fitting preserves compact readable rows');
+    // Profile switching uses the actual command and webview, without reloading Codex.
+    const profilePicker = navigatorUi.window.showQuickPick, profileInput = navigatorUi.window.showInputBox;
+    const routingSnapshot = JSON.stringify(companionProvider.profiles.shared('routingScopes.v1', {}));
+    try {
+      let step = 0;
+      navigatorUi.window.showQuickPick = async choices => step++ === 0 ? choices.find(item => item.id === 'create') : choices.find(item => item.copy === true);
+      navigatorUi.window.showInputBox = async () => 'Education';
+      await vscode.commands.executeCommand('codexNavigator.chatProfiles');
+      const customId = companionProvider.profiles.activeId;
+      assert.notEqual(customId, 'default');
+      assert.equal(companionContext.workspaceState.get('chatProfile.v1'), customId);
+      await until(()=>companion.description?.includes('Education'),'custom profile name visible');
+      await vscode.commands.executeCommand('codexNavigator.setCustomLabel', target, 'School profile');
+      navigatorUi.window.showQuickPick = async choices => choices.find(item => item.id === 'default');
+      await vscode.commands.executeCommand('codexNavigator.chatProfiles');
+      await until(async()=>(await probe()).rowColours[id(12)]==='rgb(102, 85, 255)','Default colour restored after profile switch');
+      assert.equal(companionProvider.profiles.get('customLabels.v1')['local/'+id(12)],'UBC');
+      assert.equal(JSON.stringify(companionProvider.profiles.shared('routingScopes.v1', {})),routingSnapshot,'organisation profile switches do not redirect routing');
+      assert.equal(companionContext.workspaceState.get('chatProfile.v1'),'default');
+    } finally { navigatorUi.window.showQuickPick=profilePicker; navigatorUi.window.showInputBox=profileInput; }
+    const setupChecks = await require('./setup-integration.cjs').run(companionContext, vscode, until, companionProvider.profiles);
     // Setup's automatic-label test deliberately replaces this chat's custom label.
     await vscode.commands.executeCommand('codexNavigator.setCustomLabel',target,'UBC');
     const {hookReadiness,hookSetupStatus}=require('../dist/hook-setup');
@@ -574,9 +607,9 @@ exports.run = async function (context, fixtureVscode) {
     const expired=JSON.parse(originalLicense);
     expired.trialStartedAt=Date.now()-8*86400000; expired.observedAt=Date.now();
     fixtureGoal={...fixtureGoal,status:'active'};
-    const savedStars=JSON.stringify(companionContext.workspaceState.get('starredChats.v1'));
-    const savedLabels=JSON.stringify(companionContext.workspaceState.get('customLabels.v1'));
-    const savedAssignments=JSON.stringify(companionContext.workspaceState.get('repositoryAssignments.v1'));
+    const savedStars=JSON.stringify(companionProvider.profiles.get('starredChats.v1'));
+    const savedLabels=JSON.stringify(companionProvider.profiles.get('customLabels.v1'));
+    const savedAssignments=JSON.stringify(companionProvider.profiles.get('repositoryAssignments.v1'));
     const inputBox=vscode.window.showInputBox, quickPick=vscode.window.showQuickPick;
     let finishLabel, finishRepository;
     vscode.window.showInputBox=async()=>new Promise(resolve=>{finishLabel=()=>resolve('Must not apply after expiry');});
@@ -592,8 +625,8 @@ exports.run = async function (context, fixtureVscode) {
       finishLabel();finishRepository();
       await Promise.all([pendingLabel,pendingRepository]);
     } finally {vscode.window.showInputBox=inputBox;vscode.window.showQuickPick=quickPick;}
-    assert.equal(JSON.stringify(companionContext.workspaceState.get('customLabels.v1')),savedLabels,'pending label input cannot apply after expiry');
-    assert.equal(JSON.stringify(companionContext.workspaceState.get('repositoryAssignments.v1')),savedAssignments,'pending repository choice cannot apply after expiry');
+    assert.equal(JSON.stringify(companionProvider.profiles.get('customLabels.v1')),savedLabels,'pending label input cannot apply after expiry');
+    assert.equal(JSON.stringify(companionProvider.profiles.get('repositoryAssignments.v1')),savedAssignments,'pending repository choice cannot apply after expiry');
     const readsAfterExpiry=goalReads;
     await companion.webview.postMessage({type:'action',id:id(12),action:'star'});
     await companion.webview.postMessage({type:'goal',id:id(12),goal:fixtureGoal});
@@ -602,13 +635,13 @@ exports.run = async function (context, fixtureVscode) {
     assert.equal(goalReads,readsAfterExpiry,'expired Navigator stops goal metadata polling');
     assert.equal(goalWrites,writesBeforeExpiry,'expiry and stale controls never pause a Codex goal');
     assert.equal(fixtureGoal.status,'active');
-    assert.equal(JSON.stringify(companionContext.workspaceState.get('starredChats.v1')),savedStars,'host command and stale webview actions cannot change saved stars');
+    assert.equal(JSON.stringify(companionProvider.profiles.get('starredChats.v1')),savedStars,'host command and stale webview actions cannot change saved stars');
     await companionContext.secrets.store(protectedKey,originalLicense);
     await until(async()=>(await probe()).licenseText.includes('trial is active'),'restoring the fixture entitlement refreshes the license screen');
     await companion.webview.postMessage({type:'fixture:click',selector:'#licenseBack'});
     await until(async()=>!(await probe()).licenseVisible&&(await probe()).rows>0,'regaining access restores unchanged chats');
     const result = { phase: 'initial', passed: true, vscode: vscode.version,
-      verified: [...setupChecks, 'mandatory initial setup despite old dismissal flags', 'hook outages preserve established chats with nonblocking diagnosis', 'shared custom-label colours and explicit chat overrides', 'Navigator rename and original-title lookup/search/reset', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
+      verified: [...setupChecks, 'profile create/copy/switch preserves independent organisation and routing', 'frame height fitting with bounded row expansion', 'mandatory initial setup despite old dismissal flags', 'hook outages preserve established chats with nonblocking diagnosis', 'shared custom-label colours and explicit chat overrides', 'Navigator rename and original-title lookup/search/reset', 'natural visible count below and above eight', 'complete rows without scroll or Show more',
         'native recency order independent of activity', 'recency outage preserves order', 'whole-panel pointer ordering hold', 'safe title text', 'coloured label text', 'automatic distinct repository colours', 'multi-repo Auto default', 'Automatic versus No colour picker', 'star control', 'search',
         'height-driven layouts', 'width-dependent columns', 'resize preserves focus', 'column and fitted row counts survive webview reload', 'native header search',
         'native extension URI dispatch', 'both sidebar views visible', 'no patch bridge',

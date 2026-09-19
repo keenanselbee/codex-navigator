@@ -29,8 +29,11 @@ terminal only when you choose Open Hook Review. Trust is granted in Codex, never
 by Navigator; setup does not submit test prompts.
 
 Custom chat names, labels, stars, chat colours, modes, readiness acknowledgements and setup choices
-are stored in VS Code extension state. A startup cache retains up to 200 chat IDs,
-titles, ordering and recency timestamps in workspace state; it contains no messages
+are stored locally in VS Code extension storage. Chat profiles, original workspace
+migration snapshots and removed-profile recovery snapshots use a transactional
+SQLite database separated by Codex home. The selected profile remains in workspace
+state. A shared startup cache retains up to 200 chat IDs,
+titles, ordering and recency timestamps; it contains no messages
 or live activity/goal status. Automatic repository colours retain
 normalized Git paths in the local profile. Custom repository colours are stored
 in user settings and may sync through VS Code Settings Sync if enabled.

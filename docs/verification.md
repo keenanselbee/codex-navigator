@@ -1,7 +1,7 @@
 Verification
 ============
 
-Current release: Codex Navigator 1.5.0. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.7.0. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
@@ -117,3 +117,20 @@ npm run package
 Packaging does not install, commit or publish. Verify the packaged payload and
 retain the artifact hash before installation. Existing reserved packages must not
 be overwritten with new contents or reinterpreted under the new license.
+
+
+Profile and frame-fit acceptance: 1.7.0
+-------------------------------------
+
+The profile migration and workspace filter pass 146 public unit tests, including
+stale snapshot merges, deletions, recovered conflicts, shared browsing admission,
+exact-root filtering with unassigned chats and old saved selections. All 24
+commercial tests pass; the private implementation is unchanged.
+
+Real isolated VS Code 1.137.0 verifies profile create/copy/switch through the
+command and webview, independent labels, persisted workspace selection and
+unchanged routing on profile switches. Restart restores organisation. A second
+workspace window inherits Default and merges independent simultaneous edits.
+Frame fitting keeps the existing layout transitions and complete cells within
+the available frame. The original native hook and customer-journey qualifications
+remain as recorded above and in the release preparation document.

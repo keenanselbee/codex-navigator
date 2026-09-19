@@ -20,7 +20,7 @@ own global instruction marker. There is no old identity or patch migration.
 Existing project URLs may retain their repository slug until the hosting project
 is renamed; a display-name change does not silently change a remote repository.
 
-Custom-label colours use trimmed, case-insensitive text keys in workspace state.
+Custom-label colours use trimmed, case-insensitive text keys in the selected chat profile.
 Legacy explicit colours seed the shared palette deterministically; conflicting
 chat overrides remain explicit. Label edits inherit the destination colour, and
 colour edits offer shared-label or chat-only scope. Label colour sharing never
@@ -53,7 +53,7 @@ It initializes the protocol and reads thread recency, visible goals and setup's
 hook definitions/trust. It does not load/resume threads or perform goal writes.
 Requests time out; failed reads return unavailable and use bounded retry delays.
 `ChatRecency` preserves server order, ties and last known order across outages.
-Its bounded workspace snapshot also saves titles and recency times for up to 200
+Its bounded shared snapshot also saves titles and recency times for up to 200
 chats. Startup publishes this cache merged with the local index before querying
 live metadata, scope reports or activity. The cache stores no messages, goals or
 activity indicators. A successful native response replaces it, including an empty
@@ -93,7 +93,7 @@ One reusable page puts required activity hooks first, with optional automatic
 labels and project instructions. Each shows its next action, with diagnostics
 and options under Details. Arrangement instructions appear only after the action.
 Initial setup requires installed, enabled and trusted hooks; old dismissal flags
-cannot bypass it. Verified completion is saved per workspace and admits browsing
+cannot bypass it. Verified browsing completion is saved across workspaces in the local profile store and admits browsing
 after restart, independently of current hook trust. Later failures never replace
 the chat list or cancel a colour picker. Unknown status retries quietly for 30
 seconds before a nonblocking notice; confirmed configuration problems show their
@@ -149,3 +149,28 @@ and current docs. Patch installers, injected bridge assets and compatibility cod
 are removed. Tests and scratch artifacts are excluded. Reserved release packages
 are immutable. Source availability grants inspection; other rights follow the
 [license](../LICENSE.md). Earlier MIT grants are not revoked.
+
+
+Chat profile persistence
+------------------------
+
+`ChatProfiles` stores bounded JSON records in SQLite under globalStorageUri,
+partitioned by normalized Codex home. BEGIN IMMEDIATE transactions serialize
+writers. Map updates apply only differences from the caller's last snapshot,
+preserving unrelated edits/deletions in another window. Host refresh reconciles
+live maps while retaining pending local edits. Workspace state stores only the
+selected profile ID for this feature; profiles may be shared across windows.
+
+Migration retains each original workspace snapshot, imports disjoint entries to
+Default and leaves conflicts recoverable as a separate profile. Old global
+organisation is imported only once. Original VS Code records remain untouched.
+Custom profiles can store explicit chat selections with identity/title snapshots;
+no transcript bodies or live goal state are stored. Default includes bounded
+recent history unless the user explicitly chooses a selection.
+
+Profile switching invalidates in-flight scope/row reads and rejects stale webview
+profile actions. Switching is deferred while an interactive Navigator action is
+open. Routing uses a separate shared scope snapshot: merely hydrating another
+profile establishes a comparison baseline, not a new routing instruction.
+Explicit scope changes and later automatic reports can still update routing.
+The workspace filter uses associated exact roots and includes unassigned chats.
