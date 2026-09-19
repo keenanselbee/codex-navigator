@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.7.0 (verified candidate; production packaging pending)
+Product: Codex Navigator 1.7.0 (verified production package on Desktop)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -257,3 +257,23 @@ packaging will record the clean reviewed public revision and unchanged private
 revision `279a6513450a108980544c6291bfad7f47343a65`, followed by verification of the
 exact release archive and Desktop copy. Marketplace publication remains with the
 owner.
+
+
+Verified production package: 1.7.0
+----------------------------------
+
+The canonical packager produced `dist/codex-navigator-1.7.0.vsix` and its paired
+receipt from public revision `8585f3823bd7ff5cd82b8eb6eb54af09ed012588` and
+private revision `279a6513450a108980544c6291bfad7f47343a65`. All 60 archive entries
+matched the allowlisted payload; private source and source maps were excluded.
+SHA-256: `8124850757694e34257d18ac1cfc67525f7799d071464182537b9378bc15171a`.
+
+The exact release archive passed isolated production-mode installation and
+reinstallation in `installed-acceptance-nrMkSl`: 57 file hashes and the manifest
+matched, profile stars persisted and expired trial state survived reinstall.
+The disposable extension was removed. The normal installation was unchanged.
+
+The VSIX and paired receipt are on `C:\Users\Keenan\Desktop`; both Desktop
+copies match their source hashes. Marketplace upload remains with the owner.
+This evidence update is excluded from the VSIX and preserves the recorded build
+revision and immutable archive. No Git remote push was performed.
