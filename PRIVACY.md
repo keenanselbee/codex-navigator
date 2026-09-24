@@ -19,6 +19,10 @@ by the detector or sent to a classifier.
 Optional activity hooks receive input that can contain prompt/response text. The
 collector discards text and saves only identifiers, lifecycle status and times.
 Bounded diagnostics contain event names, chat IDs, outcomes and timestamps.
+The local output channel also records activity transitions for up to 200 chats
+per refresh, including turn IDs, source statuses and observation times. Runtime
+connection diagnostics contain short classifications and error codes, not raw
+stderr or conversation contents.
 Activity detection can also read bounded local transcript lifecycle/tool records
 and query an existing local runtime. It does not answer approvals or store messages.
 

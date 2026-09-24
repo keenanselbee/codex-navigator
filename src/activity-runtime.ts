@@ -32,9 +32,11 @@ export class RuntimeActivity {
     if (!this.binary || Date.now() < this.retryAt) return false;
     this.connecting = (async () => {
       const child = spawn(this.binary!, ['app-server', 'proxy'], { env: { ...process.env, CODEX_HOME: this.home }, windowsHide: true, stdio: 'pipe' });
-      this.child = child; let buffer = '';
-      child.stdout.setEncoding('utf8'); child.stderr.resume();
-      child.on('error', () => this.disconnect()); child.on('exit', () => { if (this.child === child) this.disconnect(); });
+      this.child = child; let buffer = '', diagnostic = '', exitCode: number | null = null, spawnCode = '';
+      child.stdout.setEncoding('utf8');
+      child.stderr.on('data', data => { diagnostic += data.toString().slice(0, Math.max(0, 2048 - diagnostic.length)); });
+      child.on('error', error => { spawnCode = (error as NodeJS.ErrnoException).code || ''; if (this.child === child) this.disconnect(); });
+      child.on('exit', code => { exitCode = code; if (this.child === child) this.disconnect(); });
       child.stdout.on('data', data => {
         buffer += data.toString(); if (buffer.length > 4 * 1024 * 1024) { this.disconnect(); return; }
         let end;
@@ -47,7 +49,16 @@ export class RuntimeActivity {
         }
       });
       const response = await this.request('initialize', { clientInfo: { name: 'codex_navigator_status', version: require('../package.json').version }, capabilities: { experimentalApi: true } });
-      if (!response || !this.child) { this.disconnect(); this.report('Existing runtime unavailable; using hooks and local lifecycle records.'); return false; }
+      if (!response || !this.child) {
+        this.disconnect();
+        // Classify bounded stderr instead of logging arbitrary runtime text,
+        // which can contain local paths or other private configuration.
+        const socket = /failed to connect to socket/i.test(diagnostic);
+        const osError = /os error (\d{1,6})/i.exec(diagnostic)?.[1];
+        const code = /^[A-Z][A-Z0-9_]{0,31}$/.test(spawnCode) ? spawnCode : undefined;
+        this.report(`Existing runtime unavailable; using hooks and local lifecycle records. ${socket ? 'Control socket connection failed.' : 'Initialization failed or timed out.'}${osError ? ' OS error ' + osError + '.' : ''}${code ? ' Spawn error ' + code + '.' : ''}${exitCode !== null ? ' Exit code ' + exitCode + '.' : ''}`);
+        return false;
+      }
       this.child.stdin.write(JSON.stringify({ method: 'initialized' })+'\n');
       this.report('Connected to existing runtime for read-only activity status.'); return true;
     })();

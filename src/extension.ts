@@ -7,7 +7,7 @@ import { assignAutomaticColours, resolvedRepositoryColours } from './automatic-c
 import { ChatGoals } from './chat-goals';
 import { ChatSidebar } from './chat-sidebar';
 import { LicenseAccess } from './license-access';
-import { TranscriptActivity, combineActivity } from './activity-events';
+import { ActivityDiagnostics, TranscriptActivity, combineActivity } from './activity-events';
 import { RuntimeActivity } from './activity-runtime';
 import { readChatActivity } from './chat-activity';
 import { inheritedColour, readColours, repositoryColourKey } from './colours';
@@ -83,6 +83,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const sessions = new SessionIndex(home);
   const discussionReader = new DiscussionReader();
   const transcriptActivity = new TranscriptActivity();
+  const activityDiagnostics = new ActivityDiagnostics(record => output.appendLine(JSON.stringify({ time: new Date().toISOString(), ...record })));
   const codexPath = vscode.extensions.getExtension('openai.chatgpt')?.extensionPath;
   const runtimeActivity = new RuntimeActivity(!vscode.env.remoteName ? codexBinary(codexPath) : undefined, home,
     message => output.appendLine(JSON.stringify({ time: new Date().toISOString(), event: 'activity-runtime', message })));
@@ -204,6 +205,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const live = runtime.get(item.id);
         if (live) activity = { ...live, workedAt: Math.max(activity.workedAt, live.workedAt) };
         if (activity.status === 'ready' && (activity.completedAt || 0) <= (seen[item.id] || 0)) activity = { ...activity, status: 'idle', detail: undefined };
+        if (items.length < 200) activityDiagnostics.record(item.id, hook, transcript, live, activity);
       }
       items.push({ ...item, roots: scopeRoots(key), label: display.label, hasCustomLabel: !!customLabels[key], colour: colour.colour, starred: !!starredChats[key],
         activity: activity?.status, activityDetail: activity?.detail, completedAt: activity?.completedAt,

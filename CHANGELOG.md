@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+1.7.1
+-----
+
+- Recover activity from fresh reasoning and tool calls after large context
+  compactions, including when older hook signals have expired.
+- Let newer stop and interruption hooks clear stale working indicators while
+  retaining completed-turn ready dots.
+- Keep transcript offsets accurate across partial UTF-8 records and reset
+  activity when the transcript file is replaced.
+- Add concise activity-transition and runtime-connection diagnostics without
+  recording conversation contents.
+
 1.7.0
 -----
 

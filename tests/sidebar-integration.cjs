@@ -423,6 +423,33 @@ exports.run = async function (context, fixtureVscode) {
     await until(async () => (await probe()).readyDots===0,'opening completed chat clears ready dot');
     await recordEvent(process.env.CODEX_HOME,{session_id:id(11),turn_id:'fixture-b',hook_event_name:'Interrupt'});
     await until(async () => (await probe()).spinners===0,'interruption clears spinner');
+    // Exercise the complete reader -> host -> webview path with no live runtime,
+    // no active goal and an expired hook. The compaction body is synthetic.
+    const activityLine=(type,payload)=>JSON.stringify({timestamp:new Date().toISOString(),type,payload})+'\n';
+    await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-compaction',hook_event_name:'UserPromptSubmit'});
+    fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_started',turn_id:'fixture-compaction'}));
+    await companionProvider.refresh();
+    await until(async () => (await probe()).spinners===1,'new turn reaches sidebar');
+    const hookFile=path.join(process.env.CODEX_HOME,'codex-navigator','activity',id(12)+'.json');
+    const expiredHook=JSON.parse(fs.readFileSync(hookFile,'utf8'));expiredHook.observedAt=expiredHook.workedAt=Date.now()-20*60000;
+    fs.writeFileSync(hookFile,JSON.stringify(expiredHook));
+    fs.appendFileSync(activityTranscript,activityLine('compacted',{message:'x'.repeat(8*1024*1024)})
+      +activityLine('turn_context',{turn_id:'fixture-compaction'})+activityLine('event_msg',{type:'context_compacted'})
+      +activityLine('response_item',{type:'custom_tool_call',name:'exec',call_id:'fixture-call'}));
+    await companionProvider.refresh();
+    await until(async () => (await probe()).spinners===1,'fresh post-compaction tool call reaches sidebar with expired hook');
+    assert.equal(companionProvider.rows.find(row=>row.id===id(12)).activity,'working');
+    fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_complete',turn_id:'fixture-compaction'}));
+    await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-compaction',hook_event_name:'Stop'});
+    await companionProvider.refresh();
+    await until(async () => (await probe()).spinners===0&&(await probe()).readyDots===1,'post-compaction completion removes spinner and shows ready');
+    await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-interrupt',hook_event_name:'UserPromptSubmit'});
+    fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_started',turn_id:'fixture-interrupt'}));
+    await companionProvider.refresh();
+    await until(async () => (await probe()).spinners===1,'interrupt fixture reaches sidebar');
+    await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-interrupt',hook_event_name:'Interrupt'});
+    await companionProvider.refresh();
+    await until(async () => (await probe()).spinners===0,'newer interrupt overrides cached working transcript in sidebar');
     await companion.webview.postMessage({type:'fixture:leave'});
     assert.equal((await probe()).ids[0],id(12),'background completion and interruption do not change native order');
     nativeRecent=[nativeRecent.find(row=>row.id===id(11)),...nativeRecent.filter(row=>row.id!==id(11))];
@@ -646,7 +673,7 @@ exports.run = async function (context, fixtureVscode) {
         'height-driven layouts', 'width-dependent columns', 'resize preserves focus', 'column and fitted row counts survive webview reload', 'native header search',
         'native extension URI dispatch', 'both sidebar views visible', 'no patch bridge',
         'row context command dispatch', 'right-click/keyboard menu events', 'coloured stars beside repository labels',
-        'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'single-line repository labels keep row heights and control space', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt'],
+        'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'single-line repository labels keep row heights and control space', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt', 'large compaction with expired hook recovers and completes in sidebar', 'newer interrupt clears cached working transcript'],
       scope: 'Real isolated VS Code; fixture URI handler and synthetic hook events. Native-menu context data and command dispatch exercised with synthetic mouse/keyboard events; picker choices supplied by fixture. Native overlay appearance is not inspected. No authenticated Codex conversation.' };
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));

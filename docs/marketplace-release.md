@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.7.0 (verified production package on Desktop)
+Product: Codex Navigator 1.7.1 (release candidate)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,32 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+
+Prepared release inputs: 1.7.1
+-----------------------------
+
+Activity now recovers from fresh reasoning/tool invocations after large
+compactions using the current turn context. Context alone does not imply work;
+unread gaps and replaced files do not retain uncertain activity. Bounded reads
+keep exact byte offsets when a tail begins inside a UTF-8 character. Newer
+stop/interruption hooks override older working/waiting records, and matching
+completion still supplies the ready dot. Local transition and connection-error
+diagnostics omit conversation contents and raw runtime stderr.
+
+All 152 public tests and the missing-private build guard passed in
+`public-only-mRM9yK`; all 24 commercial tests passed. Isolated VS Code 1.137
+integration passed initial, restart and second-window checks in
+`integration-9cdHmI`, including the full reader-to-sidebar compaction recovery,
+completion and interruption scenarios. The first integration attempt had a
+duplicate fixture variable; it was corrected before the successful run.
+
+The original screenshot is not claimed fixed by reproduction: replay with its
+fresh hook still selected working. This release addresses reproduced activity
+weaknesses and adds diagnostics for any recurrence. Production packaging and
+exact-archive installed acceptance follow the clean public release commit.
+The private source remains at `279a6513450a108980544c6291bfad7f47343a65`.
+Marketplace publication remains with the owner.
 
 Release checklist
 -----------------

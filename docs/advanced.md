@@ -208,6 +208,20 @@ Unfamiliar records leave status unknown. Working/waiting observations expire
 without fresh evidence. A blue ready dot records a completed turn since opening
 through Navigator; native navigation is not tracked reliably.
 
+Large transcript updates reset uncertain activity rather than carrying work
+across unread records. After compaction, turn context identifies subsequent
+reasoning and tool calls so activity can recover within the bounded tail, even
+after a reload. Context and compaction alone do not start a spinner. Newer stop
+or interruption hooks override older working/waiting records; a matching
+completed transcript can still supply the ready dot.
+
+The Codex Navigator output channel records activity state changes for up to 200
+chats per refresh, with thread
+and turn IDs, source statuses and observation times. Repeated polling does not
+repeat unchanged states. Runtime connection failures include short error
+classifications and numeric codes, without raw stderr, paths or conversation
+contents. These diagnostics help distinguish missing evidence from UI issues.
+
 An active goal also displays one animated circle immediately after its goal icon,
 even between turns. A working turn shares that spinner;
 pausing the goal removes it only when the chat is not working. When a goal and another activity indicator appear together, the chat title uses

@@ -1,7 +1,7 @@
 const {test}=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs'), vm=require('node:vm');
 const {EventEmitter}=require('node:events');
 test('runtime observer only reads state, distinguishes approval/input and terminal failures', async () => {
- const calls=[],child=new EventEmitter();child.stdout=new EventEmitter();child.stdout.setEncoding=()=>{};child.stderr={resume(){}};child.kill=()=>{};
+ const calls=[],child=new EventEmitter();child.stdout=new EventEmitter();child.stdout.setEncoding=()=>{};child.stderr=new EventEmitter();child.kill=()=>{};
  child.stdin={write(line,callback){
   const m=JSON.parse(line);calls.push(m.method);if(!m.id)return;
   let result={};
@@ -22,4 +22,19 @@ test('runtime observer only reads state, distinguishes approval/input and termin
  assert.equal(result.get('complete').completedAt,10000);assert.equal(result.has('unloaded'),false);
  assert.ok(calls.every(method=>['initialize','initialized','thread/list','thread/turns/list'].includes(method)));
  runtime.dispose();
+});
+
+test('runtime connection failures report bounded classifications without private stderr', async () => {
+ const reports=[],child=new EventEmitter();let spawns=0;
+ child.stdout=new EventEmitter();child.stdout.setEncoding=()=>{};child.stderr=new EventEmitter();child.kill=()=>{};
+ child.stdin={write(){queueMicrotask(()=>{
+   child.stderr.emit('data',Buffer.from('Error: failed to connect to socket at PRIVATE-PATH\n(os error 10050)\nSECRET='+ 'x'.repeat(10000)));
+   child.emit('exit',1);
+ });}};
+ const exports={};vm.runInNewContext(fs.readFileSync(require.resolve('../dist/activity-runtime'),'utf8'),{exports,require:name=>name==='node:child_process'?{spawn:()=>{spawns++;return child;}}:name==='./chat-goals'?require('../dist/chat-goals'):require(name),process,setTimeout,clearTimeout});
+ const runtime=new exports.RuntimeActivity('fixture','fixture',message=>reports.push(message));
+ assert.equal((await runtime.read(new Set(['chat']))).size,0);
+ assert.match(reports[0],/Control socket connection failed.*OS error 10050.*Exit code 1/);
+ assert.doesNotMatch(reports[0],/PRIVATE-PATH|SECRET/);assert.ok(reports[0].length<300);
+ await runtime.read(new Set(['chat']));assert.equal(spawns,1,'failure uses the existing retry backoff');runtime.dispose();
 });

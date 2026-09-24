@@ -3,7 +3,7 @@ const id='00000000-0000-0000-0000-000000000001';
 function fixture(moduleName,handler){
  const calls=[],children=[],exports={};
  function spawn(binary,args){
-  const child=new EventEmitter();child.stdout=new EventEmitter();child.stdout.setEncoding=()=>{};child.stderr={resume(){}};child.kill=()=>{child.killed=true;};
+  const child=new EventEmitter();child.stdout=new EventEmitter();child.stdout.setEncoding=()=>{};child.stderr=new EventEmitter();child.stderr.resume=()=>{};child.kill=()=>{child.killed=true;};
   child.stdin={write(line,callback){const m=JSON.parse(line);calls.push(m);if(m.id){const result=handler(m);queueMicrotask(()=>child.stdout.emit('data',JSON.stringify({id:m.id,...result})+'\n'));}callback?.();}};
   children.push({child,args});return child;
  }

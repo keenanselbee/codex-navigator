@@ -1,13 +1,29 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.7.0. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.7.1. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
 
 Automated checks
 ----------------
+
+- Activity regressions cover an 8 MiB compaction with fresh, missing and expired
+  hooks, cold tail reads, resumed tool calls, terminal records, file replacement,
+  and partial records after a UTF-8 tail boundary. Newer stop/interruption hooks
+  override older working/waiting transcripts without losing same-turn ready dots.
+- Activity diagnostics omit content and suppress unchanged snapshots. Runtime
+  tests classify a control-socket failure without logging raw stderr and retain
+  the existing retry backoff. The original missing-spinner screenshot remains
+  unexplained: replay with its fresh hook still selected working. These changes
+  fix reproduced weaknesses and provide evidence for any recurrence.
+- Version 1.7.1 passed 152 public tests in `public-only-mRM9yK`, the missing-private
+  build guard and all 24 commercial tests. Isolated VS Code 1.137 integration
+  passed initial, restart and second-window checks in `integration-9cdHmI`.
+  The real sidebar recovered after an 8 MiB compaction with an expired hook and
+  paused goal, then displayed completion and cleared a later interrupted turn.
+  These are synthetic lifecycle fixtures, not a reproduction of the screenshot.
 
 - Browser inspection confirms that the supplied sandbox portal URL reaches the
   Keenan Selbee customer sign-in page with a sandbox banner. This verifies URL

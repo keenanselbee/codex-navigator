@@ -41,7 +41,7 @@ async function fixture(t, { saved = {}, custom = {}, ready = false } = {}) {
     vscode, 'node:fs': { watch: () => ({ on() {}, close() {} }) }, 'node:fs/promises': { mkdir: async () => {} },
     './routing': { RoutingPublisher: class extends Idle { async publish() {} } },
     './scope-store': { codexHome: () => path.resolve('.codex-temp', 'unused-colour-fixture'), SessionIndex: Idle, reportedThreadIds: async () => [] },
-    './discussion': { DiscussionReader: Idle }, './activity-events': { TranscriptActivity: Idle },
+    './discussion': { DiscussionReader: Idle }, './activity-events': { TranscriptActivity: Idle, ActivityDiagnostics: Idle },
     './activity-runtime': { RuntimeActivity: Idle }, './chat-goals': { ChatGoals: Idle },
     './chat-recency': { ChatRecency: Idle }, './history': { readRecentConversations: async () => [] },
     './chat-sidebar': { ChatSidebar: class extends Idle { constructor(_context, _read, _goals, background) { super(); reportBackground = background; } async refresh() {} } },
