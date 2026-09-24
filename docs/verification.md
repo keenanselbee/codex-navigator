@@ -24,6 +24,11 @@ Automated checks
   The real sidebar recovered after an 8 MiB compaction with an expired hook and
   paused goal, then displayed completion and cleared a later interrupted turn.
   These are synthetic lifecycle fixtures, not a reproduction of the screenshot.
+- The exact production 1.7.1 VSIX passed all 60 archive-entry checks and isolated
+  installation/reinstallation in `installed-acceptance-nVW0Rs`, including 57
+  installed file hashes, manifest verification and trial-expiry persistence.
+  The Desktop VSIX and receipt match the verified originals. No normal-profile
+  installation, remote push or Marketplace publication was performed.
 
 - Browser inspection confirms that the supplied sandbox portal URL reaches the
   Keenan Selbee customer sign-in page with a sandbox banner. This verifies URL
