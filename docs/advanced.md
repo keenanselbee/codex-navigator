@@ -215,6 +215,11 @@ after a reload. Context and compaction alone do not start a spinner. Newer stop
 or interruption hooks override older working/waiting records; a matching
 completed transcript can still supply the ready dot.
 
+Rotated transcript files retain the conversation ID before their optional rollout
+ID suffix. Navigator selects the newest filename timestamp, verifies its session
+identity, and refreshes cached paths on file creation/removal or after 30 seconds.
+This activity refresh is independent of optional repository-focus detection.
+
 The Codex Navigator output channel records activity state changes for up to 200
 chats per refresh, with thread
 and turn IDs, source statuses and observation times. Repeated polling does not

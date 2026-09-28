@@ -57,6 +57,11 @@ export async function writeScopeReport(home: string, id: string, roots: string[]
   return true;
 }
 
+// Rotated transcripts append a rollout ID after the conversation ID.
+export function sessionThreadId(filename: string): string | undefined {
+  return /(?:^|[-\\/])([0-9a-f-]{36})(?:_[0-9a-f-]{36})?\.jsonl$/i.exec(filename)?.[1];
+}
+
 // Index only standard session directory names; never parse conversation bodies.
 // Limit traversal so a malformed or unusually large store cannot monopolize the host.
 export class SessionIndex {
@@ -73,9 +78,9 @@ export class SessionIndex {
 
   async get(id: string): Promise<SessionMetadata | undefined> {
     if (!threadIdPattern.test(id)) { return; }
-    if (this.metadata.has(id)) { return this.metadata.get(id); }
     if (!this.indexedAt || Date.now() - this.indexedAt > 30000) {
       this.indexedAt = Date.now();
+      const files = new Map<string, string>();
       let remaining = 20000;
       const visit = async (directory: string, depth: number): Promise<void> => {
         let entries;
@@ -86,13 +91,23 @@ export class SessionIndex {
           if (entry.isDirectory() && depth < 3 && /^\d{2,4}$/.test(entry.name)) {
             await visit(path.join(directory, entry.name), depth + 1);
           } else if (entry.isFile()) {
-            const match = /([0-9a-f-]{36})\.jsonl$/i.exec(entry.name);
-            if (match && threadIdPattern.test(match[1])) { this.files.set(match[1], path.join(directory, entry.name)); }
+            const threadId = sessionThreadId(entry.name);
+            if (threadId && threadIdPattern.test(threadId)) {
+              const previous = files.get(threadId);
+              // Rollout filenames begin with their creation timestamp. Old files
+              // may be touched later, so modification time does not select a turn.
+              if (!previous || entry.name > path.basename(previous)) files.set(threadId, path.join(directory, entry.name));
+            }
           }
         }
       };
       await visit(path.join(this.home, 'sessions'), 0);
+      for (const cachedId of this.metadata.keys()) {
+        if (files.get(cachedId) !== this.files.get(cachedId)) this.metadata.delete(cachedId);
+      }
+      this.files = files;
     }
+    if (this.metadata.has(id)) return this.metadata.get(id);
     const filename = this.files.get(id);
     if (!filename) { return; }
     let file;

@@ -23,7 +23,7 @@ import { ChatRecency } from './chat-recency';
 import { watch } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import * as path from 'node:path';
-import { codexHome, SessionIndex, readScopeReport, reportedThreadIds, parseScopeReport, ScopeReport } from './scope-store';
+import { codexHome, SessionIndex, sessionThreadId, readScopeReport, reportedThreadIds, parseScopeReport, ScopeReport } from './scope-store';
 import { DiscussionReader, projectNames } from './discussion';
 import { effectiveMode, modeKey, readModes, scopeAssignment } from './scope';
 
@@ -873,14 +873,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   activityWatcher.on('error', error => report(error));
   context.subscriptions.push({ dispose() { activityWatcher.close(); } });
   try {
-    const sessionWatcher = watch(path.join(home, 'sessions'), { recursive: true }, (_event, filename) => {
+    const sessionWatcher = watch(path.join(home, 'sessions'), { recursive: true }, (event, filename) => {
       if (!license.allowed()) return;
-      const id = /([0-9a-f-]{36})\.jsonl$/i.exec(filename?.toString() ?? '')?.[1];
+      const id = sessionThreadId(filename?.toString() ?? '');
       if (!id || !threadIdPattern.test(id)) { return; }
+      if (event === 'rename') sessions.invalidate();
       const key = 'local/' + id;
       if (effectiveMode(modes[key], assignments[key]) !== 'auto') { return; }
       if (!vscode.workspace.getConfiguration('codexNavigator').get('detectChatFocus', false)) { return; }
-      sessions.invalidate();
       if (knownKeys.has(key)) {
         discussionKeys.add(key);
         pendingKeys.add(key);

@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.7.1 (verified production package on Desktop)
+Product: Codex Navigator 1.7.2 (release inputs verified; packaging pending)
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,21 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+
+Prepared release inputs: 1.7.2
+-----------------------------
+
+Fix the reproduced missing-spinner failure for rotated transcripts. Filename
+parsing retains the conversation ID before an optional rollout ID, selects the
+newest transcript timestamp, and refreshes cached paths independently of optional
+focus detection. Session metadata still verifies conversation identity and source.
+
+All 154 public tests, the missing-private build guard, 24 commercial tests and
+isolated VS Code initial/restart/second-window integration passed. The new sidebar
+rotation fixture verifies spinner start and completion while hooks are stale and
+the live runtime is unavailable. Release packaging requires reviewed committed
+inputs; the normal-profile installation remains unchanged.
 
 
 Prepared release inputs: 1.7.1

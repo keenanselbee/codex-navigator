@@ -1,7 +1,7 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.7.1. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.7.2. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
@@ -9,6 +9,21 @@ retains release history. Old patch checks are not evidence for this product.
 Automated checks
 ----------------
 
+- Version 1.7.2 fixes the reproduced rotated-transcript lookup failure: the
+  installed 1.7.1 reader selected an interrupted original while the current
+  suffixed transcript reported working. The updated reader selects the current
+  transcript, and follows subsequent rotation after cached reads.
+- All 154 public tests and the missing-private guard passed in
+  public-only-IqUjuM; all 24 commercial tests passed. Isolated VS Code integration
+  passed initial, restart and second-window checks in integration-v8k2Q6.
+  A new rotation fixture starts and clears the actual sidebar spinner with no
+  live runtime and an older completed transcript. Normal-profile installation
+  and repair of the unavailable live connection are not claimed.
+
+- The disposable production package passed all 60 archive-entry checks and
+  isolated installation/reinstallation in installed-acceptance-ViNQoe, with
+  57 installed file hashes and manifest verification. This fixture uses version
+  0.0.0; the final 1.7.2 release archive remains pending the release commit.
 - Activity regressions cover an 8 MiB compaction with fresh, missing and expired
   hooks, cold tail reads, resumed tool calls, terminal records, file replacement,
   and partial records after a UTF-8 tail boundary. Newer stop/interruption hooks

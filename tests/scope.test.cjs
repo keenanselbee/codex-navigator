@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { SessionIndex, readScopeReport, writeScopeReport, parseScopeReport } = require('../dist/scope-store');
+const { SessionIndex, sessionThreadId, readScopeReport, writeScopeReport, parseScopeReport } = require('../dist/scope-store');
 const { reportScope } = require('../dist/report-scope');
 const { scopeAssignment, effectiveMode } = require('../dist/scope');
 const { correctScope } = require('../tools/correct-chat-scope.cjs');
@@ -74,4 +74,43 @@ test('user correction stays separate and a fresh identical agent report can supe
   assert.equal(await reportScope([f.repo], f.root, a), true);
   assert.ok((await readScopeReport(f.root, a)).reportedAt > correction.reportedAt);
   await assert.rejects(correctScope('../wrong', [f.repo], f.root), /existing local/);
+});
+
+test('rotated filenames retain the conversation identity for indexing and watchers', () => {
+  for (const name of [
+    'rollout-2026-09-27T18-28-24-' + a + '_' + b + '.jsonl',
+    '2026/09/27/rollout-2026-09-27T18-28-24-' + a + '_' + b + '.jsonl',
+    'rollout-' + a + '.jsonl'
+  ]) assert.equal(sessionThreadId(name), a);
+  assert.equal(sessionThreadId('rollout-' + a + '_invalid.jsonl'), undefined);
+});
+
+test('activity follows the newest rotated transcript on cold and cached reads', async () => {
+  const { TranscriptActivity } = require('../dist/activity-events');
+  const f = await fixture(), index = new SessionIndex(f.root);
+  const original = path.join(f.directory, 'rollout-' + a + '.jsonl');
+  const old = path.join(f.directory, 'rollout-2026-09-25T22-03-10-' + a + '.jsonl');
+  await fs.rename(original, old);
+  assert.equal(await index.fileFor(a), old);
+  const now = Date.now(), timestamp = new Date(now).toISOString();
+  const newerDirectory = path.join(f.root, 'sessions', '2026', '09', '27');
+  await fs.mkdir(newerDirectory);
+  const current = path.join(newerDirectory, 'rollout-2026-09-27T18-28-24-' + a + '_' + b + '.jsonl');
+  await fs.writeFile(current, [
+    { type: 'session_meta', payload: { id: a, cwd: f.repo, source: 'vscode' } },
+    { timestamp, type: 'event_msg', payload: { type: 'task_started', turn_id: b } }
+  ].map(record => JSON.stringify(record)).join('\n') + '\n');
+  await fs.utimes(old, new Date(now + 10000), new Date(now + 10000));
+  index.invalidate();
+  assert.equal(await index.fileFor(a), current);
+  assert.equal(await new SessionIndex(f.root).fileFor(a), current);
+  assert.equal((await new TranscriptActivity().read(await index.fileFor(a), now)).status, 'working');
+  // A missed watcher event still refreshes after the index TTL.
+  await fs.unlink(current);
+  const originalNow = Date.now;
+  try {
+    Date.now = () => now + 31000;
+    assert.equal(await index.fileFor(a), old);
+  } finally { Date.now = originalNow; }
+  await fs.rm(f.root, { recursive: true, force: true });
 });

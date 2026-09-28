@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+1.7.2
+-----
+
+- Restore activity indicators for resumed chats whose transcripts have rotated
+  into filenames containing an additional rollout ID.
+- Follow the newest transcript after rotation and refresh cached paths even when
+  optional repository-focus detection is disabled.
+
 1.7.1
 -----
 

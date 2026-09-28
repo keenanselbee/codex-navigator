@@ -443,6 +443,17 @@ exports.run = async function (context, fixtureVscode) {
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-compaction',hook_event_name:'Stop'});
     await companionProvider.refresh();
     await until(async () => (await probe()).spinners===0&&(await probe()).readyDots===1,'post-compaction completion removes spinner and shows ready');
+    const rotatedTranscript=path.join(path.dirname(activityTranscript),'rollout-2099-09-28T12-00-00-'+id(12)+'_'+id(90)+'.jsonl');
+    fs.writeFileSync(rotatedTranscript,fs.readFileSync(activityTranscript,'utf8').split('\n')[0]+'\n'
+      +activityLine('event_msg',{type:'task_started',turn_id:'fixture-rotation'}));
+    await until(async () => {
+      await companionProvider.refresh();
+      return (await probe()).spinners===1;
+    },'rotated transcript starts spinner despite completed original and stale hooks');
+    fs.appendFileSync(rotatedTranscript,activityLine('event_msg',{type:'task_complete',turn_id:'fixture-rotation'}));
+    await companionProvider.refresh();
+    await until(async () => (await probe()).spinners===0,'rotated transcript completion clears spinner');
+    fs.unlinkSync(rotatedTranscript);
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-interrupt',hook_event_name:'UserPromptSubmit'});
     fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_started',turn_id:'fixture-interrupt'}));
     await companionProvider.refresh();
