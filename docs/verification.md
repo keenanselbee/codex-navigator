@@ -1,10 +1,25 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.8.0. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.8.1. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
+
+Account text and demonstration: 1.8.1
+-------------------------------------
+
+Account labels, their row and usage text have two extra pixels below their
+clipping boundary, offset by negative margins. A real VS Code webview comparison
+in `descender-smoke-1W5KUf` passes 48 combinations of four font sizes, three
+CSS zoom scales and four panel dimensions: tile/text positions and dimensions,
+font size and horizontal ellipsis are unchanged, with extra descender clearance.
+The supplied replacement GIF matches the committed listing asset byte for byte.
+
+All 228 public tests and the missing-private guard pass in `public-only-s0wbur`.
+Full initial, restart and second-window integration passes in `integration-fOaLBC`.
+The private checkout and commercial logic are unchanged. Exact-package
+installation/reinstallation and Desktop delivery follow the clean release commit.
 
 Verified production package: 1.8.0
 ----------------------------------

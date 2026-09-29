@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.8.1
+-----
+
+- Give account text descenders extra clipping space without moving the text
+  or changing tile sizes.
+- Replace the extension demonstration GIF with the updated recording.
+
 1.8.0
 -----
 

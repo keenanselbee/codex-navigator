@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.8.0
+Product: Codex Navigator 1.8.1
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,21 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+Account text and demonstration: 1.8.1
+-------------------------------------
+
+Account labels, their row and usage text have two extra pixels below their
+clipping boundary, offset by negative margins. A real VS Code webview comparison
+in `descender-smoke-1W5KUf` passes 48 combinations of four font sizes, three
+CSS zoom scales and four panel dimensions: tile/text positions and dimensions,
+font size and horizontal ellipsis are unchanged, with extra descender clearance.
+The supplied replacement GIF matches the committed listing asset byte for byte.
+
+All 228 public tests and the missing-private guard pass in `public-only-s0wbur`.
+Full initial, restart and second-window integration passes in `integration-fOaLBC`.
+The private checkout and commercial logic are unchanged. Exact-package
+installation/reinstallation and Desktop delivery follow the clean release commit.
 
 Verified production package: 1.8.0
 ----------------------------------
