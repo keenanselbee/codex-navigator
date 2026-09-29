@@ -17,6 +17,21 @@ The hosting repository is [keenanselbee/codex-navigator](https://github.com/keen
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
 
+Verified production package: 1.8.2
+----------------------------------
+
+Production archive and receipt are retained in `dist/` and on the Desktop.
+Public build revision: `ca8ec7a844dd991cd2a50c2f84a71125629758f3`.
+SHA-256: `3d83059603d6c8acbe966c0d4e2b9f5baecda847d8d1760042cf366ed84c0926`.
+
+All four release metadata/evidence tests pass. All 68 archive entries match the
+allowlist. Exact installation and reinstallation pass in
+`installed-acceptance-ryFzRB`, including 65 payload hashes, the manifest and
+persistent expired trial state. The disposable installation was removed.
+Desktop VSIX, receipt, release notes and verification copies match their sources.
+No normal-profile changes, Git push or Marketplace publication were performed.
+Push the public commits before upload to update the GitHub-hosted GIF.
+
 Demonstration refresh: 1.8.2
 ----------------------------
 
