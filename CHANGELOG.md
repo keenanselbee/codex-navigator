@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+1.7.9
+-----
+
+- Retry missing usage after ten seconds while Accounts is visible, with increasing
+  delays up to five minutes after repeated failures. Keep successful usage cached.
+- Keep Accounts open when its view becomes ready during a toolbar request.
+- Serialize account database initialization and migrations across windows.
+- Preserve account-switching status when automatic label settings change.
+- Highlight saved accounts and last known usage in the extension listing.
+- Show account-specific progress during switching and browser sign-in. Show Copy
+  Email only for a known sign-in address and omit unavailable quota-window hover values.
+
 1.7.8
 -----
 

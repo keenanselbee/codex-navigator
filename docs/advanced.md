@@ -556,7 +556,14 @@ through Codex before replacement and keeps the latest rotated tokens.
 
 If a saved login needs reconnecting, choose Sign In Again. The menu shows the
 expected email with Copy Email and Cancel sign-in. Browser email prefill is not
-supported. A matching login continues the original switch automatically; there
+supported. Copy Email copies the address for pasting into the browser form; it
+is hidden when adding an account without a known address. Progress messages show
+credential checks, waiting for browser sign-in, switching and reloading. Missing
+quota-window remaining or reset values are omitted from account hover details.
+While Accounts is visible, missing usage is retried after ten seconds, then with
+increasing delays up to five minutes. Successful quota results retain their
+five-minute cache; closing Accounts stops these retries.
+A matching login continues the original switch automatically; there
 is no need to select the account twice. Cancelling or using the wrong account
 keeps the current sign-in. Fresh native logins do not require another refresh.
 

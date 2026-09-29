@@ -1,10 +1,29 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.7.8. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.7.9. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
+
+Account audit fixes and listing: 1.7.9
+-------------------------------------
+
+All 225 public tests and the missing-private guard pass in public-only-hZjPPG;
+all 24 commercial tests pass. Regression coverage checks account opening,
+serialized legacy migration, setup status, contextual progress and missing-usage
+retry delays of 10, 20 and 40 seconds, stopping after quota becomes available.
+The backoff is capped at five minutes and successful quotas retain their cache.
+
+Real isolated account UI checks pass in integration-TGe50P and integration-l1uKfB,
+including the ten-second timer, repeated opening, contextual progress, conditional
+Copy Email and omitted unavailable quota-window values. Both full integration
+runs subsequently stop at the previously intermittent chat-resize keyboard-focus
+assertion. Earlier initial/restart/second-window checks passed in
+integration-9hg56E before the retry addition; these are not a full pass for the
+final code. No real account sign-in was changed. Final archive installation and
+Desktop delivery remain pending.
+
 
 Toolbar acceptance: 1.7.8
 ------------------------

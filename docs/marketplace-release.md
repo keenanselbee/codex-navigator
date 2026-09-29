@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.7.8
+Product: Codex Navigator 1.7.9
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,25 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+Prepared release inputs: 1.7.9
+-----------------------------
+
+The extension listing leads with chats and accounts, places saved accounts first
+in the feature list, and retains the Preview and last-known-usage qualifications.
+The release also fixes duplicate account-page opening, concurrent account schema
+migration and account status being cleared by automatic-label updates.
+
+Missing account usage now retries while Accounts is visible, starting at ten
+seconds and backing off to five minutes. Contextual progress describes sign-in,
+switching and reload. Copy Email appears only for known sign-in addresses.
+
+All 225 public tests, the missing-private guard and 24 commercial tests pass.
+The real account UI checks pass, including the ten-second retry. The full final
+integration harness stops later at the known intermittent chat-resize focus
+assertion; see [verification](verification.md). Final packaging and exact-package
+installed acceptance are pending. The private checkout is unchanged.
+
 
 Verified production package: 1.7.8
 ---------------------------------
