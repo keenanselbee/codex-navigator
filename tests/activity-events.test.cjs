@@ -100,14 +100,14 @@ test('unread gaps and replaced files cannot inherit working state; UTF-8 tails k
  try {
    const reader=new TranscriptActivity(),start=JSON.stringify(event('task_started'))+'\n';
    await fs.writeFile(file,start);assert.equal((await reader.read(file,now)).status,'working');
-   await fs.appendFile(file,JSON.stringify(event('task_complete'))+'\n'+JSON.stringify({type:'ignored',payload:'x'.repeat(70000)})+'\n');
+   await fs.appendFile(file,JSON.stringify(event('task_complete'))+'\n'+JSON.stringify({type:'ignored',payload:'x'.repeat(1024*1024+100)})+'\n');
    assert.equal((await reader.read(file,now)).status,'unknown','completion may be in the skipped gap');
    await fs.writeFile(file,start);await reader.read(file,now);
    const replacement=path.join(folder,'replacement.jsonl');await fs.writeFile(replacement,' '.repeat(start.length+10)+'\n');
    await fs.rename(replacement,file);assert.equal((await reader.read(file,now)).status,'unknown');
-   let data=Buffer.from(JSON.stringify({payload:'\u00e9'.repeat(40000)})+'\n'+start);
-   if(data[data.length-65536]!==0xa9) data=Buffer.concat([Buffer.from(' '),data.subarray(0,data.length-1),Buffer.from(' \n')]);
-   assert.equal(data[data.length-65536],0xa9,'fixture tail begins inside a UTF-8 character');
+   let data=Buffer.from(JSON.stringify({payload:'\u00e9'.repeat(600000)})+'\n'+start);
+   if(data[data.length-1024*1024]!==0xa9) data=Buffer.concat([Buffer.from(' '),data.subarray(0,data.length-1),Buffer.from(' \n')]);
+   assert.equal(data[data.length-1024*1024],0xa9,'fixture tail begins inside a UTF-8 character');
    await fs.writeFile(file,data);assert.equal((await reader.read(file,now)).status,'working');
    const stop=JSON.stringify(event('task_complete','a',now+1))+'\n';
    await fs.appendFile(file,stop.slice(0,20));assert.equal((await reader.read(file,now+1)).status,'working');
@@ -126,4 +126,56 @@ test('activity diagnostics report transitions only, omit content, and bound reme
  for(let i=0;i<201;i++)log.record('other-'+i,initial,initial,undefined,initial);
  log.record('chat',hook,initial,undefined,hook);
  assert.equal(records.length,204,'evicted chat is reported on reappearance');
+});
+
+test('live item events recover the turn after compaction without reviving ended or waiting turns', () => {
+ const item=(kind='ContextCompaction',id='a',time=now)=>({
+   timestamp:new Date(time).toISOString(),type:'event_msg',
+   payload:{type:'item_completed',turn_id:id,item:{type:kind,id:'item'}}
+ });
+ for(const kind of ['ContextCompaction','Reasoning','CommandExecution']) {
+   const state=reduceActivity(initial,item(kind),now);
+   assert.equal(state.status,'working');assert.equal(state.turnId,'a');
+   for(const terminal of ['task_complete','turn_aborted']) {
+     const ended=reduceActivity(state,event(terminal),now);
+     assert.equal(reduceActivity(ended,item(kind,'a',now+1),now+1).status,ended.status);
+   }
+   assert.equal(reduceActivity({...state,status:'waiting',pendingInput:'q'},item(kind),now).status,'waiting');
+   assert.equal(reduceActivity({...state,turnId:'b'},item(kind),now).turnId,'b');
+   assert.equal(reduceActivity(initial,item(kind,'',now),now).status,'unknown');
+   assert.equal(reduceActivity(initial,item(kind,'a',now+10000),now).status,'unknown');
+   assert.equal(combineActivity({status:'idle',turnId:'a',observedAt:now+1,workedAt:now+1},state).status,'idle');
+ }
+ for(const kind of ['AgentMessage','UserMessage','Unknown']) assert.equal(reduceActivity(initial,item(kind),now).status,'unknown');
+ const call={timestamp:new Date(now).toISOString(),type:'response_item',payload:{type:'custom_tool_call',name:'exec',call_id:'c'}};
+ assert.equal(reduceActivity(initial,call,now).status,'working','fresh tool invocation recovers without context');
+});
+
+test('compaction completion and large tool results keep activity through cold and incremental reads', async () => {
+ const folder=await fs.mkdtemp(path.resolve('.codex-temp/activity-items-')),file=path.join(folder,'chat.jsonl');
+ const line=(type,payload,time=now)=>JSON.stringify({timestamp:new Date(time).toISOString(),type,payload})+'\n';
+ try {
+   const reader=new TranscriptActivity();
+   await fs.writeFile(file,JSON.stringify(event('task_started'))+'\n');
+   assert.equal((await reader.read(file,now)).status,'working');
+   await fs.appendFile(file,line('compacted',{replacement_history:['x'.repeat(12*1024*1024)]})
+     +line('turn_context',{turn_id:'a'})
+     +line('event_msg',{type:'item_completed',turn_id:'a',item:{type:'ContextCompaction',id:'compact'}}));
+   for(const current of [reader,new TranscriptActivity()]) {
+     const snapshot=await current.read(file,now);
+     assert.equal(snapshot.status,'working');assert.equal(snapshot.turnId,'a');
+   }
+   const output=line('event_msg',{type:'item_completed',turn_id:'a',item:{type:'CommandExecution',output:'x'.repeat(180000)}})
+     +line('response_item',{type:'custom_tool_call_output',call_id:'tool',output:'x'.repeat(80000)});
+   await fs.appendFile(file,output);
+   assert.equal((await reader.read(file,now)).status,'working','ordinary large result does not reset state');
+   assert.equal((await new TranscriptActivity().read(file,now)).status,'working');
+   await fs.appendFile(file,JSON.stringify(event('task_complete','a',now+1))+'\n'+line('event_msg',{
+     type:'item_completed',turn_id:'a',item:{type:'Reasoning',id:'late'}
+   },now+2));
+   assert.equal((await reader.read(file,now+2)).status,'ready','late item cannot restart completed turn');
+   assert.equal((await new TranscriptActivity().read(file,now+2)).status,'ready');
+   await fs.writeFile(file,line('event_msg',{type:'item_completed',turn_id:'a',item:{type:'ContextCompaction'}}));
+   assert.equal((await new TranscriptActivity().read(file,now+3600000)).status,'unknown','abandoned activity still expires');
+ } finally { await fs.rm(folder,{recursive:true,force:true}); }
 });

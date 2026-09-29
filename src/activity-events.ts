@@ -22,6 +22,14 @@ export function reduceActivity(state: TranscriptState, record: any, now: number)
     if (p.type === 'task_started' && typeof p.turn_id === 'string') {
       return { status: 'working', turnId: p.turn_id, observedAt: time, workedAt: time, detail: 'Working (local activity)' };
     }
+    // These are live item lifecycle events, not the compacted history body.
+    // They retain the turn ID even when task_started/context fell outside the tail.
+    if (p.type === 'item_completed' && ['ContextCompaction', 'Reasoning', 'CommandExecution'].includes(p.item?.type)
+        && typeof p.turn_id === 'string' && p.turn_id.length > 0
+        && (!state.turnId || state.turnId === p.turn_id) && !state.ended && !state.pendingInput) {
+      return { ...state, status: 'working', turnId: p.turn_id, observedAt: time, workedAt: time,
+        detail: 'Working (local item activity)' };
+    }
     if (['task_complete', 'turn_aborted'].includes(p.type) && typeof p.turn_id === 'string'
         && (!state.turnId || state.turnId === p.turn_id)) {
       return { status: p.type === 'task_complete' ? 'ready' : 'unknown', turnId: p.turn_id,
@@ -37,7 +45,7 @@ export function reduceActivity(state: TranscriptState, record: any, now: number)
     if (p.type === 'function_call_output' && state.pendingInput === p.call_id && typeof p.call_id === 'string') {
       return { ...state, status: 'working', pendingInput: undefined, observedAt: time, detail: 'Working (local activity)' };
     }
-    const invocation = state.turnId && ['function_call', 'custom_tool_call'].includes(p.type)
+    const invocation = ['function_call', 'custom_tool_call'].includes(p.type)
       && typeof p.name === 'string' && typeof p.call_id === 'string';
     if (!state.pendingInput && (p.type === 'reasoning' || invocation)) {
       return { ...state, status: 'working', observedAt: time, workedAt: time, detail: 'Working (recent local activity)' };
@@ -46,7 +54,10 @@ export function reduceActivity(state: TranscriptState, record: any, now: number)
   return state;
 }
 
-// Small incremental reads, cached for unchanged files. Partial records are retried next time.
+// Bound each read to 1 MiB: ordinary tool results can exceed 64 KiB between polls.
+// Larger gaps still reset state; explicit item events recover after compaction.
+// Unchanged files are cached and partial records are retried next time.
+const transcriptReadLimit = 1024 * 1024;
 export class TranscriptActivity {
   private cache = new Map<string, { size: number; modified: number; offset: number; device: number; inode: number; state: TranscriptState }>();
   async read(filename: string, now = Date.now()): Promise<ActivitySnapshot> {
@@ -54,12 +65,12 @@ export class TranscriptActivity {
       const info = await stat(filename), cached = this.cache.get(filename);
       const sameFile = cached && cached.device === info.dev && cached.inode === info.ino;
       if (sameFile && cached.size === info.size && cached.modified === info.mtimeMs) return this.fresh(cached.state, info.mtimeMs, now);
-      const continuing = sameFile && info.size > cached.size && info.size - cached.offset <= 65536;
-      let start = continuing ? cached.offset : Math.max(0, info.size - 65536);
+      const continuing = sameFile && info.size > cached.size && info.size - cached.offset <= transcriptReadLimit;
+      let start = continuing ? cached.offset : Math.max(0, info.size - transcriptReadLimit);
       const file = await open(filename, 'r');
       let bytes: Buffer;
       try {
-        const buffer = Buffer.alloc(Math.min(65536, info.size - start));
+        const buffer = Buffer.alloc(Math.min(transcriptReadLimit, info.size - start));
         const result = await file.read(buffer, 0, buffer.length, start); bytes = buffer.subarray(0, result.bytesRead);
       } finally { await file.close(); }
       let state = continuing ? cached.state : unknown();
