@@ -4,6 +4,11 @@ Advanced use and development
 Codex Navigator owns its sidebar. It does not inject UI, rename native Codex tabs,
 patch extension bundles or automatically restore/reapply another extension's files.
 
+Navigator's **...** actions menu is the first toolbar icon, before Search and
+Accounts. **Show New Chat Button** (`codexNavigator.showNewChatButton`) is off
+by default; enable it in Navigator's extension settings to show **+** between
+Search and Accounts. The preference takes effect without a reload.
+
 Setup
 -----
 
@@ -514,7 +519,7 @@ Account switching (test build)
 -----------------------------
 
 In Set Up Codex Navigator, enable Account Switching. The account icon appears
-after Search and New Chat. Navigator remembers compatible local credential
+after Search and the optional New Chat button. Navigator remembers compatible local credential
 files in VS Code SecretStorage; there is no password field or credential import.
 The icon switches Navigator to an Accounts page with tiles sized like chats.
 Each heading shows email and account plan, where known. Click a saved account

@@ -63,6 +63,7 @@ Right-click a chat for naming and label options. Matching custom labels share a 
 
 - **Automatic labels:** Enable this option in setup, then start a new Codex chat. Labels follow the repositories the agent reports; you can always choose a repository yourself.
 - **Chat history:** Turn off **Recent Chats Only** to include older chats.
+- **New Chat button:** Enable **Show New Chat Button** to add the optional + button to Navigator's toolbar.
 - **Visit highlights:** Choose which visited chats glow and how long the highlight lasts.
 - **Project instructions:** Optionally help Codex find your repository's AGENTS.md and shared rules.
 

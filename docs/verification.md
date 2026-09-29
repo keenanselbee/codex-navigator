@@ -1,10 +1,30 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.7.7. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.7.8. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
+
+Toolbar acceptance: 1.7.8
+------------------------
+
+All 220 public tests and the missing-private guard pass in public-only-a55maA;
+all 24 commercial tests pass. Real isolated VS Code initial/restart/second-window
+checks pass in integration-hbcbyK. The private checkout remains unchanged.
+
+The isolated toolbar-smoke-uPfli3 host verifies the rendered native toolbar order:
+Navigator Actions, Search, Accounts. Its new profile has no New Chat button.
+Changing showNewChatButton to true immediately adds it between Search and Accounts;
+changing it back removes it without reloading. The setting is scoped to that
+disposable profile. Synthetic clicks and renderer inspection did not establish
+popup appearance; the Computer Use native helper was unavailable, so native
+popup appearance remains unverified. The menu uses the supported view/title
+submenu contribution and retains the existing command handlers.
+
+Version 1.7.7 was packaged before this toolbar follow-up and remains reserved;
+the final Desktop release is 1.7.8. Exact-archive installation/reinstallation
+acceptance follows production packaging.
 
 Plan metadata and simplified account page: 1.7.7
 ----------------------------------------------

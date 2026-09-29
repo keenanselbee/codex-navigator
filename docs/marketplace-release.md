@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.7.7
+Product: Codex Navigator 1.7.8
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,20 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+
+Prepared release inputs: 1.7.8
+-----------------------------
+
+The owner added a toolbar follow-up during packaging: move Navigator's actions
+menu ahead of Search/Accounts, and make New Chat opt-in through the default-off
+showNewChatButton setting. A contributed native submenu supplies the menu;
+no webview popup or VS Code patch is used. The isolated native toolbar checks
+confirm order and immediate settings-driven visibility changes.
+
+Version 1.7.7 was already packaged from committed inputs and remains immutable.
+The final Desktop delivery is 1.7.8 and includes its plan/account changes. The
+release workflow and platform qualifications below continue to apply.
 
 
 Prepared release inputs: 1.7.7

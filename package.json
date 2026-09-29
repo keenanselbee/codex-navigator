@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Find and organise your Codex chats in a compact sidebar with project colours, favourites and activity indicators.",
-  "version": "1.7.7",
+  "version": "1.7.8",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -374,9 +374,9 @@
       ],
       "view/title": [
         {
-          "command": "codexNavigator.license",
+          "submenu": "codexNavigator.navigatorMenu",
           "when": "view == codexNavigator.chats",
-          "group": "1_navigator@7"
+          "group": "navigation@0"
         },
         {
           "command": "codexNavigator.searchChats",
@@ -385,53 +385,51 @@
         },
         {
           "command": "codexNavigator.newSidebarChat",
-          "when": "view == codexNavigator.chats",
+          "when": "view == codexNavigator.chats && config.codexNavigator.showNewChatButton",
           "group": "navigation@2"
-        },
-        {
-          "command": "codexNavigator.filterChats",
-          "when": "view == codexNavigator.chats",
-          "group": "1_navigator@1"
-        },
-        {
-          "command": "codexNavigator.showRepositoryColours",
-          "when": "view == codexNavigator.chats",
-          "group": "1_navigator@2"
-        },
-        {
-          "command": "codexNavigator.refreshChats",
-          "when": "view == codexNavigator.chats",
-          "group": "1_navigator@3"
-        },
-        {
-          "command": "codexNavigator.setUp",
-          "when": "view == codexNavigator.chats",
-          "group": "1_navigator@4"
-        },
-        {
-          "command": "codexNavigator.openSettings",
-          "when": "view == codexNavigator.chats",
-          "group": "zz_navigator_settings@1"
-        },
-        {
-          "command": "codexNavigator.restoreHiddenChats",
-          "when": "view == codexNavigator.chats",
-          "group": "1_navigator@6"
-        },
-        {
-          "command": "codexNavigator.chatProfiles",
-          "when": "view == codexNavigator.chats",
-          "group": "1_profiles@1"
-        },
-        {
-          "command": "codexNavigator.workspaceChats",
-          "when": "view == codexNavigator.chats",
-          "group": "1_profiles@2"
         },
         {
           "command": "codexNavigator.accounts",
           "when": "view == codexNavigator.chats && codexNavigator.accountsEnabled",
           "group": "navigation@3"
+        }
+      ],
+      "codexNavigator.navigatorMenu": [
+        {
+          "command": "codexNavigator.license",
+          "group": "1_navigator@7"
+        },
+        {
+          "command": "codexNavigator.filterChats",
+          "group": "1_navigator@1"
+        },
+        {
+          "command": "codexNavigator.showRepositoryColours",
+          "group": "1_navigator@2"
+        },
+        {
+          "command": "codexNavigator.refreshChats",
+          "group": "1_navigator@3"
+        },
+        {
+          "command": "codexNavigator.setUp",
+          "group": "1_navigator@4"
+        },
+        {
+          "command": "codexNavigator.openSettings",
+          "group": "zz_navigator_settings@1"
+        },
+        {
+          "command": "codexNavigator.restoreHiddenChats",
+          "group": "1_navigator@6"
+        },
+        {
+          "command": "codexNavigator.chatProfiles",
+          "group": "1_profiles@1"
+        },
+        {
+          "command": "codexNavigator.workspaceChats",
+          "group": "1_profiles@2"
         }
       ]
     },
@@ -475,6 +473,12 @@
             "maximum": 3600,
             "description": "How long each chat highlight fades, from 1 to 3600 seconds. Applies to both highlight modes. Revisiting a chat restarts its timer.",
             "order": 3
+          },
+          "codexNavigator.showNewChatButton": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show the New Chat (+) button in the Navigator toolbar.",
+            "order": 4
           }
         }
       },
@@ -611,7 +615,14 @@
           "icon": "media/icon.png"
         }
       ]
-    }
+    },
+    "submenus": [
+      {
+        "id": "codexNavigator.navigatorMenu",
+        "label": "Navigator Actions",
+        "icon": "$(ellipsis)"
+      }
+    ]
   },
   "scripts": {
     "compile": "node tools/compile.cjs",

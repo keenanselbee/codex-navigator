@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.7.8
+-----
+
+- Place Navigator's native actions menu before the other toolbar icons.
+- Hide the New Chat (+) toolbar button by default. Enable Show New Chat Button
+  in Navigator settings to restore it.
+
 1.7.7
 -----
 
