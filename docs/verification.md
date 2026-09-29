@@ -21,8 +21,10 @@ Copy Email and omitted unavailable quota-window values. Both full integration
 runs subsequently stop at the previously intermittent chat-resize keyboard-focus
 assertion. Earlier initial/restart/second-window checks passed in
 integration-9hg56E before the retry addition; these are not a full pass for the
-final code. No real account sign-in was changed. Final archive installation and
-Desktop delivery remain pending.
+final code. No real account sign-in was changed. Exact production archive installation and
+reinstallation pass in installed-acceptance-ohG3Ti, with all 65 runtime file hashes
+and the manifest verified. Desktop archive, receipt, notes and verification
+copies match their sources. The normal profile remains unchanged.
 
 
 Toolbar acceptance: 1.7.8

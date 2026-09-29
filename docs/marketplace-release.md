@@ -32,8 +32,13 @@ switching and reload. Copy Email appears only for known sign-in addresses.
 All 225 public tests, the missing-private guard and 24 commercial tests pass.
 The real account UI checks pass, including the ten-second retry. The full final
 integration harness stops later at the known intermittent chat-resize focus
-assertion; see [verification](verification.md). Final packaging and exact-package
-installed acceptance are pending. The private checkout is unchanged.
+assertion; see [verification](verification.md). The exact production VSIX passes installation and
+reinstallation in installed-acceptance-ohG3Ti. Desktop copies match the archive
+and receipt. The private checkout is unchanged.
+
+Public revision: 37c82ef8875f5027ccdb37a499bd2520863c24da.
+Archive SHA-256: 359ffa2c382a0ae4a6f87822561fcfdb18e29a1859058be1f16be261f488c1ef.
+No normal-profile installation, Git push or Marketplace publication was performed.
 
 
 Verified production package: 1.7.8
