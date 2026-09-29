@@ -64,6 +64,19 @@ test('renderer updates activity without overwriting unsaved routing fields',()=>
  assert.equal(node('main').value,'Unsaved');assert.equal(node('stale').hidden,false);assert.equal(node('activity-status').textContent,'Review needed');assert.equal(node('review-hooks').disabled,false);
 });
 
+test('label updates preserve enabled account status and removal controls',()=>{
+ const nodes=new Map();let receive;const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',hidden:false,textContent:'',addEventListener(){},replaceChildren(){},append(){},classList:{toggle(){}}});return nodes.get(id);};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../media/setup.js'),'utf8'),{acquireVsCodeApi:()=>({postMessage(){}}),document:{getElementById:node,querySelectorAll:()=>[],createElement:()=>node('item'),body:{setAttribute(){}}},window:{addEventListener:(_e,fn)=>receive=m=>fn({data:m})}});
+ receive({type:'accounts',accounts:{enabled:true,label:'Remembering accounts',detail:'Saved securely.',count:2}});
+ for(const enabled of [true,false]) {
+  receive({type:'labels',labels:{enabled,installed:enabled}});
+  assert.equal(node('accounts-status').textContent,'Remembering accounts');
+  assert.equal(node('accounts-detail').textContent,'Saved securely. Saved accounts: 2.');
+  assert.equal(node('disable-accounts').hidden,false);
+  assert.equal(node('enable-accounts').hidden,true);
+ }
+});
+
 test('automatic label setup changes only its guidance and global label preference',async()=>{
  const f=fixture();await f.open();await f.send({type:'ready'});
  await f.send({type:'enableAutomaticLabels',home:'C:/attacker'});

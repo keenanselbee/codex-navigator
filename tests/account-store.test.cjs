@@ -41,8 +41,53 @@ function fixture(t) {
     stores.push(store);
     return store;
   };
-  return { open, secrets, values, calls };
+  return { open, secrets, values, calls, directory };
 }
+
+test('legacy account migrations exclude other writers and preserve saved metadata', t => {
+  const { directory, secrets, open } = fixture(t);
+  const { DatabaseSync } = require('node:sqlite');
+  const home = path.join(directory, 'home');
+  const namespace = require('node:crypto').createHash('sha256')
+    .update(process.platform === 'win32' ? path.resolve(home).toLowerCase() : path.resolve(home)).digest('hex').slice(0, 32);
+  const filename = path.join(directory, `accounts-${namespace}.sqlite`);
+  const legacy = new DatabaseSync(filename);
+  legacy.exec(`CREATE TABLE accounts (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
+    email TEXT, label TEXT, secret_key TEXT NOT NULL, generation INTEGER NOT NULL);
+    CREATE TABLE credential_keys (secret_key TEXT PRIMARY KEY, account_id TEXT NOT NULL);
+    INSERT INTO accounts VALUES ('saved', 'user', 'workspace', 'person@example.test', 'Work', 'synthetic-key', 3);`);
+  legacy.close();
+  let lockedChecks = 0;
+  class ObservedDatabase extends DatabaseSync {
+    prepare(sql) {
+      const statement = super.prepare(sql);
+      if (!/^PRAGMA table_info\((accounts|credential_keys)\)$/.test(sql)) return statement;
+      return { all: () => {
+        const rows = statement.all();
+        const contender = new DatabaseSync(filename);
+        try {
+          contender.exec('PRAGMA busy_timeout=0');
+          assert.throws(() => contender.exec('BEGIN IMMEDIATE'), /locked/,
+            'another window cannot acquire the writer lock between schema inspection and ALTER TABLE');
+          lockedChecks++;
+        } finally { contender.close(); }
+        return rows;
+      } };
+    }
+  }
+  const exports = {};
+  require('node:vm').runInNewContext(fs.readFileSync(require.resolve('../dist/account-store'), 'utf8'), { exports, process,
+    require: name => name === 'node:sqlite' ? { DatabaseSync: ObservedDatabase }
+      : name.startsWith('./') ? require('../dist/' + name.slice(2)) : require(name) });
+  const upgraded = new exports.AccountStore(directory, home, secrets);
+  try {
+    assert.equal(lockedChecks, 2);
+    const saved = upgraded.list()[0];
+    assert.equal(saved.label, 'Work'); assert.equal(saved.generation, 3);
+    assert.equal(saved.plan, undefined);
+    assert.equal(open().list()[0].id, saved.id, 'another window opens the migrated catalog');
+  } finally { upgraded.dispose(); }
+});
 
 test('usage cache survives reopen, rejects late generations, and is removed by forgetting', async t => {
   const { open } = fixture(t), store = open();

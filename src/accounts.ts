@@ -16,7 +16,7 @@ export interface AccountMenuState extends AccountStatus {
   accounts: { id: string; generation: number; name: string; email?: string; workspace: string; selected: boolean;
     plan?: string; usage?: AccountUsage; usageProblem?: string }[];
   busy: boolean; canSwitch: boolean; canAdd: boolean; problem?: string; recovery: boolean;
-  reloadNeeded: boolean; loginEmail?: string; usageRefreshing?: boolean;
+  reloadNeeded: boolean; loginEmail?: string; usageRefreshing?: boolean; progress?: string;
 }
 
 /** Credentials stay in the extension host; the menu receives metadata only. */
@@ -30,9 +30,11 @@ export class Accounts implements vscode.Disposable {
   private usageRefresh?: Promise<void>;
   private usageAbort?: AbortController;
   private usageAttempts = new Map<string, number>();
+  private missingUsageAttempts = new Map<string, number>();
   private usageProblems = new Map<string, string>();
   private busy = false;
   private acting = false;
+  private progress = '';
   private disposed = false;
   private closing?: Promise<void>;
   private timer: ReturnType<typeof setInterval>;
@@ -83,10 +85,11 @@ export class Accounts implements vscode.Disposable {
     }; }), busy: this.busy || this.acting, canSwitch: usable, canAdd: usable && !!this.capability.isolatedLogin,
     ...(problem ? { problem } : {}), recovery: !!problem && !!this.store.state().pending,
     reloadNeeded: this.reloadNeeded, usageRefreshing: !!this.usageRefresh,
+    ...(this.progress ? { progress: this.progress } : {}),
     ...(this.loginEmail ? { loginEmail: this.loginEmail } : {}) };
   }
   /** Display-only metadata uses access tokens, never a second refresh-token owner. */
-  async refreshUsage(force = false): Promise<void> {
+  async refreshUsage(force = false, missingOnly = false): Promise<void> {
     if (this.usageRefresh) return this.usageRefresh;
     if (!this.allowed() || !this.store.enabled || this.busy || this.acting || this.reloadNeeded) return;
     const controller = new AbortController(); this.usageAbort = controller;
@@ -97,11 +100,16 @@ export class Accounts implements vscode.Disposable {
       for (const account of accounts) {
         if (controller.signal.aborted || !this.allowed() || !this.store.enabled || this.busy || this.acting) break;
         const now = Date.now(), usage = this.store.usage(account.id);
-        if (now - (this.usageAttempts.get(account.id) || 0) < (force ? 15000 : 300000) ||
-            !force && usage && now - usage.checkedAt < 300000) continue;
+        const hasQuota = !!(usage?.primary || usage?.secondary);
+        if (missingOnly && hasQuota) continue;
+        const retryDelay = hasQuota ? 300000 : Math.min(300000,
+          10000 * 2 ** Math.max(0, (this.missingUsageAttempts.get(account.id) || 0) - 1));
+        if (now - (this.usageAttempts.get(account.id) || 0) < (force ? 15000 : retryDelay) ||
+            !force && hasQuota && now - usage!.checkedAt < 300000) continue;
         const owner = randomUUID();
         if (!this.store.acquireLease(owner, now, 60000)) break;
         this.usageAttempts.set(account.id, now);
+        if (!hasQuota) this.missingUsageAttempts.set(account.id, Math.min(6, (this.missingUsageAttempts.get(account.id) || 0) + 1));
         const deadline = setTimeout(() => controller.abort(), 15000);
         try {
           const raw = await this.store.load(account.id);
@@ -111,6 +119,7 @@ export class Accounts implements vscode.Disposable {
             if (result.primary || result.secondary || result.bankedResets !== undefined)
               this.store.saveUsage(account.id, account.generation, result);
             this.store.savePlan(account.id, account.generation, result.plan);
+            if (result.primary || result.secondary) this.missingUsageAttempts.delete(account.id);
             this.usageProblems.delete(account.id);
           }
         } catch {
@@ -203,6 +212,7 @@ export class Accounts implements vscode.Disposable {
     if (!message || typeof message !== 'object' || this.disposed) return;
     const { action, id, generation, label, force } = message as Record<string, unknown>;
     if (action === 'refreshUsage') { await this.refreshUsage(force === true); return; }
+    if (action === 'retryUsage') { await this.refreshUsage(false, true); return; }
     if (action === 'cancelUsage') { await this.stopUsage(); return; }
     if (action === 'cancelLogin') { this.login?.abort(); return; }
     if (action === 'copyEmail') {
@@ -213,7 +223,15 @@ export class Accounts implements vscode.Disposable {
     if (action === 'refresh') { await this.refresh(); return; }
     if (!['setup', 'forgetAll', 'forget', 'rename', 'remember', 'retryReload', 'restore', 'add', 'switch', 'reconnect'].includes(String(action))) return;
     if (this.acting || this.busy) return;
-    this.acting = true; this.notice = ''; this.changed();
+    this.acting = true; this.notice = '';
+    this.progress = action === 'add' || action === 'reconnect' ? 'Preparing sign-in...'
+      : action === 'switch' ? 'Preparing account switch...'
+      : action === 'rename' ? 'Saving account label...'
+      : action === 'forget' || action === 'forgetAll' ? 'Removing saved sign-in...'
+      : action === 'restore' ? 'Restoring previous account...'
+      : action === 'retryReload' ? 'Reloading VS Code...'
+      : action === 'setup' ? 'Opening account setup...' : 'Saving your sign-in...';
+    this.changed();
     try {
       await this.stopUsage();
       if (action === 'setup') { await vscode.commands.executeCommand('codexNavigator.setUp'); return; }
@@ -253,7 +271,7 @@ export class Accounts implements vscode.Disposable {
       if (action === 'reconnect') await this.add(current);
       else await this.switchAccount(current);
     } catch (error) { this.notice = accountErrorMessage(error); }
-    finally { this.acting = false; this.changed(); if (this.captureQueued && !this.reloadNeeded) void this.refresh(); }
+    finally { this.acting = false; this.progress = ''; this.changed(); if (this.captureQueued && !this.reloadNeeded) void this.refresh(); }
   }
   private async confirmReload(): Promise<boolean> {
     const active = this.options.hasActiveWork?.();
@@ -266,6 +284,7 @@ export class Accounts implements vscode.Disposable {
     await this.context.globalState.update('accounts.reloadNotice.v1', true); return true;
   }
   private async reload() {
+    this.progress = 'Reloading VS Code with your selected account...';
     this.reloadNeeded = true; this.reloadProblem = ''; this.changed(); this.options.beforeReload();
     try { await vscode.commands.executeCommand('workbench.action.reloadWindow'); }
     catch { this.reloadProblem = 'The account was selected, but the window could not reload. Retry Reload or restore the previous account.'; throw new AccountError(this.reloadProblem); }
@@ -275,16 +294,22 @@ export class Accounts implements vscode.Disposable {
     if (!this.capability.isolatedLogin) throw new AccountError('Isolated sign-in is unavailable for this authentication policy.');
     const before = await readAccountFile(this.options.home);
     this.busy = true; const controller = new AbortController(); this.login = controller;
-    this.loginEmail = expected?.email || 'your new account'; this.changed();
+    this.loginEmail = expected?.email || 'your new account';
+    this.progress = 'Opening browser sign-in...'; this.changed();
     let saved: AccountSummary | undefined;
     try {
       const raw = await isolatedAccountLogin(this.options.binary, path.join(this.context.globalStorageUri.fsPath, 'account-logins'),
-        async url => { if (!await vscode.env.openExternal(vscode.Uri.parse(url))) throw new AccountError('Could not open Codex sign-in.'); }, controller.signal);
+        async url => {
+          if (!await vscode.env.openExternal(vscode.Uri.parse(url))) throw new AccountError('Could not open Codex sign-in.');
+          this.progress = expected ? 'Waiting for browser sign-in to ' + (expected.label || expected.email || 'your account') + '...'
+            : 'Waiting for browser sign-in...'; this.changed();
+        }, controller.signal);
       if (controller.signal.aborted || !this.allowed() || !this.store.enabled) return;
       if (expected && parseAccountAuth(raw).id !== expected.id)
         throw new AccountError('The browser signed in to a different account or workspace. Your current sign-in was kept. Try Sign In Again with the account shown.');
       if (expected && this.store.list().find(item => item.id === expected.id)?.generation !== expected.generation)
         throw new AccountError('This saved account changed during sign-in. Choose it again.');
+      this.progress = 'Saving your sign-in...'; this.changed();
       saved = await this.store.capture(raw, true);
       if (!saved) throw new AccountError('The sign-in could not be saved securely. Your current sign-in was kept.');
       const current = await readAccountFile(this.options.home);
@@ -298,7 +323,8 @@ export class Accounts implements vscode.Disposable {
     if (this.busy || !this.options.binary || !this.allowed() || !this.store.enabled) return;
     const owner = randomUUID();
     if (!this.store.acquireLease(owner, Date.now(), 300000)) throw new AccountError('Another Navigator window is changing accounts. Retry shortly.');
-    this.busy = true; this.changed();
+    const name = account.label || account.email || 'your account';
+    this.busy = true; this.progress = (freshLogin ? 'Switching to ' : 'Checking sign-in for ') + name + '...'; this.changed();
     let recovery = false, generation = account.generation;
     try {
       if (this.store.list().find(item => item.id === account.id)?.generation !== generation) throw new AccountError('This saved sign-in changed. Choose it again.');
@@ -329,6 +355,7 @@ export class Accounts implements vscode.Disposable {
           throw new AccountError('The saved sign-in or account switching settings changed.');
         if (!this.store.acquireLease(owner, Date.now(), 300000)) throw new AccountError('Another account operation is in progress.');
       };
+      this.progress = 'Switching to ' + name + '...'; this.changed();
       guard();
       const previous = outgoing === undefined ? undefined : authFingerprint(outgoing);
       this.store.setPending({ accountId: account.id, fingerprint: authFingerprint(raw), createdAt: Date.now() });

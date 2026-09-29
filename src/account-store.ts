@@ -130,25 +130,31 @@ export class AccountStore {
     const normalizedHome = process.platform === 'win32' ? path.resolve(home).toLowerCase() : path.resolve(home);
     this.namespace = createHash('sha256').update(normalizedHome).digest('hex').slice(0, 32);
     this.db = new DatabaseSync(path.join(directory, `accounts-${this.namespace}.sqlite`));
-    this.db.exec(`PRAGMA busy_timeout=3000;
-      CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK (id = 1), schema INTEGER NOT NULL, enabled INTEGER NOT NULL, epoch INTEGER NOT NULL);
-      INSERT OR IGNORE INTO settings VALUES (1, 1, 0, 0);
-      CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
-        email TEXT, label TEXT, secret_key TEXT NOT NULL, generation INTEGER NOT NULL, plan TEXT);
-      CREATE TABLE IF NOT EXISTS sequences (id TEXT PRIMARY KEY, latest INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS credential_keys (secret_key TEXT PRIMARY KEY, account_id TEXT NOT NULL, writing INTEGER NOT NULL DEFAULT 0);
-      INSERT OR IGNORE INTO credential_keys (secret_key, account_id) SELECT secret_key, id FROM accounts;
-      CREATE TABLE IF NOT EXISTS exclusions (id TEXT PRIMARY KEY);
-      CREATE TABLE IF NOT EXISTS account_usage (account_id TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS lease (id INTEGER PRIMARY KEY CHECK (id = 1), owner TEXT NOT NULL, expires INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS pending (id INTEGER PRIMARY KEY CHECK (id = 1), account_id TEXT NOT NULL,
-        fingerprint TEXT NOT NULL, created_at INTEGER NOT NULL);`);
-    if (!(this.db.prepare('PRAGMA table_info(credential_keys)').all()).some(row => row.name === 'writing'))
-      this.db.exec('ALTER TABLE credential_keys ADD COLUMN writing INTEGER NOT NULL DEFAULT 0');
-    if (!(this.db.prepare('PRAGMA table_info(accounts)').all()).some(row => row.name === 'plan'))
-      this.db.exec('ALTER TABLE accounts ADD COLUMN plan TEXT');
-    const schema = Number(this.db.prepare('SELECT schema FROM settings WHERE id = 1').get()!.schema);
-    if (schema !== 1) { this.db.close(); throw new AccountError('Account storage uses an unsupported schema.'); }
+    try {
+      this.db.exec('PRAGMA busy_timeout=3000');
+      // Hold the writer lock across schema inspection and migration in every window.
+      this.transaction(() => {
+        this.db.exec(`
+          CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK (id = 1), schema INTEGER NOT NULL, enabled INTEGER NOT NULL, epoch INTEGER NOT NULL);
+          INSERT OR IGNORE INTO settings VALUES (1, 1, 0, 0);
+          CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
+            email TEXT, label TEXT, secret_key TEXT NOT NULL, generation INTEGER NOT NULL, plan TEXT);
+          CREATE TABLE IF NOT EXISTS sequences (id TEXT PRIMARY KEY, latest INTEGER NOT NULL);
+          CREATE TABLE IF NOT EXISTS credential_keys (secret_key TEXT PRIMARY KEY, account_id TEXT NOT NULL, writing INTEGER NOT NULL DEFAULT 0);
+          INSERT OR IGNORE INTO credential_keys (secret_key, account_id) SELECT secret_key, id FROM accounts;
+          CREATE TABLE IF NOT EXISTS exclusions (id TEXT PRIMARY KEY);
+          CREATE TABLE IF NOT EXISTS account_usage (account_id TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS lease (id INTEGER PRIMARY KEY CHECK (id = 1), owner TEXT NOT NULL, expires INTEGER NOT NULL);
+          CREATE TABLE IF NOT EXISTS pending (id INTEGER PRIMARY KEY CHECK (id = 1), account_id TEXT NOT NULL,
+            fingerprint TEXT NOT NULL, created_at INTEGER NOT NULL);`);
+        if (!(this.db.prepare('PRAGMA table_info(credential_keys)').all()).some(row => row.name === 'writing'))
+          this.db.exec('ALTER TABLE credential_keys ADD COLUMN writing INTEGER NOT NULL DEFAULT 0');
+        if (!(this.db.prepare('PRAGMA table_info(accounts)').all()).some(row => row.name === 'plan'))
+          this.db.exec('ALTER TABLE accounts ADD COLUMN plan TEXT');
+        const schema = Number(this.db.prepare('SELECT schema FROM settings WHERE id = 1').get()!.schema);
+        if (schema !== 1) throw new AccountError('Account storage uses an unsupported schema.');
+      });
+    } catch (error) { this.db.close(); throw error; }
   }
 
   private transaction<T>(action: () => T): T {

@@ -30,6 +30,24 @@ function fixture() {
   return { sidebar, calls, sent, id, view, exports, vscode, commands, stored, receive: m => sidebar.receive(m) };
 }
 
+test('opening accounts delivers once whether the view becomes ready before or after focus', async () => {
+  for (const readyFirst of [true, false]) {
+    const f = fixture();
+    let releaseFocus;
+    f.vscode.commands.executeCommand = () => new Promise(resolve => { releaseFocus = resolve; });
+    f.sidebar.accounts = { snapshot: () => ({}), refresh: async () => {} };
+    try {
+      const opening = f.sidebar.showAccounts();
+      if (readyFirst) await f.receive({ type: 'ready' });
+      releaseFocus();
+      await opening;
+      if (!readyFirst) await f.receive({ type: 'ready' });
+      await f.receive({ type: 'refresh' });
+      assert.equal(f.sent.filter(message => message.type === 'accountsOpen').length, 1);
+    } finally { f.sidebar.dispose(); }
+  }
+});
+
 test('native menu actions use their captured row ID and reject missing or foreign context', async () => {
   const f = fixture(); await f.sidebar.refresh();
   const action = f.commands.get('codexNavigator.sidebar.colour');

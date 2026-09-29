@@ -3,7 +3,8 @@
 function createNavigatorAccounts(api, navigation) {
   const page = document.getElementById('accountPage');
   let state, stateAt = 0, previousFocus, contextAccountId, contextPosition, renamingAccountId, renameValue = '';
-  let pendingAction = false, criticalSignature = '';
+  let pendingAction = false, pendingProgress = '', criticalSignature = '';
+  let usageRetry;
 
   function element(tag, className, value) {
     const node = document.createElement(tag);
@@ -27,8 +28,15 @@ function createNavigatorAccounts(api, navigation) {
     if (label !== undefined) message.label = label;
     if (force !== undefined) message.force = force;
     api.postMessage(message);
-    if (!['refresh', 'refreshUsage', 'cancelUsage', 'copyEmail'].includes(action)) {
+    if (!['refresh', 'refreshUsage', 'retryUsage', 'cancelUsage', 'copyEmail'].includes(action)) {
       pendingAction = true;
+      pendingProgress = action === 'switch' ? 'Switching to ' + identity(account) + '...'
+        : action === 'add' || action === 'reconnect' ? 'Preparing sign-in...'
+        : action === 'rename' ? 'Saving account label...'
+        : action === 'cancelLogin' ? 'Cancelling sign-in...'
+        : action === 'forget' ? 'Removing saved sign-in...'
+        : action === 'restore' ? 'Restoring previous account...'
+        : action === 'retryReload' ? 'Reloading VS Code...' : 'Opening account setup...';
       render();
     }
   }
@@ -91,10 +99,12 @@ function createNavigatorAccounts(api, navigation) {
     if (account.email && account.email !== account.name) lines.push('Email: ' + account.email);
     if (account.workspace) lines.push('Workspace: ' + account.workspace);
     lines.push('Plan: ' + (account.plan ? plan(account) + ' (last known)' : 'unavailable'));
-    lines.push(shortWindow(usage?.primary) + ' remaining: ' + remaining(usage?.primary));
-    lines.push('Short reset: ' + resetTime(usage?.primary?.resetsAt));
-    lines.push(shortWindow(usage?.secondary, 'Other window') + ' remaining: ' + remaining(usage?.secondary));
-    lines.push(shortWindow(usage?.secondary, 'Other window') + ' reset: ' + resetTime(usage?.secondary?.resetsAt));
+    for (const [window, fallback] of [[usage?.primary, 'Short'], [usage?.secondary, 'Other window']]) {
+      const label = shortWindow(window, fallback);
+      const left = remaining(window), reset = resetTime(window?.resetsAt);
+      if (left !== 'unavailable') lines.push(label + ' remaining: ' + left);
+      if (reset !== 'unavailable') lines.push(label + ' reset: ' + reset);
+    }
     lines.push('Banked resets: ' + (Number.isSafeInteger(usage?.bankedResets) ? usage.bankedResets : 'unavailable'));
     lines.push('Checked: ' + when(usage?.checkedAt));
     if (account.usageProblem) lines.push('Usage: ' + account.usageProblem);
@@ -109,6 +119,7 @@ function createNavigatorAccounts(api, navigation) {
   function close(restore = true) {
     if (page.hidden) return;
     page.hidden = true;
+    clearInterval(usageRetry); usageRetry = undefined;
     contextAccountId = undefined;
     renamingAccountId = undefined;
     post('cancelUsage');
@@ -122,13 +133,18 @@ function createNavigatorAccounts(api, navigation) {
   }
 
   function open() {
-    if (!page.hidden) { close(); return; }
+    if (!page.hidden) return;
     previousFocus = document.activeElement;
     if (!navigation.onOpen()) return;
     page.hidden = false;
     render('accountBack');
     if (!state || Date.now() - stateAt > 2000) post('refresh');
     post('refreshUsage');
+    usageRetry = setInterval(() => {
+      if (page.hidden || document.hidden || pendingAction || state?.busy || state?.usageRefreshing
+          || !state?.enabled || !state?.supported) return;
+      if (state.accounts?.some(account => !account.usage?.primary && !account.usage?.secondary)) post('retryUsage');
+    }, 10000);
   }
 
   function startRename(account) {
@@ -225,7 +241,7 @@ function createNavigatorAccounts(api, navigation) {
     const currentFocus = focusKey || (page.contains(document.activeElement) ? document.activeElement.dataset.accountFocus : undefined);
     const scrollTop = page.querySelector('.account-content')?.scrollTop || 0;
     const busy = !!state?.busy || pendingAction;
-    const nextCritical = JSON.stringify([state?.loginEmail || '', state?.problem || '', busy]);
+    const nextCritical = JSON.stringify([state?.loginEmail || '', state?.problem || '', state?.progress || '', busy]);
     const criticalChanged = nextCritical !== criticalSignature;
     criticalSignature = nextCritical;
     page.setAttribute('aria-busy', String(busy));
@@ -264,13 +280,17 @@ function createNavigatorAccounts(api, navigation) {
         const hasEmail = loginEmail.includes('@');
         login.append(element('strong', '', hasEmail ? 'Sign in to the expected account' : 'Sign in to your new account'));
         login.append(element('span', 'account-subtitle', loginEmail));
-        login.append(button('Copy Email', 'copyEmail', () => post('copyEmail'), !hasEmail));
+        if (hasEmail) {
+          const copy = button('Copy Email', 'copyEmail', () => post('copyEmail'));
+          copy.title = 'Copy this email address to paste into the browser sign-in form.';
+          login.append(copy);
+        }
         login.append(button('Cancel sign-in', 'cancelLogin', () => post('cancelLogin'), pendingAction));
         content.append(login);
       }
       if (busy) {
         const progress = element('p', 'account-progress',
-          typeof state.busy === 'string' ? state.busy : 'Working on your account...');
+          state.progress || (pendingAction ? pendingProgress : state.loginEmail ? 'Waiting for browser sign-in...' : 'Preparing account action...'));
         progress.setAttribute('role', 'status');
         content.append(progress);
       }

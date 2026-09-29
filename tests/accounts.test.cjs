@@ -27,7 +27,7 @@ async function fixture(t, overrides = {}, options = {}) {
     window: { async showWarningMessage(message) { messages.push(message); return typeof answer === 'function' ? answer(message) : answer; }, async showInformationMessage(message) { messages.push(message); return answer; } } };
   const exports = {};
   vm.runInNewContext(fs.readFileSync(require.resolve('../dist/accounts'), 'utf8'), {
-    exports, process, setInterval: () => 1, clearInterval() {}, setTimeout, clearTimeout, AbortController,
+    exports, process, Date: options.clock || Date, setInterval: () => 1, clearInterval() {}, setTimeout, clearTimeout, AbortController,
     require: name => name === 'vscode' ? vscode : name === './account-store' ? require('../dist/account-store')
       : name === './account-usage' ? { ...require('../dist/account-usage'), readAccountUsage: overrides.readAccountUsage || (async () => {
         calls.usage++; return { checkedAt: Date.now(), plan: 'plus', primary: { usedPercent: 25, windowDurationMins: 300 }, bankedResets: 2 };
@@ -57,6 +57,28 @@ async function fixture(t, overrides = {}, options = {}) {
 function action(account, name = 'switch') { return { action: name, id: account.id, generation: account.generation }; }
 function reloads(f) { return f.commands.filter(([name]) => name === 'workbench.action.reloadWindow').length; }
 function gate() { let open; const promise = new Promise(resolve => { open = resolve; }); return { promise, open }; }
+
+test('account progress reports credential checks, browser sign-in, switching and reload then clears', async t => {
+  const f = await fixture(t, { isolatedAccountLogin: async (_binary, _directory, open) => {
+    await open('https://auth.openai.com/synthetic');
+    return auth('new');
+  } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  await f.controller.store.rename(target.id, 'Work');
+  const progress = [];
+  f.controller.onChange = () => progress.push(f.controller.snapshot().progress);
+  await f.controller.act(action(target));
+  assert.ok(progress.includes('Checking sign-in for Work...'));
+  assert.ok(progress.includes('Switching to Work...'));
+  assert.ok(progress.includes('Reloading VS Code with your selected account...'));
+  assert.equal(f.controller.snapshot().progress, undefined);
+  await f.controller.act({ action: 'add' });
+  for (const message of ['Opening browser sign-in...', 'Waiting for browser sign-in...', 'Saving your sign-in...', 'Switching to new@example.invalid...'])
+    assert.ok(progress.includes(message), message);
+  assert.equal(f.controller.snapshot().progress, undefined);
+});
 
 test('account page metadata is cached without replacing credentials or repeating fresh reads', async t => {
   const f = await fixture(t);
@@ -88,6 +110,26 @@ test('failed usage reads retain cached metadata and do not block saved switching
   assert.match(metadata.usageProblem, /could not be updated/);
   assert.doesNotMatch(JSON.stringify(f.controller.snapshot()), /PRIVATE/);
   await f.controller.act(action(target)); assert.equal(reloads(f), 1);
+});
+
+test('missing usage retries after ten seconds, backs off, and stops once quota is cached', async t => {
+  let now = Date.now(), reads = 0, succeed = false;
+  const f = await fixture(t, { readAccountUsage: async () => {
+    reads++;
+    if (!succeed) return { checkedAt: now, plan: 'prolite', bankedResets: 0 };
+    return { checkedAt: now, primary: { usedPercent: 1, windowDurationMins: 10080 } };
+  } }, { clock: { now: () => now } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  await f.controller.refreshUsage(); assert.equal(reads, 1);
+  now += 9999; await f.controller.act({ action: 'retryUsage' }); assert.equal(reads, 1);
+  now++; await f.controller.act({ action: 'retryUsage' }); assert.equal(reads, 2);
+  now += 19999; await f.controller.act({ action: 'retryUsage' }); assert.equal(reads, 2);
+  now++; await f.controller.act({ action: 'retryUsage' }); assert.equal(reads, 3);
+  now += 39999; await f.controller.act({ action: 'retryUsage' }); assert.equal(reads, 3);
+  succeed = true; now++; await f.controller.act({ action: 'retryUsage' }); assert.equal(reads, 4);
+  now += 600000; await f.controller.act({ action: 'retryUsage' }); assert.equal(reads, 4);
+  await f.controller.refreshUsage(); assert.equal(reads, 5);
 });
 
 test('plan metadata survives missing quota without replacing the last quota snapshot', async t => {

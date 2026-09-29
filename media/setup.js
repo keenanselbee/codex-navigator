@@ -113,7 +113,6 @@ window.addEventListener('message', event => {
     showAccounts(message.accounts); controls();
   } else if (message.type === 'labels') {
     if (state) state.labels = message.labels;
-    showAccounts(message.accounts);
     showLabels(message.labels); controls();
   } else if (message.type === 'activity') {
     if (state) { state.activity = message.activity; }

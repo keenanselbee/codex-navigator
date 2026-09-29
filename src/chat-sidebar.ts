@@ -66,8 +66,13 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     this.accountsRequested = true;
     await vscode.commands.executeCommand('codexNavigator.chats.focus');
     await this.publishAccounts();
-    if (this.view && this.accountsViewReady) { await this.view.webview.postMessage({ type: 'accountsOpen' }); this.accountsRequested = false; }
+    await this.openRequestedAccounts();
     await this.accounts?.refresh();
+  }
+  private async openRequestedAccounts() {
+    if (!this.accountsRequested || !this.view || !this.accountsViewReady) return;
+    this.accountsRequested = false;
+    await this.view.webview.postMessage({ type: 'accountsOpen' });
   }
   private view?: vscode.WebviewView;
   private rows: SidebarChat[] = [];
@@ -275,7 +280,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     if (type === 'ready') {
       this.accountsViewReady = true;
       await this.publishAccounts();
-      if (this.accountsRequested) { await this.view?.webview.postMessage({ type: 'accountsOpen' }); this.accountsRequested = false; }
+      await this.openRequestedAccounts();
     }
     if (type === 'accountAction') { await this.accounts?.act(message); await this.publishAccounts(); return; }
     if (type === 'license' && typeof action === 'string') { await this.license?.action(action); return; }
@@ -311,9 +316,11 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       await this.view?.webview.postMessage({ type: 'colourClosed' }); return;
     }
     if (type === 'ready' || type === 'refresh') {
-      this.accountsViewReady = true;
-      await this.publishAccounts();
-      if (this.accountsRequested) { await this.view?.webview.postMessage({ type: 'accountsOpen' }); this.accountsRequested = false; }
+      if (type === 'refresh') {
+        this.accountsViewReady = true;
+        await this.publishAccounts();
+        await this.openRequestedAccounts();
+      }
       await this.refresh();
       if (this.colour) await this.view?.webview.postMessage({ type: 'colour', token: this.colour.token, ...this.colour.options });
       return;
