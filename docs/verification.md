@@ -1,10 +1,18 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.8.1. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.8.2. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
+
+Demonstration refresh: 1.8.2
+----------------------------
+
+Replace the listing GIF with the owner-supplied latest recording. Runtime code
+and styles are unchanged from 1.8.1, including the verified descender spacing.
+Prior runtime verification remains applicable. Verify release metadata and the
+exact production VSIX installation/reinstallation before Desktop delivery.
 
 Verified production package: 1.8.1
 ----------------------------------
