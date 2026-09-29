@@ -17,6 +17,25 @@ The hosting repository is [keenanselbee/codex-navigator](https://github.com/keen
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
 
+Verified production package: 1.8.0
+----------------------------------
+
+The canonical production package is `dist/codex-navigator-1.8.0.vsix`, with its
+paired receipt. Public build revision: `8b90a00a16f72ce6e14956ab0d743090c18b8c8a`.
+The private revision remains `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `3688ffaec8194cc784c08e8b84067a11b33b7d97c7667d61535f21768b876fd1`.
+
+All 68 archive entries match the allowlist. Exact production installation and
+reinstallation pass in `installed-acceptance-KZ1SE1`: 65 payload hashes and the
+manifest match, and expired trial state survives reinstall. The disposable
+extension was removed; the normal VS Code profile was unchanged.
+
+Desktop copies of the VSIX, receipt, release notes and verification JSON match
+their sources. Push the public commits before Marketplace upload so the
+GitHub-hosted visuals and updated account documentation anchor are current.
+No Git push or Marketplace publication was performed. Temporary presentation
+fixtures are excluded; retained local artifacts preserve their release receipts.
+
 Prepared release inputs: 1.8.0
 ------------------------------
 
