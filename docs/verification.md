@@ -1,13 +1,32 @@
 Verification
 ============
 
-Current candidate: **1.8.7**, covering the Windows-only WSL guard and clearer
-account/Node.js setup diagnostics. Automated checks pass as recorded below. Native
-macOS/Linux account and secure-storage acceptance remains outstanding.
+Current verified Desktop release: **1.8.7**, covering the Windows-only WSL guard
+and clearer account/Node.js setup diagnostics. Native macOS/Linux account and
+secure-storage acceptance remains outstanding. Publication remains with the owner.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.8.7
+-------------------------------
+
+Public build revision: `078bab354fa8f60a05cf6fac4a5dfa01ab04e7ca`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `28f2db1740bbdc054cb7918516662379875a1a0b73011fd2778c49043d840120`.
+
+All 68 archive entries match the production allowlist. The exact VSIX passes
+installation and reinstallation in `installed-acceptance-tklH5y` under VS Code
+1.137.0, verifying 65 payload hashes, its manifest and retained trial expiry.
+The disposable extension was removed. Normal-profile installation, live account
+switching and paid-provider requests were not performed.
+
+Desktop VSIX, receipt, notes and verification JSON match their source hashes.
+No Git push or Marketplace publication was performed. Push the public commits
+before upload to make the new account-storage help anchor available. This
+post-package evidence is excluded from the immutable VSIX.
 
 
 Compatibility and setup checks: 1.8.7
