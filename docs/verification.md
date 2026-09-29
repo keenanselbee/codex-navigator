@@ -1,13 +1,37 @@
 Verification
 ============
 
-Current documentation release: **1.8.6**. Packaging and exact-archive checks
-will be recorded here after completion. Runtime code and styles are unchanged
-from the previously verified release.
+Current verified Desktop release: **1.8.6**. Runtime code and styles match the
+previously verified 1.8.4 release. Publication remains with the owner.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.8.6
+-------------------------------
+
+Public build revision: `a227c07c08d293c7a1d0234ace11e5950c41b65c`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `54c1a26ddc1144ddc366be8ebb40b701bed03f45ab45f80cce1d0fab0333dc12`.
+
+All 68 archive entries match the allowlisted payload. Four release checks and
+48 local/repository documentation paths and anchors pass. All 60 runtime, UI
+and collector file hashes match verified 1.8.4; no runtime behavior changed.
+The README uses the centred italic account tagline once, and its introduction
+starts with Find conversations by project.
+
+Exact production installation and reinstallation pass in
+`installed-acceptance-Zfm2hS` under VS Code 1.137.0: 65 payload files and the
+manifest match, and expired trial state survives reinstall. These isolated
+checks do not exercise live accounts or paid provider endpoints. The disposable
+extension was removed; the normal profile was unchanged.
+
+Desktop VSIX, receipt, release notes and verification JSON match their source
+hashes. No Git push or Marketplace publication was performed. Push the public
+commits before upload to make the new developer guide and updated help available.
+This evidence is excluded from the VSIX and preserves its immutable build inputs.
 
 
 Reserved documentation package: 1.8.5
