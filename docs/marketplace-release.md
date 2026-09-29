@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.8.2
+Product: Codex Navigator 1.8.3
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,14 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+Demonstration refresh: 1.8.3
+----------------------------
+
+Update the listing GIF from the latest owner-supplied recording. Runtime code
+and styles are unchanged, retaining the verified account descender spacing.
+Prior runtime checks remain applicable; release metadata and exact-package
+installation/reinstallation are checked for this release.
 
 Verified production package: 1.8.2
 ----------------------------------

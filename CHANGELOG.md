@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+1.8.3
+-----
+
+- Update the extension demonstration GIF to the latest supplied recording.
+
 1.8.2
 -----
 
