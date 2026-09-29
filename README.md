@@ -32,7 +32,7 @@ Recent chat highlights fade over time, showing which conversations you visited m
 Features
 --------
 
-- **Keep your Codex accounts ready:** Save sign-ins securely on your device, give accounts recognisable names, and switch with a click and window reload. See last known usage, plan and reset details before choosing an account. [Supported environments and limits](docs/advanced.md#account-switching).
+- **Keep your Codex accounts ready:** Save sign-ins securely on your device, give accounts recognisable names, and switch with a click and window reload. See last known usage, plan and reset details before choosing an account. [Supported environments and limits](https://github.com/keenanselbee/codex-navigator/blob/main/docs/advanced.md#account-switching).
 - **Recognise each project:** Give chats repository labels or custom labels. Projects get distinct, repeatable automatic colours, and you can choose your own.
 - **Switch conversations quickly:** Browse and search saved chats from a sidebar that adapts to your available space. The order stays steady while you interact with the list.
 - **Keep favourites close:** Star chats to filter favourites. Pin a chat to hold its position and keep it visible beyond the default 24-hour recency filter.

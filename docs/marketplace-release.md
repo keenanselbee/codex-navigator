@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.8.3
+Product: Codex Navigator 1.8.4
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,15 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+Marketplace documentation link: 1.8.4
+-------------------------------------
+
+Use the full GitHub URL for Supported environments and limits. The previous
+relative link resolved against marketplace.visualstudio.com because packaging
+disables relative-link rewriting. Verify the packaged README keeps the absolute
+URL and has no relative Markdown links. Runtime code and styles are unchanged.
+The owner requested Desktop delivery only, without Marketplace publication.
 
 Verified production package: 1.8.3
 ----------------------------------

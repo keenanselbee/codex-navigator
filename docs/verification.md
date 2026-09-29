@@ -1,10 +1,19 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.8.3. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.8.4. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
+
+Marketplace documentation link: 1.8.4
+-------------------------------------
+
+Use the full GitHub URL for Supported environments and limits. The previous
+relative link resolved against marketplace.visualstudio.com because packaging
+disables relative-link rewriting. Verify the packaged README keeps the absolute
+URL and has no relative Markdown links. Runtime code and styles are unchanged.
+The owner requested Desktop delivery only, without Marketplace publication.
 
 Verified production package: 1.8.3
 ----------------------------------

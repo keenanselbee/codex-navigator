@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+1.8.4
+-----
+
+- Fix the Marketplace account-support link to open the GitHub documentation.
+
 1.8.3
 -----
 

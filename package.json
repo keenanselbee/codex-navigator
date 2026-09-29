@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Organise your Codex chats, switch saved accounts and see last known usage in one compact sidebar.",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
