@@ -20,14 +20,14 @@ async function fixture(t, overrides = {}, options = {}) {
   const values = new Map(), globals = new Map(), commands = [], messages = [], calls = { read: 0, preflight: 0, login: 0, usage: 0 };
   let answer = 'Switch Account and Reload', allowed = true, active = options.activeWork, reloadFails = options.reloadFails;
   const secrets = { async get(k) { return values.get(k); }, async store(k,v) { values.set(k,v); }, async delete(k) { values.delete(k); } };
-  const vscode = { workspace: { isTrusted: true, getConfiguration: () => ({ get: () => false }) },
+  const vscode = { workspace: { isTrusted: true, getConfiguration: () => ({ get: () => options.wsl || false }) },
     env: { openExternal: async () => true, clipboard: { async writeText() {} } },
     Uri: { parse: value => value },
     commands: { async executeCommand(...args) { commands.push(args); if (args[0] === 'workbench.action.reloadWindow' && reloadFails) throw Error('synthetic reload failure'); } },
     window: { async showWarningMessage(message) { messages.push(message); return typeof answer === 'function' ? answer(message) : answer; }, async showInformationMessage(message) { messages.push(message); return answer; } } };
   const exports = {};
   vm.runInNewContext(fs.readFileSync(require.resolve('../dist/accounts'), 'utf8'), {
-    exports, process, Date: options.clock || Date, setInterval: () => 1, clearInterval() {}, setTimeout, clearTimeout, AbortController,
+    exports, process: options.platform ? { ...process, platform: options.platform } : process, Date: options.clock || Date, setInterval: () => 1, clearInterval() {}, setTimeout, clearTimeout, AbortController,
     require: name => name === 'vscode' ? vscode : name === './account-store' ? require('../dist/account-store')
       : name === './account-usage' ? { ...require('../dist/account-usage'), readAccountUsage: overrides.readAccountUsage || (async () => {
         calls.usage++; return { checkedAt: Date.now(), plan: 'plus', primary: { usedPercent: 25, windowDurationMins: 300 }, bankedResets: 2 };
@@ -57,6 +57,37 @@ async function fixture(t, overrides = {}, options = {}) {
 function action(account, name = 'switch') { return { action: name, id: account.id, generation: account.generation }; }
 function reloads(f) { return f.commands.filter(([name]) => name === 'workbench.action.reloadWindow').length; }
 function gate() { let open; const promise = new Promise(resolve => { open = resolve; }); return { promise, open }; }
+
+test('only Windows applies the WSL preference and other account access guards remain enforced', async t => {
+  for (const platform of ['win32', 'darwin', 'linux']) for (const wsl of [false, true]) {
+    const f = await fixture(t, {}, { platform, wsl });
+    assert.equal(f.controller.allowed(), !(platform === 'win32' && wsl), platform + ' WSL=' + wsl);
+    f.vscode.workspace.isTrusted = false; assert.equal(f.controller.allowed(), false);
+    f.vscode.workspace.isTrusted = true; f.vscode.env.remoteName = 'ssh-remote'; assert.equal(f.controller.allowed(), false);
+    f.vscode.env.remoteName = undefined; f.access(false); assert.equal(f.controller.allowed(), false);
+  }
+});
+
+test('failed account enable stays visible without capture and a later explicit retry can enable', async t => {
+  let supported = false, checks = 0;
+  const reason = 'Account switching requires file-backed Codex authentication.';
+  const f = await fixture(t, { accountCapability: async () => {
+    checks++; return { supported, isolatedLogin: supported, message: supported ? 'Ready' : reason };
+  } });
+  assert.equal(f.controller.status().label, 'Off');
+  let changes = 0; f.controller.onChange = () => changes++;
+  await f.controller.enable(); await f.controller.refresh();
+  assert.equal(f.controller.store.enabled, false);
+  assert.equal(f.controller.status().label, 'Unavailable');
+  assert.equal(f.controller.status().detail, reason);
+  assert.equal(f.calls.read, 0); assert.equal(f.values.size, 0);
+  assert.equal(checks, 1, 'disabled polling does not repeatedly launch the capability helper');
+  assert.ok(changes > 0); assert.equal(f.messages.length, 0, 'failure stays inline');
+  supported = true; await f.controller.enable();
+  assert.equal(f.controller.store.enabled, true);
+  assert.notEqual(f.controller.status().detail, reason);
+  await f.controller.disable(); assert.equal(f.controller.status().label, 'Off');
+});
 
 test('account progress reports credential checks, browser sign-in, switching and reload then clears', async t => {
   const f = await fixture(t, { isolatedAccountLogin: async (_binary, _directory, open) => {

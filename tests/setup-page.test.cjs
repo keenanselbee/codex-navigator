@@ -62,6 +62,10 @@ test('renderer updates activity without overwriting unsaved routing fields',()=>
  receive({type:'state',replaceChoices:true,choices:{main:'Saved',scopes:[],fallbackNames:[],enabled:false},routing:{label:'Ready',detail:''},repositories:[],activity:{nodeAvailable:true,label:'Not installed',home:'Home'}});
  node('main').value='Unsaved';receive({type:'stale'});receive({type:'activity',activity:{installed:true,enabled:true,nodeAvailable:true,trusted:false,label:'Review needed',home:'Home'}});
  assert.equal(node('main').value,'Unsaved');assert.equal(node('stale').hidden,false);assert.equal(node('activity-status').textContent,'Review needed');assert.equal(node('review-hooks').disabled,false);
+ const nextStep='VS Code does not have permission to run Node.js. Check your installation.';
+ receive({type:'activity',activity:{nodeAvailable:false,label:'Node.js unavailable',nextStep,home:'Home'}});
+ assert.equal(node('activity-next').textContent,nextStep);assert.equal(node('install-detail').textContent,nextStep);
+ assert.equal(node('install-hooks').disabled,true);assert.equal(node('main').value,'Unsaved');
 });
 
 test('label updates preserve enabled account status and removal controls',()=>{

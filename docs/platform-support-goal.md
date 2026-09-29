@@ -1,6 +1,21 @@
 Best-effort desktop platform support
 ===================================
 
+Current status
+--------------
+
+Portable implementation is included in production releases. Windows x64 has
+native verification; macOS/Linux remain best effort pending real-device checks.
+Version 1.8.7 limits the WSL preference to Windows and improves account-backend
+and Node.js setup diagnostics. These changes do not add keyring account switching
+or establish native macOS/Linux acceptance. See [current help](advanced.md) and
+[verification](verification.md).
+
+The dated results below are historical evidence. Their references to unreleased
+changes, pending commercial acceptance and version 1.5.1 describe that milestone,
+not the current release.
+
+
 Scope
 -----
 

@@ -58,15 +58,16 @@ export class Accounts implements vscode.Disposable {
   }
   private allowed() {
     return !this.disposed && this.options.canUse() && vscode.workspace.isTrusted && !vscode.env.remoteName
-      && !vscode.workspace.getConfiguration('chatgpt').get('runCodexInWindowsSubsystemForLinux', false);
+      && !(process.platform === 'win32' && vscode.workspace.getConfiguration('chatgpt').get('runCodexInWindowsSubsystemForLinux', false));
   }
   status(): AccountStatus {
     const enabled = this.store.enabled;
     const problem = this.notice || this.reloadProblem || this.captureNotice;
+    const unsupported = this.checkedAt > 0 && !this.capability.supported;
     return { enabled, count: this.store.list().length, supported: this.capability.supported,
-      label: !enabled ? 'Off' : !this.allowed() ? 'Unavailable' : problem ? 'Needs attention'
+      label: !enabled ? unsupported ? 'Unavailable' : 'Off' : !this.allowed() ? 'Unavailable' : problem ? 'Needs attention'
         : !this.capability.supported ? 'Unsupported authentication' : this.identity ? 'Remembering accounts' : 'Sign in to Codex',
-      detail: !enabled ? 'Optional. Remember Codex sign-ins securely on this device.'
+      detail: !enabled ? unsupported ? this.capability.message : 'Optional. Remember Codex sign-ins securely on this device.'
         : !this.allowed() ? 'Account switching requires Navigator access and a trusted native local workspace.'
         : problem || (!this.capability.supported ? this.capability.message : 'Choose an account to switch and reload this window.') };
   }
@@ -185,7 +186,7 @@ export class Accounts implements vscode.Disposable {
     if (!this.allowed()) throw new AccountError('Open a trusted native local workspace with Navigator access first.');
     this.capability = await accountCapability(this.options.binary, this.options.home, this.options.cwd);
     this.checkedAt = Date.now();
-    if (!this.capability.supported) { await vscode.window.showInformationMessage(this.capability.message); return; }
+    if (!this.capability.supported) { this.changed(); return; }
     await this.store.enable(); this.notice = ''; await this.refresh(true);
   }
   private async mutate(operation: () => Promise<void>) {
@@ -196,7 +197,7 @@ export class Accounts implements vscode.Disposable {
   async disable() {
     await this.stopUsage();
     if (this.busy && !this.login) throw new AccountError('Wait for the account switch to finish.');
-    this.login?.abort(); await this.mutate(() => this.store.disable()); await this.refresh();
+    this.login?.abort(); await this.mutate(() => this.store.disable()); this.checkedAt = 0; await this.refresh();
   }
   async forgetAll() {
     await this.stopUsage();
@@ -205,7 +206,7 @@ export class Accounts implements vscode.Disposable {
     if (this.busy && !this.login) throw new AccountError('Wait for the account switch to finish.');
     this.login?.abort();
     await this.mutate(async () => { await this.store.forgetAll(); await this.context.secrets.delete(this.rollbackKey); });
-    this.reloadNeeded = false; this.reloadProblem = ''; this.notice = ''; await this.refresh();
+    this.reloadNeeded = false; this.reloadProblem = ''; this.notice = ''; this.checkedAt = 0; await this.refresh();
   }
   /** All webview actions are validated again against host-owned state. */
   async act(message: unknown): Promise<void> {

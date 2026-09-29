@@ -1,12 +1,31 @@
 Verification
 ============
 
-Current verified Desktop release: **1.8.6**. Runtime code and styles match the
-previously verified 1.8.4 release. Publication remains with the owner.
+Current candidate: **1.8.7**, covering the Windows-only WSL guard and clearer
+account/Node.js setup diagnostics. Automated checks pass as recorded below. Native
+macOS/Linux account and secure-storage acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Compatibility and setup checks: 1.8.7
+-------------------------------------
+
+All 231 public tests pass, including the Windows/macOS/Linux WSL-preference
+matrix, retained trust/remote/access guards, failed account enable without
+credential capture, explicit retry, bounded Node error classification and
+host-provided setup guidance. All 24 commercial tests pass with the private
+implementation unchanged. Fifty local/repository Markdown paths and anchors,
+the setup account-help link and diff whitespace pass.
+
+Isolated VS Code 1.137.0 integration passes initial and restart phases in
+`integration-bL5yus`, including setup, retained drafts, account SecretStorage,
+chat/profile restoration and second-window coordination. These fixtures use
+synthetic credentials and hooks, not native macOS/Linux or live-account evidence.
+Production packaging and exact-archive installed acceptance follow the reviewed
+release-input commit.
 
 
 Verified Desktop package: 1.8.6

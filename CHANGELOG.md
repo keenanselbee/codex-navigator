@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+1.8.7
+-----
+
+- Apply the Windows WSL preference only on Windows when checking account access.
+- Keep account setup failures visible with storage guidance and an explicit retry.
+- Explain Node.js PATH, permission and timeout failures consistently in setup.
+- Remove obsolete account test-build and confirmation wording. macOS/Linux
+  support remains best effort pending native verification.
+
 1.8.6
 -----
 

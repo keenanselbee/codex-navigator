@@ -106,14 +106,14 @@ export async function accountCapability(binary: string | undefined, home: string
       return { supported: false, message: 'Codex policy requires another credential backend.' };
     const standardEndpoint = (value: unknown) => value == null || value === 'https://chatgpt.com/backend-api/' || value === 'https://chatgpt.com/backend-api';
     if (!standardEndpoint(requirements?.chatgptBaseUrl) || !standardEndpoint(config?.chatgpt_base_url))
-      return { supported: false, message: 'Custom Codex authentication endpoints are not supported by this test build.' };
+      return { supported: false, message: 'Account switching does not support custom Codex authentication endpoints. Your settings were not changed.' };
     // Unknown/default backend is not proof that an existing auth.json is authoritative.
-    if (config?.cli_auth_credentials_store !== 'file') return { supported: false, message: 'This test build supports file-backed Codex authentication. Your credential storage settings were not changed.' };
+    if (config?.cli_auth_credentials_store !== 'file') return { supported: false, message: 'Account switching requires file-backed Codex authentication. Your configuration uses another or unverified storage backend. See account storage help in setup. No settings were changed.' };
     if (config.forced_login_method && config.forced_login_method !== 'chatgpt') return { supported: false, message: 'Codex policy does not permit ChatGPT account switching.' };
     const forced = config.forced_chatgpt_workspace_id;
     const workspaces = typeof forced === 'string' ? [forced] : Array.isArray(forced) && forced.every(value => typeof value === 'string') ? forced : undefined;
     if (forced != null && !workspaces) return { supported: false, message: 'Codex workspace restrictions could not be verified.' };
-    return { supported: true, message: 'File-backed accounts are available. Switching requires a reload and confirmation in Codex.', workspaces, isolatedLogin: requirements == null && !workspaces?.length };
+    return { supported: true, message: 'File-backed accounts are available. Choose an account to switch and reload this window.', workspaces, isolatedLogin: requirements == null && !workspaces?.length };
   } catch { return { supported: false, message: 'Codex authentication settings could not be verified. Retry after Codex is ready.' }; }
   finally { client.dispose(); }
 }

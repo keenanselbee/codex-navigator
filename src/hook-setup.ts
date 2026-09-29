@@ -9,6 +9,17 @@ import { activityCommand, codexBinary, codexRuntimeIssue, sameFilePath } from '.
 export const hookEvents = ['UserPromptSubmit', 'Stop', 'Interrupt', 'SessionEnd'];
 export { activityCommand } from './platform';
 
+export async function nodeRuntimeIssue(): Promise<string> {
+  return new Promise(resolve => execFile('node', ['--version'], { windowsHide: true, timeout: 3000, maxBuffer: 1024 }, (error, stdout) => {
+    if (!error && /^v\d+\.\d+\.\d+\s*$/.test(stdout)) { resolve(''); return; }
+    const reason = error?.code === 'ENOENT' ? 'Node.js was not found on VS Code\'s PATH.'
+      : error?.code === 'EACCES' || error?.code === 'EPERM' ? 'VS Code does not have permission to run Node.js.'
+      : error?.killed ? 'Node.js did not respond within three seconds.'
+      : 'Node.js could not be verified by VS Code.';
+    resolve(reason + ' Check your Node.js installation and PATH, fully quit and reopen VS Code, then check setup again.');
+  }));
+}
+
 export function parseHookTrust(value: any, home: string, cwds: string[]) {
   if (!Array.isArray(value?.data) || !value.data.length || value.data.length > 100) return undefined;
   const expected = hookEvents.map(event => event[0].toLowerCase() + event.slice(1));
@@ -86,7 +97,8 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
     installed = false;
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') detail = error instanceof Error ? error.message : String(error);
   }
-  const nodeAvailable = await new Promise<boolean>(resolve => execFile('node', ['--version'], { windowsHide: true, timeout: 3000 }, error => resolve(!error)));
+  const nodeIssue = await nodeRuntimeIssue();
+  const nodeAvailable = !nodeIssue;
   let trusted: boolean | undefined;
   let warnings: unknown[] = [];
   const codex = vscode.extensions.getExtension('openai.chatgpt');
@@ -105,7 +117,7 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
     try { observed = await lastHookEvent(home, since); }
     catch (error) { deliveryDetail = error instanceof Error ? error.message : String(error); }
   }
-  const nextStep = !nodeAvailable ? 'Install Node.js and restart VS Code.' : detail ? detail
+  const nextStep = !nodeAvailable ? nodeIssue : detail ? detail
     : !installed || !enabled ? 'Install Navigator hooks first.'
     : trusted === false ? 'Open Hook Review, type /hooks, and trust all Navigator hooks.'
     : trusted === undefined ? 'Trust could not be verified. Open Hook Review and check Navigator hooks in /hooks.'
@@ -113,7 +125,7 @@ async function readHookSetupStatus(context: vscode.ExtensionContext, home: strin
     : observed ? 'Hook delivery is verified. No further setup is needed.'
     : 'Navigator is ready. Activity indicators will update when a Codex chat runs. You can optionally reload and send a message to check delivery.';
   return { enabled, installed, nodeAvailable, trusted, observed, home, detail, deliveryDetail, warnings, nextStep, checkedAt: Date.now(),
-    label: !nodeAvailable ? 'Node.js needed' : detail ? 'Needs attention' : !installed || !enabled ? 'Not installed' : trusted === false ? 'Review needed' : trusted === undefined ? 'Trust not verified' : deliveryDetail ? 'Activity needs attention' : observed ? 'Event received' : 'Ready' };
+    label: !nodeAvailable ? 'Node.js unavailable' : detail ? 'Needs attention' : !installed || !enabled ? 'Not installed' : trusted === false ? 'Review needed' : trusted === undefined ? 'Trust not verified' : deliveryDetail ? 'Activity needs attention' : observed ? 'Event received' : 'Ready' };
 }
 
 export function openHookReview(home: string): void {

@@ -56,7 +56,7 @@ function showActivity(activity) {
   el('review-hooks').hidden = !installed || activity.trusted === true;
   el('reload-hooks').hidden = !installed || ready;
   el('verify-hooks').hidden = !installed;
-  el('activity-next').textContent = !activity.nodeAvailable ? 'Install Node.js and restart VS Code to enable activity indicators.' : ready ? activity.nextStep : !installed
+  el('activity-next').textContent = !activity.nodeAvailable ? activity.nextStep : ready ? activity.nextStep : !installed
     ? 'Install hooks, then review them in Codex.' : activity.trusted !== true
       ? 'Open Hook Review, type /hooks, and trust all Navigator hooks. Then reload and send a chat message.'
       : 'Reload this window and send a normal chat message to verify activity.';
@@ -64,7 +64,7 @@ function showActivity(activity) {
   el('activity-detail').textContent = [activity.detail, activity.deliveryDetail,
     ...(activity.warnings || []).map(warning => typeof warning === 'string' ? warning : JSON.stringify(warning))].filter(Boolean).join('\n');
   el('activity-checked').textContent = 'Last checked: ' + new Date(activity.checkedAt).toLocaleTimeString();
-  el('install-detail').textContent = !activity.nodeAvailable ? 'Install Node.js and restart VS Code so Codex can run the collector.' : activity.installed && activity.enabled ? 'Navigator hooks and collector are installed.' : 'Install four small hooks for activity updates.';
+  el('install-detail').textContent = !activity.nodeAvailable ? activity.nextStep : activity.installed && activity.enabled ? 'Navigator hooks and collector are installed.' : 'Install four small hooks for activity updates.';
   el('install-hooks').textContent = activity.installed && activity.enabled ? 'Reinstall Hooks' : 'Install Hooks';
   el('trust-detail').textContent = activity.trusted === true ? 'Codex reports all four hooks trusted and enabled for this workspace.' : activity.trusted === false ? 'One or more hooks need review or are disabled. Open /hooks in Codex.' : 'Trust has not been verified. Open /hooks in Codex and check the entries.';
   el('event-detail').textContent = activity.observed ? 'A real hook event was received at ' + new Date(activity.observed).toLocaleString() + '. This verifies event delivery, not the outcome of a task.' : activity.nextStep;

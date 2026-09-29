@@ -93,7 +93,10 @@ diagnostics. Missing event evidence and collector write failures
 are shown only as activity diagnostics; neither hides chats. Older dismissal flags
 no longer bypass installation and trust checks.
 
-If setup says Node.js needed, install Node.js and restart VS Code. If trust is
+If setup says Node.js unavailable, follow its specific PATH, permission or timeout
+guidance. The check runs inside the extension host; Node working in an interactive
+terminal alone does not establish that Navigator can run it. After fixing the
+installation or PATH, fully quit and reopen VS Code, then check setup again. If trust is
 unverified, inspect `/hooks` in the provided terminal. If trusted but no event
 arrives, reload and start a new turn, then inspect the diagnostics path shown in
 setup. Other Codex policy or configuration can disable hooks. Official details:
@@ -563,6 +566,24 @@ Turning off keeps saved accounts;
 Forget All deletes them and turns remembering off without signing Codex out.
 Normal Navigator access is required to enable, capture, add or switch. Removal
 remains available after access expires.
+
+### Account credential storage
+
+Navigator supports Codex's file-backed credentials and does not migrate another
+backend. If Enable Account Switching fails, setup keeps the reason visible;
+choose Enable Account Switching again after resolving it. Disabled account
+switching does not repeatedly check the backend or capture credentials.
+
+The file backend keeps Codex's active sign-in in its local auth.json. Navigator's
+remembered copies use VS Code SecretStorage. The keyring backend uses a different
+storage mechanism; auto and unknown configurations are not treated as proof that
+auth.json is authoritative. An existing file alone is insufficient.
+
+If you choose to configure Codex to use file-backed credentials, do so through
+Codex's own configuration and sign in through Codex, then retry Navigator setup.
+This is a deliberate storage choice, not a requirement to use Navigator's chat
+features. Do not copy tokens manually or bypass managed authentication policies.
+Navigator never changes the selected backend automatically.
 
 This version supports file-backed ChatGPT authentication in trusted native local
 workspaces. It detects the effective backend and enforced login restrictions

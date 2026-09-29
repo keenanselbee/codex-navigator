@@ -5,6 +5,28 @@ vm.runInNewContext(fs.readFileSync(require.resolve('../dist/hook-setup'),'utf8')
 const {parseHookTrust,activityCommand,lastHookEvent}=exportsFixture;
 const home=path.resolve('.codex-temp/hooks-trust-home'),cwd=path.resolve('.codex-temp/project');
 const events=['userPromptSubmit','stop','interrupt','sessionEnd'];
+
+test('Node probe reports bounded actionable failures without exposing process output', async () => {
+ for (const [error,stdout,expected] of [
+  [undefined,'v22.20.0\n',''],
+  [{code:'ENOENT'},'',/not found on VS Code's PATH/],
+  [{code:'EACCES'},'',/permission/],
+  [{code:'EPERM'},'',/permission/],
+  [{killed:true},'',/three seconds/],
+  [{code:1},'private diagnostic',/could not be verified/],
+  [undefined,'not a Node version',/could not be verified/],
+ ]) {
+  const exports={};
+  vm.runInNewContext(fs.readFileSync(require.resolve('../dist/hook-setup'),'utf8'),{exports,require:name=>
+   name==='vscode'?vscodeFixture:name==='node:child_process'?{execFile(binary,args,options,done){
+    assert.equal(binary,'node');assert.equal(args.join(' '),'--version');assert.equal(options.timeout,3000);assert.equal(options.maxBuffer,1024);
+    done(error,stdout);
+   }}:name.startsWith('./')?require('../dist/'+name.slice(2)):require(name)});
+  const issue=await exports.nodeRuntimeIssue();
+  if(expected==='')assert.equal(issue,'');else {assert.match(issue,expected);assert.match(issue,/fully quit and reopen/);}
+  assert.ok(!issue.includes('private diagnostic'));
+ }
+});
 test('chat admission requires all readiness checks and retains delivery evidence during idle time',()=>{
  const valid={enabled:true,installed:true,nodeAvailable:true,trusted:true,observed:'2026-01-01T00:00:00Z',detail:'',nextStep:'Verified'};
  assert.equal(exportsFixture.hookReadiness(valid).ready,true,'old successful evidence is valid while idle');
