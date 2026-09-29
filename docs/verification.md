@@ -6,6 +6,21 @@ migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
 
+Verified production package: 1.8.3
+----------------------------------
+
+Production archive and receipt are retained in `dist/` and on the Desktop.
+Public build revision: `a8d1c3f67de2a5d83a36ef588470039b5a3a6519`.
+SHA-256: `6bad159f8821866b38ca0fa96adc70574f5e07866d5547cd3f39dac13d3592c4`.
+
+Four release metadata/evidence tests pass. All 68 archive entries match the
+allowlist. Exact installation and reinstallation pass in
+`installed-acceptance-vlBgV5`, including 65 payload hashes, the manifest and
+persistent expired trial state. The disposable installation was removed.
+Desktop archive, receipt, release notes and verification match their sources.
+No normal-profile changes, Git push or Marketplace publication were performed.
+Push the public commits before upload to update the GitHub-hosted GIF.
+
 Demonstration refresh: 1.8.3
 ----------------------------
 
