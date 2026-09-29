@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 1.7.2 (release inputs verified; packaging pending)
+Product: Codex Navigator 1.7.7
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see LICENSE.md
 
@@ -16,6 +16,73 @@ project instructions remain optional.
 The hosting repository is [keenanselbee/codex-navigator](https://github.com/keenanselbee/codex-navigator).
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
+
+
+Prepared release inputs: 1.7.7
+-----------------------------
+
+The owner approved a committed, publishable Desktop package. The Accounts page
+omits Account management and its three actions. Plan metadata recognises Codex
+variants such as `prolite` (Pro 5x) and `pro` (Pro 20x), and persists independently
+of optional quota data. Remembered sign-ins and successful metadata reads update
+the plan without inferring a paid tier from remaining quota.
+
+The release includes the account grid, safe sign-in recovery and compaction
+activity changes from local test versions 1.7.3 through 1.7.6. Normal production
+packaging requires clean committed inputs and records public/private revisions
+and payload hashes. Exact-archive installed acceptance precedes Desktop delivery.
+Marketplace publication and Git push remain separate actions. Windows is the
+verified host; macOS/Linux and real-account IDE adoption retain the qualifications
+in [verification](verification.md).
+
+
+Prepared test inputs: 1.7.6
+--------------------------
+
+The approved account grid replaces the popup. Neutral chat-sized tiles show the
+email/custom label and plan, then last known quota. Clicking switches and reloads;
+the final tile adds an account. Right-click changes the label, and clearing it
+restores the email. Hover exposes full identity, reset and freshness information.
+
+Usage checks use an isolated ephemeral native app-server with access tokens only,
+without credential refresh or live-file publication. Cached, validated metadata
+is account/workspace scoped and removed on Forget. Unsupported or expired reads
+cannot block switching. Existing sign-in, reload and secure-storage restrictions
+remain in force. No reset credits are redeemed.
+
+Use the existing uncommitted local test packaging route. Preserve earlier test
+archives and receipts; this candidate requires its own exact-package acceptance.
+No project commit, normal-profile installation or Marketplace publication is
+included in Desktop delivery. See [verification](verification.md) for evidence.
+
+
+Prepared test inputs: 1.7.3
+--------------------------
+
+Optional account setup remembers compatible file-backed Codex credentials in VS
+Code SecretStorage and adds an account picker after Search and New Chat. Add
+Account uses an isolated native browser login. Switching preserves the outgoing
+credential, checks external drift, selects the saved credential, reloads this
+window and stays pending until the user verifies Codex. Rename, forget, consent
+removal and guarded restore are available. Other credential backends, remote
+environments and custom auth endpoints remain unsupported; managed requirements
+can block isolated login. The live IDE account cannot be verified automatically.
+
+The candidate also retains the compaction/reasoning/large-output spinner fixes.
+All 182 public tests, the missing-private guard, 24 commercial tests, and real
+isolated VS Code initial/restart/second-window checks passed. Synthetic saved
+credentials survived VS Code SecretStorage across process restart. Native Codex
+synthetic testing proved file replacement needs a process restart for adoption.
+Owner-account OAuth and actual IDE adoption remain manual acceptance; macOS and
+Linux have no native account-switch evidence.
+
+This is a Desktop test delivery, not a Marketplace publication. The owner explicitly selected testing before committing. Use npm run
+package:test-build to record the exact uncommitted public source hashes and
+base revision in a test-marked receipt. Normal npm run package still requires
+clean committed inputs. Both modes reserve the same version/output path and
+retain all payload, private-checkout, licensing and immutability checks.
+The private checkout remains unchanged at
+279a6513450a108980544c6291bfad7f47343a65.
 
 
 Prepared release inputs: 1.7.2
@@ -338,3 +405,61 @@ The VSIX and paired receipt are on `C:\Users\Keenan\Desktop`; both Desktop
 copies match their source hashes. Marketplace upload remains with the owner.
 This evidence update is excluded from the VSIX and preserves the recorded build
 revision and immutable archive. No Git remote push was performed.
+
+Verified local test delivery: 1.7.3
+---------------------------------
+
+The owner explicitly requested testing before commits. The exact uncommitted
+VSIX and source/payload receipt are retained under dist and copied to the Desktop
+as codex-navigator-1.7.3-test.vsix and its paired JSON receipt. SHA-256:
+7ae782ebb0167923f83b4c820e7dbf986a9c4342afc59ddd6746c6553a43f789.
+
+All 63 archive entries passed allowlist/hash checks; the exact 1.7.3 archive
+passed isolated installation and reinstallation in installed-acceptance-dP0Xpt
+with 60 installed payload files and its manifest verified. The disposable
+installation was removed. Normal-profile installation, real-account acceptance,
+Git commits/pushes and Marketplace publication were not performed. Test notes
+and verification JSON accompany the Desktop archive. Version 1.7.3 is reserved
+for this exact payload; changed payloads require a new version.
+
+
+Prepared recovery test: 1.7.4
+----------------------------
+
+Check and refresh selected credentials through native Codex before replacing
+the active auth file or reloading. Offer reauthentication for invalidated saved
+sign-ins, retain refreshed tokens and allow explicit recovery from an unconfirmed
+switch. Display only authored account errors, never private native diagnostics.
+The owner requested testing before commits; package with package:test-build.
+The immutable 1.7.3 archive and receipt remain intact.
+
+The recovery candidate passes 190 public checks and the missing-private guard
+(public-only-nXdiRB), plus real initial/restart/second-window integration
+(integration-HB3xm5). A native Codex probe rejects synthetic invalid credentials
+without replacing a live login. Real owner-account recovery still needs testing.
+
+The exact uncommitted 1.7.4 recovery archive passed isolated installation and
+reinstallation in installed-acceptance-NxRKLF: 64 archive entries, 61 installed
+payload hashes and its manifest. The Desktop test VSIX and paired receipt,
+recovery notes and verification JSON have matching source hashes. SHA-256:
+b086ebd8d63b056003c520d4d7a852fc495e4e918273680ec17a3add03b71910.
+No live account changes, normal-profile installation or project commits were
+performed. The owner must retry real-account recovery after installing 1.7.4.
+
+
+Verified account-menu test delivery: 1.7.5
+-----------------------------------------
+
+The owner requested the streamlined account menu implementation and a Desktop
+test artifact without commits. The canonical 1.7.5 VSIX and source/payload
+receipt remain under dist; Desktop copies use the -test filename and include
+test notes and verification JSON. SHA-256:
+6e8dd418bb52b22e5566bbbbca38e640c91adf05064efa385da78894cbdc579e.
+
+204 public tests, the missing-private guard and 24 commercial tests pass.
+Real initial/restart/second-window VS Code integration includes the account
+webview with synthetic metadata. The exact 66-entry archive passes isolated
+installation and reinstallation with 63 payload hashes plus manifest checked.
+The isolated installation was removed; the normal profile was not changed.
+Real-account acceptance remains pending. Nothing was committed, pushed or
+published. Version 1.7.5 is reserved for this exact payload.

@@ -36,6 +36,7 @@ async function fixture(t, { saved = {}, custom = {}, ready = false } = {}) {
       onDidChangeWorkspaceFolders: idleEvent.subscribe, onDidChangeConfiguration: idleEvent.subscribe },
   };
   const mocks = {
+    './accounts': { Accounts: Idle },
     './chat-profiles': { ChatProfiles: class { activeId='default'; current={id:'default',data:{}}; migrate() {} list() { return [this.current]; } select() {} get(key, fallback) { return memory.get(key, fallback); } update(key,value) { return memory.update(key,value); } shared(key,fallback) { return fallback; } refreshInto() {} dispose() {} } },
     './license-access': { LicenseAccess: class extends Idle { async check() {} allowed() { return true; } async requireAccess() { return true; } onDidChange() { return disposable; } } },
     vscode, 'node:fs': { watch: () => ({ on() {}, close() {} }) }, 'node:fs/promises': { mkdir: async () => {} },

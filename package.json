@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Find and organise your Codex chats in a compact sidebar with project colours, favourites and activity indicators.",
-  "version": "1.7.2",
+  "version": "1.7.7",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -229,6 +229,17 @@
         "command": "codexNavigator.workspaceChats",
         "title": "Show Chats Relevant to This Workspace",
         "category": "Codex Navigator"
+      },
+      {
+        "command": "codexNavigator.accounts",
+        "title": "Codex Accounts",
+        "category": "Codex Navigator",
+        "icon": "$(account)"
+      },
+      {
+        "command": "codexNavigator.manageAccounts",
+        "title": "Manage Saved Codex Accounts",
+        "category": "Codex Navigator"
       }
     ],
     "menus": {
@@ -416,6 +427,11 @@
           "command": "codexNavigator.workspaceChats",
           "when": "view == codexNavigator.chats",
           "group": "1_profiles@2"
+        },
+        {
+          "command": "codexNavigator.accounts",
+          "when": "view == codexNavigator.chats && codexNavigator.accountsEnabled",
+          "group": "navigation@3"
         }
       ]
     },
@@ -607,7 +623,8 @@
     "test:package": "npm run build && node tools/test-package.cjs",
     "test:installed": "npm run build && node tools/test-installed.cjs",
     "package": "node tools/package.cjs",
-    "vscode:prepublish": "npm run build"
+    "vscode:prepublish": "npm run build",
+    "package:test-build": "node tools/package.cjs --test-build"
   },
   "devDependencies": {
     "@types/node": "22.20.2",

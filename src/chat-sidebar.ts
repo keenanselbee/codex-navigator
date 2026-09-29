@@ -13,6 +13,7 @@ import { chatPins, placePinnedChats } from './chat-pins';
 import { LicenseAccess } from './license-access';
 import { highlightMode } from './highlight-settings';
 import { HookAdmission, HookReadiness } from './hook-admission';
+import type { Accounts } from './accounts';
 
 export interface SidebarChat extends RecentConversation {
   label: string;
@@ -54,6 +55,20 @@ export async function openSidebarChat(id: string): Promise<void> {
 }
 
 export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposable {
+  accounts?: Accounts;
+  private accountsRequested = false;
+  private accountsViewReady = false;
+  get hasActiveWork() { return this.rows.some(row => row.activity === 'working' || row.activity === 'waiting'); }
+  async publishAccounts() {
+    if (this.accounts && this.view) await this.view.webview.postMessage({ type: 'accounts', state: this.accounts.snapshot() });
+  }
+  async showAccounts() {
+    this.accountsRequested = true;
+    await vscode.commands.executeCommand('codexNavigator.chats.focus');
+    await this.publishAccounts();
+    if (this.view && this.accountsViewReady) { await this.view.webview.postMessage({ type: 'accountsOpen' }); this.accountsRequested = false; }
+    await this.accounts?.refresh();
+  }
   private view?: vscode.WebviewView;
   private rows: SidebarChat[] = [];
   private pending = false;
@@ -101,13 +116,15 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
+    this.accountsViewReady = false;
     const media = vscode.Uri.joinPath(this.context.extensionUri, 'media');
     view.webview.options = { enableScripts: true, localResourceRoots: [media] };
     const asset = (name: string) => view.webview.asWebviewUri(vscode.Uri.joinPath(media, name)).toString();
     view.webview.html = readFileSync(path.join(this.context.extensionPath, 'media', 'chat-sidebar.html'), 'utf8')
       .replaceAll('{{csp}}', view.webview.cspSource).replaceAll('{{nonce}}', randomBytes(24).toString('hex'))
       .replace('{{style}}', asset('chat-sidebar.css')).replace('{{layout}}', asset('chat-layout.js')).replace('{{script}}', asset('chat-sidebar.js'))
-      .replace('{{colourScript}}', asset('sidebar-colour.js'));
+      .replace('{{colourScript}}', asset('sidebar-colour.js'))
+      .replace('{{accountStyle}}', asset('account-menu.css')).replace('{{accountScript}}', asset('account-menu.js'));
     this.subscriptions.push(view.webview.onDidReceiveMessage(message => {
       void this.receive(message).catch(error => view.webview.postMessage({ type: 'error', message: String(error.message ?? error) }));
     }), view.onDidChangeVisibility(() => { if (view.visible) { void this.refresh(); void this.refreshGoals(); } else { this.goalHost?.stop(); } }),
@@ -255,6 +272,12 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
   private async handleMessage(message: unknown): Promise<void> {
     if (!message || typeof message !== 'object' || this.disposed) { return; }
     const { type, id, action } = message as Record<string, unknown>;
+    if (type === 'ready') {
+      this.accountsViewReady = true;
+      await this.publishAccounts();
+      if (this.accountsRequested) { await this.view?.webview.postMessage({ type: 'accountsOpen' }); this.accountsRequested = false; }
+    }
+    if (type === 'accountAction') { await this.accounts?.act(message); await this.publishAccounts(); return; }
     if (type === 'license' && typeof action === 'string') { await this.license?.action(action); return; }
     if (this.license && !this.license.allowed()) { await this.refresh(); return; }
     if (this.license && !['ready', 'refresh', 'visibleChats', 'theme'].includes(String(type)) && !await this.license.requireAccess()) return;
@@ -288,6 +311,9 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       await this.view?.webview.postMessage({ type: 'colourClosed' }); return;
     }
     if (type === 'ready' || type === 'refresh') {
+      this.accountsViewReady = true;
+      await this.publishAccounts();
+      if (this.accountsRequested) { await this.view?.webview.postMessage({ type: 'accountsOpen' }); this.accountsRequested = false; }
       await this.refresh();
       if (this.colour) await this.view?.webview.postMessage({ type: 'colour', token: this.colour.token, ...this.colour.options });
       return;

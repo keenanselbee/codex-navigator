@@ -55,10 +55,36 @@ exports.run = async function (context, fixtureVscode) {
         let menuContext;
         document.addEventListener('contextmenu', event => {
           const row=event.target.closest('.chat, .repository');
-          if(row){menuContext=JSON.parse(row.dataset.vscodeContext);event.preventDefault();}
+          if(row?.dataset.vscodeContext){menuContext=JSON.parse(row.dataset.vscodeContext);event.preventDefault();}
         },true);
         window.addEventListener('message', event => {
           const m=event.data;
+          if(m.type==='fixture:accountProbe') {
+            const menu=document.getElementById('accountPage'),bounds=menu.getBoundingClientRect();
+            const content=menu.querySelector('.account-content')?.getBoundingClientRect(),
+              context=menu.querySelector('.account-context')?.getBoundingClientRect(),
+              add=menu.querySelector('.account-add')?.getBoundingClientRect(),
+              critical=menu.querySelector('.account-login, .account-problem, .account-progress')?.getBoundingClientRect();
+            api.postMessage({type:'fixture:probe',hidden:menu.hidden,display:getComputedStyle(menu).display,text:menu.textContent,
+              rows:menu.querySelectorAll('.account-tile:not(.account-add)').length,script:!!menu.querySelector('script'),
+              chatHidden:document.getElementById('chatPage').hidden,
+              gridColumns:menu.querySelector('.account-grid')?getComputedStyle(menu.querySelector('.account-grid')).gridTemplateColumns.split(' ').length:0,
+              selected:!!menu.querySelector('.account-check'),title:menu.querySelector('.account-tile')?.title,
+              context:!!menu.querySelector('.account-context'),add:!!menu.querySelector('.account-add'),
+              contextFits:!context||(context.left>=bounds.left&&context.right<=bounds.right+1&&context.top>=bounds.top&&context.bottom<=bounds.bottom+1),
+              addVisible:!!add&&!!content&&add.bottom>content.top&&add.top<content.bottom,
+              criticalVisible:!!critical&&!!content&&critical.bottom>content.top&&critical.top<content.bottom,
+              gridScrollHeight:menu.querySelector('.account-content')?.scrollHeight,
+              gridClientHeight:menu.querySelector('.account-content')?.clientHeight,
+              accountHeight:menu.querySelector('.account-tile')?.getBoundingClientRect().height,
+              pageRect:{left:bounds.left,right:bounds.right,top:bounds.top,bottom:bounds.bottom},
+              innerSize:{width:innerWidth,height:innerHeight},
+              focus:document.activeElement?.dataset.accountFocus,settingsOpen:!!menu.querySelector('details')?.open,
+              problem:!!menu.querySelector('.account-problem'),login:!!menu.querySelector('.account-login'),
+              restore:!!menu.querySelector('[data-account-focus="restore"]'),reload:!!menu.querySelector('[data-account-focus="retryReload"]'),
+              fits:bounds.left>=0&&bounds.right<=innerWidth+1&&bounds.top>=0&&bounds.bottom<=innerHeight+1,
+              horizontalOverflow:menu.scrollWidth>menu.clientWidth+1});
+          }
           if(m.type==='fixture:probe') api.postMessage({type:'fixture:probe', licenseVisible:!el('licensePage').hidden,licenseText:el('licenseStatus').textContent, welcome:!el('welcomePage').hidden,setupMessage:el('setupMessage').textContent,skipPresent:!!el('continueWithoutSetup')||!!el('dismissActivityPrompt'),rows:document.querySelectorAll('.chat').length,
             ids:[...document.querySelectorAll('.chat')].map(n=>JSON.parse(n.dataset.vscodeContext).navigatorChatId),pinOrder:[...(document.querySelector('.label-row')?.children || [])].map(n=>n.className),text:document.getElementById('chats').textContent, label:document.querySelector('.label')?.textContent,repositoryPageHidden:document.getElementById('repositoryPage').hidden,repositoryRoots:[...document.querySelectorAll('.repository')].map(n=>n.dataset.root),customMenuPresent:!!document.getElementById('contextMenu'),
             colour:document.querySelector('.label')?getComputedStyle(document.querySelector('.label')).color:null,
@@ -125,6 +151,7 @@ exports.run = async function (context, fixtureVscode) {
           if(m.type==='fixture:menu') document.querySelector(m.selector)?.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}));
           if(m.type==='fixture:key') document.querySelector(m.selector)?.dispatchEvent(new KeyboardEvent('keydown',{key:m.key,shiftKey:!!m.shiftKey,bubbles:true,cancelable:true}));
           if(m.type==='fixture:size'){document.body.style.width=m.width+'px';document.body.style.height=m.height+'px';resize();}
+          if(m.type==='fixture:resetSize'){document.body.style.width='';document.body.style.height='';resize();}
           if(m.type==='fixture:font') document.body.style.fontSize=m.size+'px';
           if(m.type==='fixture:focus') document.querySelector(m.selector)?.focus({focusVisible:true});
           if(m.type==='fixture:mouseFocus') document.querySelector(m.selector)?.focus({focusVisible:false});
@@ -160,7 +187,28 @@ exports.run = async function (context, fixtureVscode) {
       await companion.webview.postMessage({ type: 'fixture:probe' });
       return Promise.race([result, new Promise((_, reject) => setTimeout(() => reject(new Error('Probe timeout')), 2000))]);
     };
+    const { AccountStore } = require('../dist/account-store');
+    const accountTestHome = path.join(root, 'synthetic-account-storage-home');
+    const accountStore = new AccountStore(companionContext.globalStorageUri.fsPath, accountTestHome, companionContext.secrets);
+    const syntheticToken = 'header.' + Buffer.from(JSON.stringify({ sub: 'navigator-integration', email: 'fixture@example.invalid' })).toString('base64url') + '.signature';
+    const syntheticAuth = JSON.stringify({ auth_mode: 'chatgpt', tokens: { id_token: syntheticToken, access_token: 'synthetic-access', refresh_token: 'synthetic-refresh', account_id: 'fixture-workspace' } });
     if (process.env.REPO_COMPANION_TEST_PHASE === 'restart') {
+      assert.equal(accountStore.enabled, true, 'account consent survives a real host restart');
+      const savedAccounts = accountStore.list();
+      assert.equal(savedAccounts.length, 1);
+      assert.equal(await accountStore.load(savedAccounts[0].id), syntheticAuth, 'actual VS Code SecretStorage retains the complete synthetic account after restart');
+      await accountStore.forgetAll();
+      assert.equal(accountStore.enabled, false); assert.equal(accountStore.list().length, 0);
+    } else {
+      assert.equal(accountStore.enabled, false);
+      await accountStore.enable(); await accountStore.capture(syntheticAuth);
+      assert.equal(accountStore.list().length, 1);
+    }
+    accountStore.dispose();
+    const checkAccountMenu = () => require('./account-menu-integration.cjs').run({ vscode, companion, provider: companionProvider,
+      probe: async () => { const result=new Promise(resolve=>{probeResolve=resolve;}); await companion.webview.postMessage({type:'fixture:accountProbe'}); return result; }, until });
+    if (process.env.REPO_COMPANION_TEST_PHASE === 'restart') {
+      await checkAccountMenu();
       const expected = JSON.parse(fs.readFileSync(path.join(root, 'trial-persistence.json'), 'utf8'));
       const persisted = JSON.parse(await companionContext.secrets.get('license.production.v1'));
       assert.equal(persisted.installationId, expected.installationId, 'restart retains the installation identity');
@@ -203,7 +251,7 @@ exports.run = async function (context, fixtureVscode) {
       await companionContext.secrets.store('license.production.v1', originalRecord);
       await until(() => windowReached('passed'), 'access restoration propagates to the second window');
       fs.writeFileSync(path.join(root, 'result-restart.json'), JSON.stringify({ phase:'restart', passed:true, vscode:vscode.version,
-        verified:['protected record survives real VS Code process restart', 'same installation and original trial deadline', 'no second trial', 'startup chat view restored before live metadata', 'second real window shares installation and observes expiry and restoration', 'new workspace shares Default labels and browsing admission', 'two real windows merge independent organisation edits'],
+        verified:['account menu opens from toolbar after restart with keyboard controls and escaped metadata', 'saved synthetic account survives real VS Code SecretStorage process restart and can be forgotten', 'protected record survives real VS Code process restart', 'same installation and original trial deadline', 'no second trial', 'startup chat view restored before live metadata', 'second real window shares installation and observes expiry and restoration', 'new workspace shares Default labels and browsing admission', 'two real windows merge independent organisation edits'],
         scope:'Same isolated local profile after full host exit. No uninstall/reinstall or paid provider requests.' }, null, 2));
       return;
     }
@@ -213,6 +261,7 @@ exports.run = async function (context, fixtureVscode) {
     assert.equal((await probe()).licenseVisible,true,'feature command remains gated');
     await companion.webview.postMessage({type:'fixture:click',selector:'#licenseTrial'});
     await until(async()=>(await probe()).welcome&&!(await probe()).licenseVisible,'explicit trial start opens first-use welcome screen');
+    await checkAccountMenu();
     await companion.webview.postMessage({type:'fixture:size',width:320,height:100});
     assert.equal((await probe()).skipPresent,false,'setup has no bypass or dismiss control');
     assert.equal((await probe()).rows,0,'missing hooks hide saved chats');
@@ -433,12 +482,18 @@ exports.run = async function (context, fixtureVscode) {
     const hookFile=path.join(process.env.CODEX_HOME,'codex-navigator','activity',id(12)+'.json');
     const expiredHook=JSON.parse(fs.readFileSync(hookFile,'utf8'));expiredHook.observedAt=expiredHook.workedAt=Date.now()-20*60000;
     fs.writeFileSync(hookFile,JSON.stringify(expiredHook));
-    fs.appendFileSync(activityTranscript,activityLine('compacted',{message:'x'.repeat(8*1024*1024)})
-      +activityLine('turn_context',{turn_id:'fixture-compaction'})+activityLine('event_msg',{type:'context_compacted'})
-      +activityLine('response_item',{type:'custom_tool_call',name:'exec',call_id:'fixture-call'}));
+    fs.appendFileSync(activityTranscript,activityLine('compacted',{message:'x'.repeat(12*1024*1024)})
+      +activityLine('turn_context',{turn_id:'fixture-compaction'})
+      +activityLine('event_msg',{type:'item_completed',turn_id:'fixture-compaction',item:{type:'ContextCompaction',id:'compact'}}));
     await companionProvider.refresh();
-    await until(async () => (await probe()).spinners===1,'fresh post-compaction tool call reaches sidebar with expired hook');
+    await until(async () => (await probe()).spinners===1,'compaction completion restores sidebar spinner before another tool call with expired hook');
     assert.equal(companionProvider.rows.find(row=>row.id===id(12)).activity,'working');
+    fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'item_completed',turn_id:'fixture-compaction',
+      item:{type:'CommandExecution',output:'x'.repeat(180000)}})
+      +activityLine('response_item',{type:'custom_tool_call_output',call_id:'large-output',output:'x'.repeat(80000)}));
+    await companionProvider.refresh();
+    await until(async () => (await probe()).spinners===1,'large tool output retains sidebar spinner');
+
     fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_complete',turn_id:'fixture-compaction'}));
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-compaction',hook_event_name:'Stop'});
     await companionProvider.refresh();
@@ -684,7 +739,7 @@ exports.run = async function (context, fixtureVscode) {
         'height-driven layouts', 'width-dependent columns', 'resize preserves focus', 'column and fitted row counts survive webview reload', 'native header search',
         'native extension URI dispatch', 'both sidebar views visible', 'no patch bridge',
         'row context command dispatch', 'right-click/keyboard menu events', 'coloured stars beside repository labels',
-        'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'single-line repository labels keep row heights and control space', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt', 'large compaction with expired hook recovers and completes in sidebar', 'newer interrupt clears cached working transcript'],
+        'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'single-line repository labels keep row heights and control space', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt', 'compaction item completion and large tool results retain sidebar spinner with expired hook', 'newer interrupt clears cached working transcript'],
       scope: 'Real isolated VS Code; fixture URI handler and synthetic hook events. Native-menu context data and command dispatch exercised with synthetic mouse/keyboard events; picker choices supplied by fixture. Native overlay appearance is not inspected. No authenticated Codex conversation.' };
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));

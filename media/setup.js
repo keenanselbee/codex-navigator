@@ -32,6 +32,13 @@ function controls() {
   el('save-routing').disabled = busy || !state || !!state.routingError;
   document.body.setAttribute('aria-busy', String(busy));
 }
+function showAccounts(accounts) {
+  accounts ||= { enabled: false, label: 'Off', detail: 'Optional. Remember Codex sign-ins securely on this device.' };
+  el('accounts-status').textContent = accounts.label;
+  el('accounts-detail').textContent = accounts.detail + (accounts.count ? ' Saved accounts: ' + accounts.count + '.' : '');
+  el('enable-accounts').hidden = !!accounts.enabled;
+  el('disable-accounts').hidden = !accounts.enabled;
+}
 function showLabels(labels) {
   labels ||= {};
   el('labels-status').textContent = labels.error ? 'Needs attention' : !labels.enabled ? 'Off' : labels.installed ? 'Enabled' : 'Needs setup';
@@ -92,6 +99,7 @@ window.addEventListener('message', event => {
       el('advanced').open = !!(message.choices.scopes.length || message.choices.fallbackNames.length);
       el('stale').hidden = true;
     }
+    showAccounts(message.accounts);
     showLabels(message.labels);
     el('global-file').textContent = message.globalFile;
     showActivity(message.activity);
@@ -100,8 +108,12 @@ window.addEventListener('message', event => {
     el('save-routing').textContent = message.choices.enabled ? 'Save Project Instructions' : 'Enable Project Instructions';
     el('disable-routing').hidden = !message.choices.enabled;
     list(message.repositories); scopeText(); controls(); notice(message.routingError || '', !!message.routingError);
+  } else if (message.type === 'accounts') {
+    if (state) state.accounts = message.accounts;
+    showAccounts(message.accounts); controls();
   } else if (message.type === 'labels') {
     if (state) state.labels = message.labels;
+    showAccounts(message.accounts);
     showLabels(message.labels); controls();
   } else if (message.type === 'activity') {
     if (state) { state.activity = message.activity; }

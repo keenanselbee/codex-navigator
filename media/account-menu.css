@@ -1,0 +1,43 @@
+#accountPage { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.account-header { display: flex; align-items: center; gap: 6px; flex: none; min-height: 29px; }
+.account-header strong { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.account-header button:last-child { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+.account-content { flex: 1; min-height: 0; overflow: auto; }
+.account-grid { display: grid; grid-template-columns: repeat(var(--columns, 1), minmax(0, 1fr)); align-content: start; column-gap: 4px; }
+.account-tile { position: relative; display: grid; align-content: center; width: 100%; min-width: 0; min-height: var(--row-height, 28px); border: 1px solid transparent; border-radius: 3px; padding: 2px 4px; text-align: left; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.account-tile::before, .account-tile::after { content: ''; position: absolute; pointer-events: none; background: var(--vscode-contrastBorder, var(--vscode-sideBarSectionHeader-border, var(--vscode-widget-border, var(--vscode-panel-border, transparent)))); }
+.account-tile.separator-right::after { width: 1px; right: -2px; top: 3px; bottom: 3px; }
+.account-tile.separator-bottom::before { height: 1px; bottom: 0; left: 4px; right: 4px; }
+.account-tile:hover::before { inset: 0; height: auto; background: transparent; border: 1px solid var(--vscode-list-focusOutline, var(--vscode-focusBorder)); border-radius: inherit; z-index: 1; }
+.account-tile:hover { background: transparent; }
+.account-tile:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.account-tile:disabled { opacity: 0.55; cursor: default; }
+.account-tile:disabled:hover::before { display: none; }
+.account-label-row { display: flex; align-items: center; min-width: 0; gap: 3px; overflow: hidden; }
+.account-label { display: block; flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.92em; line-height: 1.2; font-weight: 600; color: var(--vscode-foreground); }
+.account-plan { flex: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.92em; font-weight: 600; }
+.account-check { flex: none; font-size: 0.92em; font-weight: 600; }
+.account-name-row { display: flex; align-items: center; min-width: 0; min-height: 24px; gap: 3px; }
+.account-usage { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.35; color: var(--vscode-descriptionForeground); }
+#accountPage[data-layout="list"] .account-tile { grid-template-columns: minmax(45px, 32%) minmax(0, 1fr); gap: 9px; align-items: center; }
+.account-edit { cursor: default; }
+.account-edit label { min-width: 0; }
+.account-rename { display: block; width: 100%; min-width: 0; padding: 3px 5px; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); font: inherit; }
+.account-rename[aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder); }
+.account-edit-actions { display: flex; align-items: center; gap: 3px; }
+.account-edit-actions button { padding: 1px 3px; }
+.account-context { position: absolute; z-index: 10; display: flex; flex-direction: column; min-width: 145px; max-width: calc(100vw - 10px); padding: 3px; border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border)); border-radius: 4px; background: var(--vscode-menu-background, var(--vscode-sideBar-background)); color: var(--vscode-menu-foreground, var(--vscode-foreground)); box-shadow: 0 4px 12px var(--vscode-widget-shadow, #0004); }
+.account-context button { text-align: left; padding: 4px 7px; }
+.account-context button:disabled { opacity: 0.55; cursor: default; }
+.account-detail, .account-muted { margin: 4px 5px 7px; color: var(--vscode-descriptionForeground); font-size: 0.9em; line-height: 1.35; }
+.account-login, .account-problem { margin: 6px 4px; padding: 6px; border: 1px solid var(--vscode-widget-border); border-radius: 3px; }
+.account-login { display: flex; flex-wrap: wrap; gap: 5px; }
+.account-login strong, .account-login .account-subtitle { flex-basis: 100%; }
+.account-subtitle { color: var(--vscode-descriptionForeground); font-size: 0.88em; overflow-wrap: anywhere; }
+.account-problem { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
+.account-problem p { margin: 0 0 5px; overflow-wrap: anywhere; }
+.account-progress { margin: 6px; color: var(--vscode-descriptionForeground); }
+.account-progress::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 6px; border: 1px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: accountWorking 0.9s linear infinite; }
+@keyframes accountWorking { to { transform: rotate(360deg); } }
+@media (max-height: 150px) { .account-header { min-height: 24px; } }
+@media (prefers-reduced-motion: reduce) { .account-progress::before { animation: none; } }

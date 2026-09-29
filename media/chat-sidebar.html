@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{csp}} 'unsafe-inline'; script-src 'nonce-{{nonce}}';">
-<link rel="stylesheet" href="{{style}}"><title>Navigator</title>
+<link rel="stylesheet" href="{{style}}"><link rel="stylesheet" href="{{accountStyle}}"><title>Navigator</title>
 </head><body>
 <section id="licensePage" hidden aria-label="Codex Navigator license">
 <div class="license-content">
@@ -39,7 +39,9 @@
 </section>
 <section id="repositoryPage" hidden aria-label="Repository Colours"><div class="repository-heading"><button id="repositoryBack" aria-label="Back to chats">Back</button><strong>Repository Colours</strong></div><div id="repositoryList"></div></section>
 <section id="colourPage" hidden aria-label="Choose colour"></section>
+<section id="accountPage" hidden aria-label="Codex accounts"></section>
 <script nonce="{{nonce}}" src="{{colourScript}}"></script>
 <script nonce="{{nonce}}" src="{{layout}}"></script>
+<script nonce="{{nonce}}" src="{{accountScript}}"></script>
 <script nonce="{{nonce}}" src="{{script}}"></script>
 </body></html>

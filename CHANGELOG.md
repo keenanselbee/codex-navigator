@@ -1,6 +1,68 @@
 Release Notes
 =============
 
+1.7.7
+-----
+
+- Remove the Account management section and its actions from the Accounts page.
+- Distinguish Pro 5x (`prolite`), Pro 20x (`pro`) and Plus. Preserve new plan codes
+  and display them directly. Retain plan metadata when usage is unavailable and update it
+  from remembered sign-ins and successful metadata reads.
+- Include the optional account grid, saved sign-in recovery, usage tooltips and
+  compaction activity fixes validated in local test versions 1.7.3 through 1.7.6.
+
+1.7.6 (local test candidate)
+---------------------------
+
+- Open an Accounts page in Navigator with neutral tiles sized like chats. Click
+  an account to switch and reload; the last tile starts Add Account.
+- Show email and plan by default, with usage beneath. Right-click to change the
+  label; clearing it restores the email. Hover for identity, reset and freshness
+  details. Back returns to the chat list.
+- Cache best-effort account limits, plan and banked resets. Metadata checks use
+  access tokens in an isolated ephemeral helper; they never refresh credentials
+  or replace Codex's sign-in. Missing or expired information remains unavailable.
+
+1.7.5 (local test candidate)
+---------------------------
+
+- Replace the account selector with a dedicated Navigator menu, inline rename,
+  per-account actions, keyboard navigation and account-specific progress/errors.
+- Switch and reload without a routine confirmation task. Reconcile selected
+  credentials after restart and show recovery only when something fails.
+- Continue the requested switch after matching browser reauthentication, with
+  the expected email, Copy Email and cancellation available in the menu.
+- Capture changed credentials promptly and preserve tokens written during helper
+  shutdown. Coordinate removal with switching and retain recovery on unexpected
+  sign-in changes. Never restore a signed-out account automatically.
+- Explain shared-home reload effects once; prompt again for known active work.
+  Private IDE account verification and real-account acceptance remain limited.
+
+1.7.4 (local test candidate)
+---------------------------
+
+- Check and refresh saved credentials through Codex in an isolated home before
+  replacing the active login or reloading. Invalidated sign-ins offer recovery.
+- Preserve rotated tokens even when a later account lookup fails; do not replace
+  refreshed credentials with an older live copy of the same account.
+- Allow an explicit checked switch to recover from an unconfirmed prior switch,
+  and add Sign In Again to saved-account management.
+- Show safe, specific account errors instead of hiding every failure behind the
+  same generic message. Native diagnostics and credentials remain private.
+
+1.7.3 (local test candidate)
+---------------------------
+
+- Add optional account remembering in VS Code SecretStorage and an account
+  picker after Search and New Chat, with isolated Add Account, rename and forget.
+- Support file-backed native ChatGPT account switching with reload, pending
+  manual verification and guarded recovery. Other backends remain unavailable;
+  macOS/Linux and real-account IDE adoption still need native acceptance.
+- Recover working indicators from explicit compaction, reasoning and command
+  lifecycle events, including before the next post-compaction tool call.
+- Keep activity across tool output larger than 64 KiB with bounded 1 MiB reads;
+  preserve terminal, waiting, replacement and stale-signal safeguards.
+
 1.7.2
 -----
 

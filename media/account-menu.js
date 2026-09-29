@@ -1,0 +1,385 @@
+'use strict';
+
+function createNavigatorAccounts(api, navigation) {
+  const page = document.getElementById('accountPage');
+  let state, stateAt = 0, previousFocus, contextAccountId, contextPosition, renamingAccountId, renameValue = '';
+  let pendingAction = false, criticalSignature = '';
+
+  function element(tag, className, value) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (value !== undefined) node.textContent = value;
+    return node;
+  }
+
+  function button(value, key, action, disabled = false) {
+    const node = element('button', '', value);
+    node.type = 'button';
+    node.dataset.accountFocus = key;
+    node.disabled = disabled;
+    node.addEventListener('click', action);
+    return node;
+  }
+
+  function post(action, account, label, force) {
+    const message = { type: 'accountAction', action };
+    if (account) { message.id = account.id; message.generation = account.generation; }
+    if (label !== undefined) message.label = label;
+    if (force !== undefined) message.force = force;
+    api.postMessage(message);
+    if (!['refresh', 'refreshUsage', 'cancelUsage', 'copyEmail'].includes(action)) {
+      pendingAction = true;
+      render();
+    }
+  }
+
+  function validAccount(account) {
+    return account && typeof account.id === 'string' && Number.isSafeInteger(account.generation);
+  }
+
+  function identity(account) {
+    return String(account.name || account.email || 'Saved account');
+  }
+
+  function plan(account) {
+    const value = typeof account.plan === 'string' ? account.plan.trim() : '';
+    const labels = { free: 'Free', free_workspace: 'Free', guest: 'Free', go: 'Go', plus: 'Plus',
+      pro: 'Pro 20x', prolite: 'Pro 5x', team: 'Business', business: 'Business',
+      self_serve_business_prolite: 'Business', self_serve_business_usage_based: 'Business',
+      edu: 'Edu', enterprise: 'Enterprise', enterprise_cbp_automation: 'Enterprise',
+      enterprise_cbp_usage_based: 'Enterprise', ent26: 'Enterprise' };
+    return Object.hasOwn(labels, value.toLowerCase()) ? labels[value.toLowerCase()] : value || 'ChatGPT';
+  }
+
+  function remaining(window) {
+    return window && Number.isFinite(window.usedPercent) && window.usedPercent >= 0 && window.usedPercent <= 100
+      ? Math.round(100 - window.usedPercent) + '% left' : 'unavailable';
+  }
+
+  function shortWindow(window, fallback = 'Short') {
+    const minutes = window?.windowDurationMins;
+    if (!Number.isFinite(minutes) || minutes <= 0) return fallback;
+    if (minutes === 10080) return 'Week';
+    if (minutes < 60) return Math.round(minutes) + 'm';
+    if (minutes < 1440) return Math.round(minutes / 60) + 'h';
+    return Math.round(minutes / 1440) + 'd';
+  }
+
+  function when(value) {
+    return Number.isFinite(value) && value > 0 ? new Date(value).toLocaleString() : 'unavailable';
+  }
+
+  function resetTime(value) {
+    if (!Number.isFinite(value) || value <= 0) return 'unavailable';
+    if (value * 1000 < Date.now()) return 'Reset time passed; check again';
+    return when(value * 1000);
+  }
+
+  function usageSubtitle(account) {
+    const usage = account.usage;
+    const windows = [[usage?.primary, 'Short'], [usage?.secondary, 'Other window']];
+    const available = windows.filter(([window]) => window && Number.isFinite(window.usedPercent)
+      && window.usedPercent >= 0 && window.usedPercent <= 100);
+    if (!available.length) return 'Usage unavailable';
+    return available.map(([window, fallback]) => shortWindow(window, fallback).toLowerCase()
+      + ' ' + remaining(window)).join(' · ');
+  }
+
+  function tooltip(account) {
+    const usage = account.usage;
+    const lines = [identity(account)];
+    if (account.email && account.email !== account.name) lines.push('Email: ' + account.email);
+    if (account.workspace) lines.push('Workspace: ' + account.workspace);
+    lines.push('Plan: ' + (account.plan ? plan(account) + ' (last known)' : 'unavailable'));
+    lines.push(shortWindow(usage?.primary) + ' remaining: ' + remaining(usage?.primary));
+    lines.push('Short reset: ' + resetTime(usage?.primary?.resetsAt));
+    lines.push(shortWindow(usage?.secondary, 'Other window') + ' remaining: ' + remaining(usage?.secondary));
+    lines.push(shortWindow(usage?.secondary, 'Other window') + ' reset: ' + resetTime(usage?.secondary?.resetsAt));
+    lines.push('Banked resets: ' + (Number.isSafeInteger(usage?.bankedResets) ? usage.bankedResets : 'unavailable'));
+    lines.push('Checked: ' + when(usage?.checkedAt));
+    if (account.usageProblem) lines.push('Usage: ' + account.usageProblem);
+    return lines.join('\n');
+  }
+
+  function focus(key) {
+    const control = [...page.querySelectorAll('[data-account-focus]')].find(node => node.dataset.accountFocus === key);
+    if (control && !control.disabled) control.focus({ preventScroll: true });
+  }
+
+  function close(restore = true) {
+    if (page.hidden) return;
+    page.hidden = true;
+    contextAccountId = undefined;
+    renamingAccountId = undefined;
+    post('cancelUsage');
+    navigation.onClose();
+    if (restore) {
+      const target = previousFocus?.isConnected && previousFocus !== document.body && !previousFocus.closest('#accountPage')
+        && previousFocus.getClientRects().length ? previousFocus : document.getElementById('viewport');
+      target?.focus({ preventScroll: true });
+    }
+    previousFocus = undefined;
+  }
+
+  function open() {
+    if (!page.hidden) { close(); return; }
+    previousFocus = document.activeElement;
+    if (!navigation.onOpen()) return;
+    page.hidden = false;
+    render('accountBack');
+    if (!state || Date.now() - stateAt > 2000) post('refresh');
+    post('refreshUsage');
+  }
+
+  function startRename(account) {
+    contextAccountId = undefined;
+    renamingAccountId = account.id;
+    renameValue = account.name || '';
+    render('rename:' + account.id);
+  }
+
+  function saveRename(account) {
+    if (pendingAction || state?.busy || !state?.canSwitch) return;
+    const label = renameValue.trim();
+    if (label.length > 60 || /[\x00-\x1f\x7f]/.test(label)) {
+      const input = page.querySelector('.account-rename');
+      input?.setAttribute('aria-invalid', 'true');
+      input?.focus();
+      return;
+    }
+    renamingAccountId = undefined;
+    post('rename', account, label);
+  }
+
+  function openContext(account, x, y) {
+    const bounds = page.getBoundingClientRect();
+    contextAccountId = account.id;
+    contextPosition = { left: Math.max(0, Math.min(x - bounds.left, bounds.width - 160)),
+      top: Math.max(0, Math.min(y - bounds.top, bounds.height - 105)) };
+    render('label:' + account.id);
+  }
+
+  function accountTile(account, busy) {
+    const tile = button('', 'switch:' + account.id, () => {
+      if (busy || !state.canSwitch) return;
+      contextAccountId = undefined;
+      post('switch', account);
+    }, busy);
+    tile.className = 'account-tile';
+    tile.setAttribute('aria-disabled', String(!state.canSwitch));
+    tile.title = tooltip(account);
+    tile.setAttribute('aria-label', (account.selected ? 'Selected account: ' : 'Switch account and reload: ')
+      + identity(account) + ', ' + plan(account) + '. ' + usageSubtitle(account));
+    const top = element('span', 'account-label-row');
+    top.append(element('span', 'account-label', identity(account)));
+    top.append(element('span', 'account-plan', '· ' + plan(account)));
+    if (account.selected) {
+      const check = element('span', 'account-check', '✓');
+      check.setAttribute('aria-label', 'Selected');
+      top.append(check);
+    }
+    const bottom = element('span', 'account-name-row');
+    bottom.append(element('span', 'account-usage', usageSubtitle(account)));
+    tile.append(top, bottom);
+    tile.addEventListener('contextmenu', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (busy) return;
+      openContext(account, event.clientX, event.clientY);
+    });
+    tile.addEventListener('keydown', event => {
+      if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
+      event.preventDefault();
+      const bounds = tile.getBoundingClientRect();
+      openContext(account, bounds.left, bounds.bottom);
+    });
+    return tile;
+  }
+
+  function renameTile(account, busy) {
+    const tile = element('div', 'account-tile account-edit');
+    const label = element('label', 'account-label', 'Change label');
+    const input = element('input', 'account-rename');
+    input.type = 'text';
+    input.maxLength = 60;
+    input.value = renameValue;
+    input.dataset.accountFocus = 'rename:' + account.id;
+    input.setAttribute('aria-label', 'Custom label for ' + (account.email || identity(account)) + '. Leave blank to use email.');
+    input.addEventListener('input', () => { renameValue = input.value; input.removeAttribute('aria-invalid'); });
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); saveRename(account); }
+    });
+    label.append(input);
+    const controls = element('span', 'account-edit-actions');
+    controls.append(button('Save', 'save:' + account.id, () => saveRename(account), busy || !state.canSwitch));
+    controls.append(button('Cancel', 'cancel:' + account.id, () => {
+      renamingAccountId = undefined;
+      render('switch:' + account.id);
+    }));
+    tile.append(label, controls);
+    return tile;
+  }
+
+  function render(focusKey) {
+    if (page.hidden) return;
+    const currentFocus = focusKey || (page.contains(document.activeElement) ? document.activeElement.dataset.accountFocus : undefined);
+    const scrollTop = page.querySelector('.account-content')?.scrollTop || 0;
+    const busy = !!state?.busy || pendingAction;
+    const nextCritical = JSON.stringify([state?.loginEmail || '', state?.problem || '', busy]);
+    const criticalChanged = nextCritical !== criticalSignature;
+    criticalSignature = nextCritical;
+    page.setAttribute('aria-busy', String(busy));
+    page.replaceChildren();
+
+    const header = element('div', 'account-header');
+    const back = button('Back', 'accountBack', () => close());
+    back.id = 'accountBack';
+    back.setAttribute('aria-label', 'Back to chats');
+    const heading = element('strong', '', 'Codex Accounts');
+    heading.id = 'accountPageTitle';
+    page.setAttribute('aria-labelledby', heading.id);
+    header.append(back, heading);
+    const refresh = button(state?.usageRefreshing ? 'Checking usage...' : 'Refresh usage', 'refreshUsage',
+      () => post('refreshUsage', undefined, undefined, true),
+      !state?.enabled || !state?.supported || !!state?.usageRefreshing);
+    header.append(refresh);
+    page.append(header);
+
+    const content = element('div', 'account-content');
+    if (!state) content.append(element('p', 'account-muted', 'Loading accounts...'));
+    else {
+      if ((!state.enabled || !state.supported || state.problem)
+          && state.detail && String(state.detail).trim() !== String(state.problem || '').trim() && state.detail !== state.label) {
+        content.append(element('p', 'account-detail', state.detail));
+      }
+      if (!state.enabled) {
+        content.append(element('p', 'account-muted', 'Set up account switching to remember Codex sign-ins on this device.'));
+        content.append(button('Set Up Account Switching', 'setupMain', () => post('setup'), busy));
+      } else if (!state.supported) {
+        content.append(element('p', 'account-muted', 'Account switching is unavailable in this Codex environment.'));
+      }
+      if (state.loginEmail) {
+        const login = element('div', 'account-login');
+        const loginEmail = String(state.loginEmail);
+        const hasEmail = loginEmail.includes('@');
+        login.append(element('strong', '', hasEmail ? 'Sign in to the expected account' : 'Sign in to your new account'));
+        login.append(element('span', 'account-subtitle', loginEmail));
+        login.append(button('Copy Email', 'copyEmail', () => post('copyEmail'), !hasEmail));
+        login.append(button('Cancel sign-in', 'cancelLogin', () => post('cancelLogin'), pendingAction));
+        content.append(login);
+      }
+      if (busy) {
+        const progress = element('p', 'account-progress',
+          typeof state.busy === 'string' ? state.busy : 'Working on your account...');
+        progress.setAttribute('role', 'status');
+        content.append(progress);
+      }
+      if (state.problem) {
+        const error = element('div', 'account-problem');
+        const message = element('p', '', state.problem);
+        message.setAttribute('role', 'alert');
+        error.append(message);
+        if (state.recovery) error.append(button('Restore Previous Account', 'restore', () => post('restore'), busy));
+        if (state.reloadNeeded) error.append(button('Retry Reload', 'retryReload', () => post('retryReload'), busy));
+        content.append(error);
+      }
+      const accounts = Array.isArray(state.accounts) ? state.accounts.filter(validAccount) : [];
+      if (state.enabled && state.supported && !accounts.length) content.append(element('p', 'account-muted', 'No saved accounts yet.'));
+      const grid = element('div', 'account-grid');
+      grid.setAttribute('aria-label', 'Saved Codex accounts');
+      for (const account of accounts) grid.append(renamingAccountId === account.id ? renameTile(account, busy) : accountTile(account, busy));
+      if (state.enabled && state.supported) {
+        const add = button('', 'add', () => post('add'), busy || !state.canAdd);
+        add.className = 'account-tile account-add';
+        add.setAttribute('aria-label', 'Add account. Sign in and switch.');
+        add.append(element('span', 'account-label-row account-label', 'Add account'));
+        add.append(element('span', 'account-name-row account-usage', 'Sign in and switch'));
+        grid.append(add);
+      }
+      content.append(grid);
+      if (contextAccountId) {
+        const account = accounts.find(item => item.id === contextAccountId);
+        if (account) {
+          const menu = element('div', 'account-context');
+          menu.setAttribute('role', 'menu');
+          menu.setAttribute('aria-label', 'Account actions for ' + identity(account));
+          menu.style.left = contextPosition.left + 'px';
+          menu.style.top = contextPosition.top + 'px';
+          menu.append(button('Change label', 'label:' + account.id, () => startRename(account), busy || !state.canSwitch));
+          menu.append(button('Sign In Again', 'reconnect:' + account.id, () => {
+            contextAccountId = undefined;
+            post('reconnect', account);
+          }, busy || !state.canAdd));
+          menu.append(button('Forget', 'forget:' + account.id, () => {
+            contextAccountId = undefined;
+            post('forget', account);
+          }, busy));
+          content.append(menu);
+        }
+      }
+    }
+    page.append(content);
+    content.scrollTop = criticalChanged ? 0 : scrollTop;
+    resize();
+    if (currentFocus) focus(currentFocus);
+  }
+
+  function resize() {
+    if (page.hidden) return;
+    const grid = page.querySelector('.account-grid');
+    const content = page.querySelector('.account-content');
+    if (!grid || !content || !grid.clientWidth) return;
+    const fontSize = parseFloat(getComputedStyle(document.body).fontSize) || 13;
+    const layout = navigatorLayout(grid.clientWidth, document.body.clientHeight, fontSize);
+    grid.style.setProperty('--columns', layout.columns);
+    grid.style.setProperty('--row-height', layout.rowHeight + 'px');
+    page.dataset.layout = layout.mode;
+    const items = [...grid.children];
+    items.forEach((item, index) => {
+      item.classList.toggle('separator-right', index % layout.columns !== layout.columns - 1 && index + 1 < items.length);
+      item.classList.toggle('separator-bottom', index + layout.columns < items.length);
+    });
+    grid.style.gridAutoRows = '';
+    if (items.length) {
+      const natural = Math.max(...items.map(item => item.getBoundingClientRect().height));
+      const available = Math.max(0, content.clientHeight - grid.offsetTop + content.offsetTop);
+      const fitted = fittedRowHeight(available, Math.ceil(items.length / layout.columns), natural);
+      grid.style.gridAutoRows = fitted + 'px';
+    }
+  }
+
+  window.addEventListener('message', event => {
+    if (event.data?.type === 'accounts') {
+      state = event.data.state;
+      stateAt = Date.now();
+      pendingAction = false;
+      render();
+    } else if (event.data?.type === 'accountsOpen') open();
+  });
+  document.addEventListener('click', event => {
+    if (!page.hidden && contextAccountId && !event.target.closest('.account-context, .account-tile')) {
+      contextAccountId = undefined;
+      render();
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (page.hidden) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (contextAccountId) { const id = contextAccountId; contextAccountId = undefined; render('switch:' + id); }
+      else if (renamingAccountId) { const id = renamingAccountId; renamingAccountId = undefined; render('switch:' + id); }
+      else close();
+      return;
+    }
+    if (event.target.matches('input') || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    const controls = [...page.querySelectorAll('button:not(:disabled), summary')].filter(node => node.getClientRects().length);
+    if (!controls.length) return;
+    const current = controls.indexOf(document.activeElement);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? controls.length - 1
+      : event.key === 'ArrowDown' ? (current + 1) % controls.length : (current - 1 + controls.length) % controls.length;
+    event.preventDefault();
+    controls[next].focus();
+  }, true);
+  return { close, resize, get active() { return !page.hidden; } };
+}

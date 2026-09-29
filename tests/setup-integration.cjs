@@ -21,7 +21,7 @@ exports.run=async function(context,vscode,until,profiles){
  await until(async()=>!['Checking...',''].includes((await probe()).status),'setup renders status');
  assert.ok((await probe()).headings.includes('Activity hooks (required)'));assert.ok(!(await probe()).headings.includes('Chat labels and stars'));
  const initial=await probe();assert.equal(initial.detailsOpen,0);assert.ok(!initial.headerText.includes('Drag the Navigator'));
- assert.equal(initial.headings.length,3);assert.ok(initial.visibleActions.includes('enableAutomaticLabels'));
+ assert.equal(initial.headings.length,4);assert.ok(initial.headings.includes('Account switching'));assert.ok(initial.visibleActions.includes('enableAccounts'));assert.ok(initial.visibleActions.includes('enableAutomaticLabels'));
  assert.ok(initial.visibleActions.includes('installHooks'));assert.ok(!initial.visibleActions.includes('reviewHooks'));
  await panel.webview.postMessage({type:'fixture:setupDraft'});
  const routingBefore=vscode.workspace.getConfiguration('codexNavigator').get('instructionRouting');
@@ -69,5 +69,5 @@ exports.run=async function(context,vscode,until,profiles){
  assert.ok(fs.readFileSync(instructions,'utf8').includes('codex-navigator:start'));
  assert.equal(vscode.workspace.getConfiguration('codexNavigator').get('agentRepositoryLabels'),false,'routing does not re-enable label reports');
  panel.dispose();
- return ['required hooks first with two optional setup sections', 'independent label setup and report preference', 'arrangement copy only after click', 'real setup webview','install/trust/event distinction','Codex-owned review dispatch','routing draft preserved','no horizontal overflow','remove own hooks','arrangement guidance without native move command'];
+ return ['required hooks first with three optional setup sections', 'independent label setup and report preference', 'arrangement copy only after click', 'real setup webview','install/trust/event distinction','Codex-owned review dispatch','routing draft preserved','no horizontal overflow','remove own hooks','arrangement guidance without native move command'];
 };

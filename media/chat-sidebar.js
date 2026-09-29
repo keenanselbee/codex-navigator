@@ -1,6 +1,27 @@
 'use strict';
 const api = acquireVsCodeApi(), el = id => document.getElementById(id);
 const colourPanel = createNavigatorColour(api);
+const accountPanel = createNavigatorAccounts(api, {
+  onOpen() {
+    if (colourPanel.active) {
+      colourPanel.close('chatPage');
+      requestAnimationFrame(() => { if (accountPanel.active) el('accountBack')?.focus({ preventScroll: true }); });
+    }
+    repositoryPageActive = false;
+    el('repositoryPage').hidden = true;
+    el('licensePage').hidden = true;
+    el('welcomePage').hidden = true;
+    el('chatPage').hidden = true;
+    return true;
+  },
+  onClose() {
+    el('licensePage').hidden = !licenseVisible;
+    el('welcomePage').hidden = licenseVisible || !welcome;
+    el('chatPage').hidden = licenseVisible || welcome;
+    sizeSignature = '';
+    resize();
+  },
+});
 const saved = api.getState() || {};
 let profileId, profileViewSignature = '';
 const chooseLayout = createNavigatorLayout(saved.layout);
@@ -28,6 +49,7 @@ function showMenu(anchor) {
     clientX: rect.left, clientY: rect.bottom }));
 }
 function render() {
+  if (accountPanel.active) return;
   for (const [id, at] of selectedChats) if (Date.now() - at >= highlightDurationMs) selectedChats.delete(id);
   const lastViewedChat = [...selectedChats.keys()].at(-1);
   const query = el('search').value.trim().toLocaleLowerCase();
@@ -149,6 +171,7 @@ function render() {
   api.setState({ mode, search: el('search').value, selectedChats: Object.fromEntries(selectedChats), layout: layout || saved.layout });
 }
 function resize() {
+  if (accountPanel.active) { accountPanel.resize(); return; }
   if (licenseVisible || colourPanel.active || repositoryPageActive || !el('welcomePage').hidden) return;
   if (el('viewport').clientWidth <= 0 || el('viewport').clientHeight <= 0 || document.body.clientHeight <= 0) return;
   const style = getComputedStyle(document.body), fontSize = parseFloat(style.fontSize) || 13;
@@ -190,8 +213,9 @@ window.addEventListener('message', event => {
       if (colourPanel.active) colourPanel.close('licensePage');
       repositoryPageActive = false;
       for (const id of ['chatPage', 'welcomePage', 'repositoryPage', 'colourPage']) el(id).hidden = true;
+      el('licensePage').hidden = accountPanel.active;
       if (!state.allowed) { rows = []; signature = ''; el('chats').replaceChildren(); goals.clear(); visibleSignature = ''; }
-    } else if (wasVisible) { el('welcomePage').hidden = !welcome; el('chatPage').hidden = welcome; sizeSignature = ''; resize(); }
+    } else if (wasVisible && !accountPanel.active) { el('welcomePage').hidden = !welcome; el('chatPage').hidden = welcome; sizeSignature = ''; resize(); }
     return;
   }
   if (licenseVisible) return;
@@ -210,10 +234,10 @@ window.addEventListener('message', event => {
     return;
   }
   if (message.type === 'goalSettled') { pendingGoals.delete(message.id); render(); return; }
-  if (message.type === 'colour') { if (welcome) return; el('welcomePage').hidden = true; el('repositoryPage').hidden = true; colourPanel.open(message); return; }
+  if (message.type === 'colour') { if (welcome) return; if (accountPanel.active) accountPanel.close(false); el('welcomePage').hidden = true; el('repositoryPage').hidden = true; colourPanel.open(message); return; }
   if (message.type === 'colourClosed') { colourPanel.close(repositoryPageActive ? 'repositoryPage' : welcome ? 'welcomePage' : 'chatPage'); sizeSignature = ''; resize(); return; }
-  if (message.type === 'repositoryPage') { if (colourPanel.active || welcome) return; repositoryPageActive = true; renderRepositories(); el('chatPage').hidden = true; el('repositoryPage').hidden = false; el('repositoryBack').focus(); return; }
-  if ((colourPanel.active || repositoryPageActive || welcome) && ['search', 'filter'].includes(message.type)) return;
+  if (message.type === 'repositoryPage') { if (colourPanel.active || welcome) return; if (accountPanel.active) accountPanel.close(false); repositoryPageActive = true; renderRepositories(); el('chatPage').hidden = true; el('repositoryPage').hidden = false; el('repositoryBack').focus(); return; }
+  if ((colourPanel.active || repositoryPageActive || accountPanel.active || welcome) && ['search', 'filter'].includes(message.type)) return;
   if (message.type === 'search') { search(); return; }
   if (message.type === 'filter') { mode = mode === 'starred' ? 'recent' : 'starred'; render(); return; }
   if (message.type === 'error') { el('message').textContent = message.message; return; }
@@ -238,9 +262,9 @@ window.addEventListener('message', event => {
     repositoryPageActive = false; el('repositoryPage').hidden = true;
     rows = []; el('chats').replaceChildren(); goals.clear(); visibleSignature = '';
   }
-  el('welcomePage').hidden = !welcome || colourPanel.active || repositoryPageActive;
+  el('welcomePage').hidden = !welcome || colourPanel.active || repositoryPageActive || accountPanel.active;
   el('setupMessage').textContent = message.setupMessage || 'Install and verify Navigator hooks to show your chats.';
-  if (!colourPanel.active && !repositoryPageActive) el('chatPage').hidden = !!message.welcome;
+  if (!colourPanel.active && !repositoryPageActive && !accountPanel.active) el('chatPage').hidden = !!message.welcome;
   const nextRepositories = message.repositories || [];
   if (JSON.stringify(nextRepositories) !== JSON.stringify(repositories)) { repositories = nextRepositories; renderRepositories(); }
   emptyMessage = message.emptyMessage || 'No saved local chats yet.';
@@ -280,7 +304,7 @@ el('chats').addEventListener('focusin', holdOrder);
 el('chats').addEventListener('focusout', () => queueMicrotask(releaseOrder));
 window.addEventListener('blur', releaseOrder);
 document.addEventListener('keydown', event => {
-  if (colourPanel.active) return;
+  if (colourPanel.active || accountPanel.active) return;
   if ((event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) && event.target.closest('.chat, .repository')) {
     event.preventDefault(); event.stopPropagation(); showMenu(event.target); return;
   }

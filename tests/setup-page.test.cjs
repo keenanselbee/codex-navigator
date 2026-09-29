@@ -7,7 +7,7 @@ function fixture(canUse){
  const panel={visible:true,reveal(){},dispose(){closed();},onDidDispose(fn){closed=fn;},webview:{cspSource:'test:',asWebviewUri:uri=>uri.toString(),postMessage:async m=>messages.push(m),onDidReceiveMessage(fn){receive=fn;return disposable();}}};
  const api={env:{},ViewColumn:{Active:1},ConfigurationTarget:{Workspace:2,Global:1},Uri:{joinPath:(base,...parts)=>uri(path.join(base.fsPath,...parts))},
  window:{createWebviewPanel:()=>panel,showOpenDialog:async()=>undefined},extensions:{getExtension:()=>undefined},
- workspace:{isTrusted:true,workspaceFolders:[{name:'Fixture',uri:uri('C:/project')}],getConfiguration:()=>({get:(_k,d)=>d,update:async(...args)=>writes.push(args)}),onDidChangeWorkspaceFolders:()=>disposable(),onDidChangeConfiguration:fn=>{changed=fn;return disposable();}},commands:{executeCommand:async(...args)=>writes.push(args)}};
+ workspace:{isTrusted:true,workspaceFolders:[{name:'Fixture',uri:uri('C:/project')}],getConfiguration:()=>({get:(_k,d)=>d,update:async(...args)=>writes.push(args)}),onDidChangeWorkspaceFolders:()=>disposable(),onDidChangeConfiguration:fn=>{changed=fn;return disposable();}},commands:{executeCommand:async(...args)=>args[0]==='codexNavigator.accountStatus'?{enabled:false,label:'Off',count:0}:writes.push(args)}};
  const exports={};vm.runInNewContext(fs.readFileSync(require.resolve('../dist/setup-page'),'utf8'),{exports,setInterval:()=>0,clearInterval(){},require:name=>{
   if(name==='vscode')return api;
   if(name==='./scope-store')return {codexHome:()=> 'C:/test-home'};
@@ -23,9 +23,9 @@ function fixture(canUse){
 }
 test('expired access blocks enabling features but preserves hook and guidance removal',async()=>{
  const f=fixture(async()=>false);await f.open();await f.send({type:'ready'});
- for(const type of ['installHooks','enableAutomaticLabels','saveRouting'])await f.send({type,revision:1});
+ for(const type of ['enableAccounts','installHooks','enableAutomaticLabels','saveRouting'])await f.send({type,revision:1});
  assert.equal(f.writes.length,0,'no enabling side effects without access');
- assert.equal(f.messages.filter(m=>m.type==='error'&&m.text.includes('Start your trial')).length,3);
+ assert.equal(f.messages.filter(m=>m.type==='error'&&m.text.includes('Start your trial')).length,4);
  await f.send({type:'disableHooks'});await f.send({type:'disableAutomaticLabels'});
  const revision=f.messages.filter(m=>m.type==='state').at(-1).revision;
  await f.send({type:'disableRouting',revision});

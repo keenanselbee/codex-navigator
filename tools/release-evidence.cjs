@@ -5,6 +5,14 @@ const { execFileSync } = require('node:child_process');
 const yauzl = require('yauzl');
 
 const hash = data => createHash('sha256').update(data).digest('hex');
+function testSourceState(root) {
+  const git = args => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', windowsHide: true }).trim();
+  const normalize = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  if (normalize(git(['rev-parse', '--show-toplevel'])) !== normalize(root)) throw new Error('Test inputs must be an independent Git root.');
+  const files = Object.fromEntries(require('./public-source.cjs').publicFiles(root)
+    .map(name => [name.replaceAll(path.sep, '/'), hash(fs.readFileSync(path.join(root, name)))]));
+  return { baseRevision: git(['rev-parse', 'HEAD']), status: git(['status', '--porcelain', '--untracked-files=all']), files };
+}
 function revision(root) {
   const git = args => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', windowsHide: true }).trim();
   const normalize = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
@@ -76,4 +84,4 @@ function inspectVsix(filename, expected, { universal = false } = {}) {
     zip.readEntry();
   }));
 }
-module.exports = { hash, revision, payload, inspectVsix };
+module.exports = { hash, revision, testSourceState, payload, inspectVsix };

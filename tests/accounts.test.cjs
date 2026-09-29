@@ -1,0 +1,532 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const runtime = require('../dist/account-runtime');
+const { AccountError } = require('../dist/account-errors');
+const { AccountStore } = require('../dist/account-store');
+
+function auth(id, refresh = 'synthetic', plan) {
+  const token = 'header.' + Buffer.from(JSON.stringify({ sub: id, email: id + '@example.invalid',
+    'https://api.openai.com/auth': { chatgpt_plan_type: plan } })).toString('base64url') + '.signature';
+  return JSON.stringify({ auth_mode: 'chatgpt', tokens: { id_token: token, access_token: 'synthetic', refresh_token: refresh, account_id: 'workspace' } });
+}
+async function fixture(t, overrides = {}, options = {}) {
+  const scratch = path.join(__dirname, '..', '.codex-temp');
+  fs.mkdirSync(scratch, { recursive: true });
+  const root = fs.mkdtempSync(path.join(scratch, 'navigator-controller-'));
+  const home = path.join(root, 'home'); fs.mkdirSync(home);
+  const values = new Map(), globals = new Map(), commands = [], messages = [], calls = { read: 0, preflight: 0, login: 0, usage: 0 };
+  let answer = 'Switch Account and Reload', allowed = true, active = options.activeWork, reloadFails = options.reloadFails;
+  const secrets = { async get(k) { return values.get(k); }, async store(k,v) { values.set(k,v); }, async delete(k) { values.delete(k); } };
+  const vscode = { workspace: { isTrusted: true, getConfiguration: () => ({ get: () => false }) },
+    env: { openExternal: async () => true, clipboard: { async writeText() {} } },
+    Uri: { parse: value => value },
+    commands: { async executeCommand(...args) { commands.push(args); if (args[0] === 'workbench.action.reloadWindow' && reloadFails) throw Error('synthetic reload failure'); } },
+    window: { async showWarningMessage(message) { messages.push(message); return typeof answer === 'function' ? answer(message) : answer; }, async showInformationMessage(message) { messages.push(message); return answer; } } };
+  const exports = {};
+  vm.runInNewContext(fs.readFileSync(require.resolve('../dist/accounts'), 'utf8'), {
+    exports, process, setInterval: () => 1, clearInterval() {}, setTimeout, clearTimeout, AbortController,
+    require: name => name === 'vscode' ? vscode : name === './account-store' ? require('../dist/account-store')
+      : name === './account-usage' ? { ...require('../dist/account-usage'), readAccountUsage: overrides.readAccountUsage || (async () => {
+        calls.usage++; return { checkedAt: Date.now(), plan: 'plus', primary: { usedPercent: 25, windowDurationMins: 300 }, bankedResets: 2 };
+      }) }
+      : name === './account-runtime' ? { ...runtime,
+        accountCapability: async () => ({ supported: true, isolatedLogin: true, message: 'fixture' }),
+        prepareAccountCredentials: async (_binary, _directory, raw) => { calls.preflight++; return raw; },
+        isolatedAccountLogin: async () => { calls.login++; return auth('new'); },
+        readAccountFile: async (...args) => { calls.read++; return runtime.readAccountFile(...args); }, ...overrides } : name.startsWith('./') ? require('../dist/' + name.slice(2)) : require(name),
+  });
+  const context = { globalStorageUri: { fsPath: path.join(root, 'storage') }, secrets,
+    globalState: { get: (key, fallback) => globals.has(key) ? globals.get(key) : fallback,
+      async update(key, value) { globals.set(key, value); } } };
+  const controller = new exports.Accounts(context,
+    { home, binary: 'synthetic', canUse: () => allowed, beforeReload() {}, hasActiveWork: () => active });
+  await controller.refresh();
+  t.after(async () => {
+    if (!controller.disposed) await controller.dispose();
+    await controller.refreshing;
+    await new Promise(resolve => setTimeout(resolve, 50));
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
+  });
+  return { controller, Accounts: exports.Accounts, context, home, commands, calls, values, globals, secrets, messages, vscode,
+    answer(value) { answer = value; }, access(value) { allowed = value; }, active(value) { active = value; }, reloadFailure(value) { reloadFails = value; } };
+}
+
+function action(account, name = 'switch') { return { action: name, id: account.id, generation: account.generation }; }
+function reloads(f) { return f.commands.filter(([name]) => name === 'workbench.action.reloadWindow').length; }
+function gate() { let open; const promise = new Promise(resolve => { open = resolve; }); return { promise, open }; }
+
+test('account page metadata is cached without replacing credentials or repeating fresh reads', async t => {
+  const f = await fixture(t);
+  await f.controller.refreshUsage(); assert.equal(f.calls.usage, 0);
+  const raw = auth('first'); fs.writeFileSync(path.join(f.home, 'auth.json'), raw);
+  await f.controller.enable();
+  await f.controller.refreshUsage();
+  const account = f.controller.snapshot().accounts[0];
+  assert.equal(account.name, ''); assert.equal(account.plan, 'plus');
+  assert.equal(account.usage.bankedResets, 2); assert.equal(account.usage.primary.usedPercent, 25);
+  assert.equal(await runtime.readAccountFile(f.home), raw);
+  assert.equal(reloads(f), 0);
+  await f.controller.refreshUsage(); assert.equal(f.calls.usage, 1);
+  assert.doesNotMatch(JSON.stringify(account), /synthetic|refresh_token|access_token/);
+  await f.controller.act({ ...action(f.controller.store.list()[0], 'rename'), label: 'Personal' });
+  assert.equal(f.controller.snapshot().accounts[0].name, 'Personal');
+  await f.controller.act({ ...action(f.controller.store.list()[0], 'rename'), label: '' });
+  assert.equal(f.controller.snapshot().accounts[0].name, '');
+});
+
+test('failed usage reads retain cached metadata and do not block saved switching', async t => {
+  const f = await fixture(t, { readAccountUsage: async () => { throw Error('PRIVATE credential detail'); } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first')); await f.controller.enable();
+  const first = f.controller.store.list()[0], target = await f.controller.store.capture(auth('second'), true);
+  f.controller.store.saveUsage(first.id, first.generation, { checkedAt: 1, plan: 'plus', bankedResets: 0 });
+  await f.controller.refreshUsage();
+  const metadata = f.controller.snapshot().accounts.find(row => row.id === first.id);
+  assert.equal(metadata.usage.bankedResets, 0);
+  assert.match(metadata.usageProblem, /could not be updated/);
+  assert.doesNotMatch(JSON.stringify(f.controller.snapshot()), /PRIVATE/);
+  await f.controller.act(action(target)); assert.equal(reloads(f), 1);
+});
+
+test('plan metadata survives missing quota without replacing the last quota snapshot', async t => {
+  const f = await fixture(t, { readAccountUsage: async () => ({ checkedAt: Date.now(), plan: 'prolite' }) });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first', 'synthetic', 'prolite'));
+  await f.controller.enable();
+  const account = f.controller.store.list()[0];
+  f.controller.store.saveUsage(account.id, account.generation, { checkedAt: 1000, plan: 'plus',
+    primary: { usedPercent: 25, windowDurationMins: 300 } });
+  await f.controller.refreshUsage();
+  const metadata = f.controller.snapshot().accounts[0];
+  assert.equal(metadata.plan, 'prolite');
+  assert.equal(metadata.usage.plan, 'prolite');
+  assert.equal(metadata.usage.checkedAt, 1000);
+  assert.equal(metadata.usage.primary.usedPercent, 25);
+  assert.equal(f.controller.store.usage(account.id).plan, 'plus');
+});
+
+test('switching cancels an in-flight usage read before acquiring its mutation lease', async t => {
+  const started = gate(); let aborted = false;
+  const f = await fixture(t, { readAccountUsage: async (_binary, _directory, _raw, signal) => {
+    started.open(); await new Promise((resolve, reject) => signal.addEventListener('abort', () => { aborted = true; reject(Error('cancelled')); }, { once: true }));
+  } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first')); await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  const reading = f.controller.refreshUsage(); await started.promise;
+  await f.controller.act(action(target)); await reading;
+  assert.equal(aborted, true); assert.equal(reloads(f), 1);
+  assert.equal(f.controller.snapshot().usageRefreshing, false);
+});
+
+test('disabled automation avoids auth reads and snapshots expose metadata only', async t => {
+  const f = await fixture(t);
+  await f.controller.refresh(true);
+  assert.equal(f.calls.read, 0);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const saved = f.controller.store.list()[0];
+  await f.controller.refresh(true);
+  assert.equal(f.controller.store.list()[0].generation, saved.generation);
+  const state = f.controller.snapshot();
+  assert.equal(state.accounts[0].selected, true);
+  assert.equal(state.accounts[0].email, 'first@example.invalid');
+  assert.equal(JSON.stringify(state).includes('synthetic'), false);
+  await f.controller.disable();
+  const reads = f.calls.read;
+  await f.controller.refresh(true);
+  assert.equal(f.calls.read, reads);
+});
+
+test('switch publishes selected credentials and restart reconciles without confirmation', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), auth('second'));
+  assert.equal(reloads(f), 1);
+  assert.equal(f.controller.store.state().pending.accountId, target.id);
+  assert.equal(f.controller.snapshot().accounts.find(row => row.id === target.id).selected, true);
+  assert.ok([...f.values.values()].includes(auth('first')));
+  f.controller.dispose();
+  await f.controller.refreshing;
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const restarted = new f.Accounts(f.context, {
+    home: f.home, binary: 'synthetic', canUse: () => true, beforeReload() {},
+  });
+  try {
+    await restarted.refresh();
+    await restarted.refresh(true);
+    assert.equal(restarted.store.state().pending, undefined);
+    assert.equal(restarted.snapshot().accounts.find(row => row.id === target.id).selected, true);
+    assert.equal([...f.values.keys()].some(key => key.includes('accountRollback')), false);
+  } finally {
+    restarted.dispose();
+    await restarted.refreshing;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+});
+
+test('shared-home warning is shown once but known active work is warned each time', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const first = f.controller.store.list()[0];
+  const second = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act(action(second));
+  assert.match(f.messages[0], /shared with other Codex windows/);
+  assert.equal(f.globals.get('accounts.reloadNotice.v1'), true);
+  await f.controller.act(action(first));
+  assert.equal(f.messages.length, 1);
+  f.active(true);
+  await f.controller.act(action(second));
+  assert.match(f.messages[1], /active work/);
+  assert.equal(reloads(f), 3);
+});
+
+test('cancelled warning and lost access preserve the live sign-in', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  f.answer(undefined);
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(reloads(f), 0);
+  f.access(false);
+  await f.controller.act(action(target));
+  assert.match(f.controller.snapshot().problem, /Enable account switching/);
+  assert.equal(f.controller.store.state().pending, undefined);
+});
+
+test('failed publication clears recovery state and reports a safe problem', async t => {
+  const f = await fixture(t, { replaceAccountFile: async () => { throw Error('PRIVATE locked target'); } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(f.controller.store.state().pending, undefined);
+  assert.equal(reloads(f), 0);
+  assert.match(f.controller.snapshot().problem, /could not complete/);
+  assert.doesNotMatch(f.controller.snapshot().problem, /PRIVATE/);
+});
+
+test('stale account generation and outgoing vault failure cannot publish', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const stale = await f.controller.store.capture(auth('second'), true);
+  await f.controller.store.capture(auth('second', 'rotated'), true);
+  await f.controller.act(action(stale));
+  assert.match(f.controller.snapshot().problem, /changed/);
+  assert.equal(reloads(f), 0);
+  const target = f.controller.store.list().find(row => row.id === stale.id);
+  f.secrets.store = async () => { throw Error('PRIVATE vault unavailable'); };
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(f.controller.store.state().pending, undefined);
+  assert.match(f.controller.snapshot().problem, /could not complete/);
+  assert.doesNotMatch(f.controller.snapshot().problem, /PRIVATE/);
+});
+
+test('reauthentication resumes the requested switch once without redundant preflight', async t => {
+  const fresh = auth('second', 'fresh');
+  let checks = 0, logins = 0;
+  const f = await fixture(t, {
+    prepareAccountCredentials: async () => { checks++; throw new AccountError('Expired sign-in.', 'reauthenticate'); },
+    isolatedAccountLogin: async () => { logins++; return fresh; },
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  f.answer(message => message.includes('needs reconnecting') ? 'Sign In Again' : 'Switch Account and Reload');
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), fresh);
+  assert.equal(await f.controller.store.load(target.id), fresh);
+  assert.equal(checks, 1);
+  assert.equal(logins, 1);
+  assert.equal(reloads(f), 1);
+});
+
+test('wrong account and cancelled reconnect preserve the active credentials', async t => {
+  const f = await fixture(t, {
+    prepareAccountCredentials: async () => { throw new AccountError('Expired sign-in.', 'reauthenticate'); },
+    isolatedAccountLogin: async () => auth('wrong'),
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  f.answer(message => message.includes('needs reconnecting') ? 'Sign In Again' : 'Switch Account and Reload');
+  await f.controller.act(action(target));
+  assert.match(f.controller.snapshot().problem, /different account/);
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(reloads(f), 0);
+  f.answer(message => message.includes('needs reconnecting') ? undefined : 'Switch Account and Reload');
+  await f.controller.act(action(target));
+  assert.match(f.controller.snapshot().problem, /needs a new sign-in/);
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(reloads(f), 0);
+});
+
+test('cancelling an in-progress browser login leaves the active sign-in alone', async t => {
+  let started;
+  const loginStarted = new Promise(resolve => { started = resolve; });
+  const f = await fixture(t, { isolatedAccountLogin: async (_binary, _directory, _open, signal) => {
+    started();
+    return new Promise((_, reject) => signal.addEventListener('abort', () => reject(new AccountError('Sign-in cancelled.')), { once: true }));
+  } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const adding = f.controller.act({ action: 'add' });
+  await loginStarted;
+  await f.controller.act({ action: 'cancelLogin' });
+  await adding;
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(f.controller.store.list().length, 1);
+  assert.equal(reloads(f), 0);
+});
+
+test('failed secure save during reconnect never publishes browser credentials', async t => {
+  const f = await fixture(t, {
+    prepareAccountCredentials: async () => { throw new AccountError('Expired sign-in.', 'reauthenticate'); },
+    isolatedAccountLogin: async () => auth('second', 'fresh'),
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  f.secrets.store = async () => { throw Error('PRIVATE vault failure'); };
+  f.answer(message => message.includes('needs reconnecting') ? 'Sign In Again' : 'Switch Account and Reload');
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(await f.controller.store.load(target.id), auth('second'));
+  assert.equal(reloads(f), 0);
+  assert.match(f.controller.snapshot().problem, /securely/);
+  assert.doesNotMatch(f.controller.snapshot().problem, /PRIVATE/);
+});
+
+test('live sign-in drift during browser login keeps the active credentials', async t => {
+  const f = await fixture(t, {
+    isolatedAccountLogin: async () => {
+      fs.writeFileSync(path.join(f.home, 'auth.json'), auth('external'));
+      return auth('new');
+    },
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  await f.controller.act({ action: 'add' });
+  assert.equal(await runtime.readAccountFile(f.home), auth('external'));
+  assert.match(f.controller.snapshot().problem, /changed during browser login/);
+  assert.equal(reloads(f), 0);
+});
+
+test('outgoing token rotation during preflight is remembered before publication', async t => {
+  let f;
+  f = await fixture(t, { prepareAccountCredentials: async (_binary, _directory, raw) => {
+    fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first', 'rotated'));
+    return raw;
+  } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const first = f.controller.store.list()[0];
+  const target = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), auth('second'));
+  assert.equal(await f.controller.store.load(first.id), auth('first', 'rotated'));
+});
+
+test('selected account does not force token refresh or reload', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const first = f.controller.store.list()[0];
+  await f.controller.act(action(first));
+  assert.equal(f.calls.preflight, 0);
+  assert.equal(reloads(f), 0);
+  assert.equal(f.messages.length, 0);
+});
+
+test('unknown, untrusted and forgotten actions cannot switch credentials', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act({ action: 'unsupported', id: target.id, generation: target.generation });
+  assert.equal(reloads(f), 0);
+  f.vscode.workspace.isTrusted = false;
+  await f.controller.act(action(target));
+  assert.match(f.controller.snapshot().problem, /trusted local workspace/);
+  f.vscode.workspace.isTrusted = true;
+  f.answer('Forget');
+  await f.controller.act(action(target, 'forget'));
+  assert.equal(f.controller.store.list().some(row => row.id === target.id), false);
+  await f.controller.refresh(true);
+  await f.controller.act(action(target));
+  assert.match(f.controller.snapshot().problem, /changed/);
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(reloads(f), 0);
+});
+
+test('reload failure offers error-only restoration and rejects unrelated live drift', async t => {
+  const f = await fixture(t, {}, { reloadFails: true });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act(action(target));
+  assert.equal(await runtime.readAccountFile(f.home), auth('second'));
+  assert.equal(f.controller.snapshot().recovery, true);
+  assert.match(f.controller.snapshot().problem, /could not reload/);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('external'));
+  await f.controller.act({ action: 'restore' });
+  assert.match(f.controller.snapshot().problem, /Credentials changed/);
+  assert.equal(await runtime.readAccountFile(f.home), auth('external'));
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('second'));
+  f.reloadFailure(false);
+  await f.controller.act({ action: 'restore' });
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  assert.equal(reloads(f), 2);
+});
+
+test('direct disable and forget-all cannot interrupt preflight or publication', async t => {
+  const preflight = gate(), enteredPreflight = gate(), publication = gate(), enteredPublication = gate();
+  const f = await fixture(t, {
+    prepareAccountCredentials: async (_binary, _directory, raw) => { enteredPreflight.open(); await preflight.promise; return raw; },
+    replaceAccountFile: async (...args) => { enteredPublication.open(); await publication.promise; return runtime.replaceAccountFile(...args); },
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  const peer = new AccountStore(f.context.globalStorageUri.fsPath, f.home, f.secrets);
+  f.answer(message => message.startsWith('Forget all') ? 'Forget Saved Accounts' : 'Switch Account and Reload');
+  const switching = f.controller.act(action(target));
+  try {
+    await enteredPreflight.promise;
+    assert.equal(peer.acquireLease('peer-window', Date.now(), 30000), false);
+    await assert.rejects(f.controller.disable(), /finish/);
+    await assert.rejects(f.controller.forgetAll(), /finish/);
+    assert.equal(f.controller.store.enabled, true);
+    preflight.open();
+    await enteredPublication.promise;
+    assert.equal(peer.acquireLease('peer-window', Date.now(), 30000), false);
+    await assert.rejects(f.controller.disable(), /finish/);
+    await assert.rejects(f.controller.forgetAll(), /finish/);
+    assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+  } finally { preflight.open(); publication.open(); await switching; peer.dispose(); }
+  assert.equal(await runtime.readAccountFile(f.home), auth('second'));
+  assert.equal(f.controller.store.enabled, true);
+});
+
+test('another window lease blocks direct disable and forget-all mutations', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const peer = new AccountStore(f.context.globalStorageUri.fsPath, f.home, f.secrets);
+  assert.equal(peer.acquireLease('peer-window', Date.now(), 30000), true);
+  f.answer('Forget Saved Accounts');
+  try {
+    await assert.rejects(f.controller.disable(), /Another account operation/);
+    await assert.rejects(f.controller.forgetAll(), /Another account operation/);
+    assert.equal(f.controller.store.enabled, true);
+    assert.equal(f.controller.store.list().length, 1);
+  } finally { peer.releaseLease('peer-window'); peer.dispose(); }
+});
+
+for (const scenario of ['missing', 'mismatched']) {
+  test('restart with ' + scenario + ' auth retains pending switch and rollback credentials', async t => {
+    const f = await fixture(t);
+    fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+    await f.controller.enable();
+    const target = await f.controller.store.capture(auth('second'), true);
+    await f.controller.act(action(target));
+    const pending = f.controller.store.state().pending;
+    assert.equal(pending.accountId, target.id);
+    await f.controller.dispose();
+    if (scenario === 'missing') fs.unlinkSync(path.join(f.home, 'auth.json'));
+    else fs.writeFileSync(path.join(f.home, 'auth.json'), auth('external'));
+    const restarted = new f.Accounts(f.context, {
+      home: f.home, binary: 'synthetic', canUse: () => true, beforeReload() {},
+    });
+    try {
+      await restarted.refresh();
+      await restarted.refresh(true);
+      assert.deepEqual(restarted.store.state().pending, pending);
+      assert.equal([...f.values.values()].includes(auth('first')), true);
+      assert.equal(restarted.snapshot().recovery, true);
+      assert.match(restarted.snapshot().problem, /changed outside Navigator/);
+      assert.equal(await runtime.readAccountFile(f.home), scenario === 'missing' ? undefined : auth('external'));
+    } finally { await restarted.dispose(); }
+  });
+}
+
+test('rename and setup leave reload-failure recovery available', async t => {
+  const f = await fixture(t, {}, { reloadFails: true });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act(action(target));
+  assert.equal(f.controller.snapshot().recovery, true);
+  await f.controller.act({ ...action(target, 'rename'), label: 'Work' });
+  assert.equal(f.controller.snapshot().accounts.find(row => row.id === target.id).name, 'Work');
+  assert.equal(f.controller.snapshot().recovery, true);
+  assert.match(f.controller.snapshot().problem, /could not reload/);
+  await f.controller.act({ action: 'setup' });
+  assert.equal(f.controller.snapshot().recovery, true);
+  assert.match(f.controller.snapshot().problem, /could not reload/);
+  assert.equal(await runtime.readAccountFile(f.home), auth('second'));
+});
+
+test('forget confirmation cannot remove credentials updated while the modal was open', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const stale = await f.controller.store.capture(auth('second'), true);
+  f.answer(async message => {
+    if (message.startsWith('Forget this saved')) {
+      await f.controller.store.capture(auth('second', 'new-generation'), true);
+      return 'Forget';
+    }
+    return 'Switch Account and Reload';
+  });
+  await f.controller.act(action(stale, 'forget'));
+  assert.equal(await f.controller.store.load(stale.id), auth('second', 'new-generation'));
+  assert.match(f.controller.snapshot().problem, /changed while the confirmation was open/);
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+});
+
+test('successful capture clears a prior transient secure-storage problem', async t => {
+  const f = await fixture(t);
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first', 'rotated'));
+  const store = f.secrets.store;
+  f.secrets.store = async () => { throw Error('PRIVATE transient failure'); };
+  await f.controller.refresh(true);
+  assert.match(f.controller.snapshot().problem, /could not be remembered/);
+  assert.doesNotMatch(f.controller.snapshot().problem, /PRIVATE/);
+  f.secrets.store = store;
+  await f.controller.refresh(true);
+  assert.equal(f.controller.snapshot().problem, undefined);
+  assert.equal(await f.controller.store.load(f.controller.store.list()[0].id), auth('first', 'rotated'));
+});
+
+test('clipboard failure during reconnect becomes a safe menu problem', async t => {
+  const started = gate();
+  const f = await fixture(t, { isolatedAccountLogin: async (_binary, _directory, _open, signal) => {
+    started.open();
+    return new Promise((_, reject) => signal.addEventListener('abort', () => reject(new AccountError('Sign-in cancelled.')), { once: true }));
+  } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable();
+  const target = await f.controller.store.capture(auth('second'), true);
+  f.vscode.env.clipboard.writeText = async () => { throw Error('PRIVATE clipboard diagnostic'); };
+  const reconnecting = f.controller.act(action(target, 'reconnect'));
+  try {
+    await started.promise;
+    assert.equal(f.controller.snapshot().loginEmail, 'second@example.invalid');
+    await f.controller.act({ action: 'copyEmail' });
+    assert.match(f.controller.snapshot().problem, /could not be copied/);
+    assert.doesNotMatch(f.controller.snapshot().problem, /PRIVATE/);
+  } finally { await f.controller.act({ action: 'cancelLogin' }); await reconnecting; }
+  assert.equal(await runtime.readAccountFile(f.home), auth('first'));
+});

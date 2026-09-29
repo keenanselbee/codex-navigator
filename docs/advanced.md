@@ -208,12 +208,15 @@ Unfamiliar records leave status unknown. Working/waiting observations expire
 without fresh evidence. A blue ready dot records a completed turn since opening
 through Navigator; native navigation is not tracked reliably.
 
-Large transcript updates reset uncertain activity rather than carrying work
-across unread records. After compaction, turn context identifies subsequent
-reasoning and tool calls so activity can recover within the bounded tail, even
-after a reload. Context and compaction alone do not start a spinner. Newer stop
-or interruption hooks override older working/waiting records; a matching
-completed transcript can still supply the ready dot.
+Transcript reads are bounded to 1 MiB so ordinary tool results do not discard
+the current turn. Larger updates still reset uncertain activity rather than
+carrying work across unread records. Explicit completion events for compaction,
+reasoning and command items identify active turns within the tail, even after
+a reload. Fresh reasoning and tool calls also recover working status without
+requiring an earlier turn-context record. Context or compacted history alone
+does not start a spinner. Completed/interrupted turns and pending input are
+not revived by later same-turn item events. Newer stop or interruption hooks
+override older work; a matching completed transcript can supply the ready dot.
 
 Rotated transcript files retain the conversation ID before their optional rollout
 ID suffix. Navigator selects the newest filename timestamp, verifies its session
@@ -506,3 +509,68 @@ fit the actual available frame, including search and notices, then share spare
 height up to 1.5 times their natural height. Fonts and controls do not scale.
 Sparse lists may retain blank space to avoid oversized cards. VS Code still owns
 the outer view's minimum height and divider position.
+
+Account switching (test build)
+-----------------------------
+
+In Set Up Codex Navigator, enable Account Switching. The account icon appears
+after Search and New Chat. Navigator remembers compatible local credential
+files in VS Code SecretStorage; there is no password field or credential import.
+The icon switches Navigator to an Accounts page with tiles sized like chats.
+Each heading shows email and account plan, where known. Click a saved account
+to switch; the final Add Account tile starts Codex's browser sign-in and switches
+after completion. You can also sign in normally in Codex and let Navigator
+remember the changed credentials. Right-click an account to change its label,
+sign in again or forget it. Clear a custom label to show the email again.
+Back returns to the chat list.
+
+The second line shows last known remaining quota. Hover for full identity,
+plan, window/reset details, banked resets and the observation time. Missing data
+means unavailable, not zero. A reset time that has passed requires another
+successful read before the quota can be described as replenished. The page
+refreshes stale information on open; explicit refresh retries it. These reads
+use an isolated access-token-only helper, never a competing token refresh.
+Expired tokens or older runtimes can leave usage unavailable while account
+switching remains usable. Managed authentication policies can prevent usage reads.
+
+Plan metadata is also retained from remembered sign-ins, so a failed usage read
+does not erase a known plan. Navigator follows Codex's plan labels, including
+Pro 5x for `prolite` and Pro 20x for `pro`; it does not infer a subscription from quota.
+New plan codes display directly until Navigator recognises them.
+The compact label mapping can change in extension
+updates; account metadata is retained even when its code is not recognised.
+Cached metadata can lag subscription changes until a new sign-in or successful
+metadata refresh. Check Codex or ChatGPT billing for your current subscription.
+
+Selecting a saved account switches and reloads this window. The first switch
+explains the shared environment; subsequent switches prompt when Navigator sees
+active work. Finish work in other Codex windows and terminals sharing this home;
+Navigator cannot observe all of them. Other windows may need reloading too.
+Usable saved sign-ins switch without a browser. Navigator checks saved credentials
+through Codex before replacement and keeps the latest rotated tokens.
+
+If a saved login needs reconnecting, choose Sign In Again. The menu shows the
+expected email with Copy Email and Cancel sign-in. Browser email prefill is not
+supported. A matching login continues the original switch automatically; there
+is no need to select the account twice. Cancelling or using the wrong account
+keeps the current sign-in. Fresh native logins do not require another refresh.
+
+After reload, Navigator reconciles the selected credential identity automatically.
+There is no Confirm Account step. Selected identifies the local credential file;
+Navigator cannot independently verify the private IDE runtime's account. Check
+Codex settings if its displayed account differs. A failed reload offers Retry
+Reload and recovery when the previous account is still available. Navigator
+never automatically restores credentials after a sign-out.
+
+Turning off keeps saved accounts;
+Forget All deletes them and turns remembering off without signing Codex out.
+Normal Navigator access is required to enable, capture, add or switch. Removal
+remains available after access expires.
+
+This version supports file-backed ChatGPT authentication in trusted native local
+workspaces. It detects the effective backend and enforced login restrictions
+without changing them. Keyring, auto, ephemeral, WSL, SSH, containers and custom
+auth endpoints are unsupported. Managed policies can prevent isolated Add
+Account. Windows is the tested platform; macOS/Linux have portable code but no
+native acceptance evidence. Real account login and IDE adoption remain manual
+test steps.

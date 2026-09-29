@@ -1,3 +1,5 @@
+import { accountErrorMessage } from './account-errors';
+import { Accounts } from './accounts';
 import { ChatProfiles } from './chat-profiles';
 import { chatPins } from './chat-pins';
 import * as vscode from 'vscode';
@@ -90,6 +92,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const chatGoals = new ChatGoals(!vscode.env.remoteName ? codexBinary(codexPath) : undefined, home,
     message => output.appendLine(JSON.stringify({ time: new Date().toISOString(), event: 'chat-goals', message })));
   context.subscriptions.push(runtimeActivity, chatGoals);
+  const accounts = new Accounts(context, { home, binary: !vscode.env.remoteName ? codexBinary(codexPath) : undefined,
+    cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath, canUse: () => license.allowed(),
+    beforeReload: () => { runtimeActivity.stop(); chatGoals.stop(); }, hasActiveWork: () => sidebar.hasActiveWork });
+  context.subscriptions.push(accounts);
+  const accountAction = async (action: () => Promise<unknown>) => {
+    try { return await action(); }
+    catch (error) { await vscode.window.showErrorMessage(accountErrorMessage(error)); }
+  };
+
   const discussionKeys = new Set<string>();
   const discussionScopes: Record<string, ScopeReport> = Object.create(null);
   const savedDiscussion = context.workspaceState.get<Record<string, unknown>>('discussionScopes.v1', {});
@@ -220,6 +231,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       root: repo.rootUri.fsPath, label: repositoryLabel(repo.rootUri.fsPath, repositoryNames()),
       colour: repositoryColours()[repositoryColourKey(repo.rootUri.fsPath)],
     })), async () => hookReadiness(await hookSetupStatus(context, home, true)), () => readSidebarChats(true), license, profiles);
+  sidebar.accounts = accounts;
+  accounts.onChange = () => { void sidebar.publishAccounts(); };
   function hydrateProfile(reset = false) {
     if (profiles.current.id !== profiles.activeId) {
       profiles.select('default'); reset = true; profileEpoch++;
@@ -669,6 +682,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   const commands: [string, (...args: any[]) => unknown][] = [
+    ['accounts', () => accountAction(() => sidebar.showAccounts())],
+    ['accountStatus', () => accounts.status()],
+    ['enableAccounts', () => accountAction(() => accounts.enable())],
+    ['disableAccounts', () => accountAction(() => accounts.disable())],
+    ['forgetAccounts', () => accountAction(() => accounts.forgetAll())],
+    ['manageAccounts', () => accountAction(() => sidebar.showAccounts())],
+
     ['setUp', () => setUpNavigator(context, () => license.requireAccess())],
     ['license', () => license.show()],
     ['openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:keenanselbee.codex-navigator')],
@@ -834,7 +854,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }],
   ];
   for (const [name, action] of commands) {
-    const alwaysAvailable = ['license', 'setUp', 'setUpActivity', 'setUpAgentHelper', 'openSettings', 'showChats'];
+    const alwaysAvailable = ['accountStatus', 'disableAccounts', 'forgetAccounts', 'manageAccounts', 'license', 'setUp', 'setUpActivity', 'setUpAgentHelper', 'openSettings', 'showChats'];
     context.subscriptions.push(vscode.commands.registerCommand(`codexNavigator.${name}`, (...args) => Promise.resolve().then(async () => {
       if (alwaysAvailable.includes(name) || await license.requireAccess()) {
         if (name === 'chatProfiles') return action(...args);

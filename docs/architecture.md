@@ -8,8 +8,19 @@ chat cards, a colour picker, stars, lifecycle indicators and goal controls.
 VS Code owns the view container, native context menus, keyboard focus and theme
 tokens. Chat and repository elements carry validated context data; contributed
 menu commands receive the clicked identity. Dynamic repository choices use a
-searchable picker. No HTML context-menu overlay is rendered inside Navigator.
+searchable picker. Accounts replace Navigator's main content with a compact
+neutral grid, using the chat layout sizing rules. An account-only context menu
+offers label and management actions. Messages contain metadata and validated
+action IDs, never credentials. Chat context menus remain native.
 No code is injected into Codex, and no Codex or VS Code bundle is modified.
+
+Account usage checks start only on opening the page or explicit refresh, use
+cached results for five minutes and query sequentially under the account lease.
+An isolated ephemeral helper receives only the access token and workspace ID;
+it cannot rotate a refresh token or replace the active auth file. Switching or
+closing the page cancels optional reads. The home-scoped catalog retains only
+validated plan, quota windows, reset count and observation time. Unknown fields
+stay unavailable, and a past reset timestamp is not proof of replenished quota.
 
 Identity and state
 ------------------
@@ -174,3 +185,19 @@ open. Routing uses a separate shared scope snapshot: merely hydrating another
 profile establishes a comparison baseline, not a new routing instruction.
 Explicit scope changes and later automatic reports can still update routing.
 The workspace filter uses associated exact roots and includes unassigned chats.
+
+Account storage and runtime boundary
+------------------------------------
+
+accounts.ts owns opt-in capture, account-page actions, admission, reload and
+selected-credential reconciliation. account-store.ts stores home-scoped metadata in SQLite
+and versioned credential bundles in VS Code SecretStorage. Transactions protect
+consent epochs, generations, exclusions and a bounded shared switch lease.
+account-runtime.ts uses a private Codex stdio helper for effective config and
+isolated login, plus bounded file reads and atomic replacement with drift checks.
+It does not attach to or claim to verify the IDE's private chat runtime.
+The setup webview receives only status and saved-account count, never credentials.
+The Accounts page receives bounded non-secret identity, plan and usage metadata.
+Plan codes survive independently of quota availability; display labels live in
+the account page and unknown codes receive an explicit fallback. Optional native
+usage reads never refresh credentials or replace the live sign-in.

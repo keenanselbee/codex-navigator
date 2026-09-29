@@ -33,7 +33,7 @@ export async function openSetupPage(context: vscode.ExtensionContext, canUse?: (
     if (disposed) return false;
     if (checking) return checking;
     checking = (async () => {
-      try { activity = await hookSetupStatus(context, home); send({ type: 'activity', activity }); return true; }
+      try { activity = await hookSetupStatus(context, home); send({ type: 'activity', activity }); send({ type: 'accounts', accounts: await vscode.commands.executeCommand('codexNavigator.accountStatus') }); return true; }
       catch (error) { send({ type: 'error', text: error instanceof Error ? error.message : String(error) }); return false; }
     })();
     try { return await checking; } finally { checking = undefined; }
@@ -62,7 +62,8 @@ export async function openSetupPage(context: vscode.ExtensionContext, canUse?: (
     const scopes = choices.scopes.length ? choices.scopes : (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath);
     const routing = await routingStatus(plan, choices, workspace, scopes, repositories().map((repo: { path: string }) => repo.path));
     await refreshActivity();
-    send({ type: 'state', routing, labels: labelsStatus(), replaceChoices, revision: ++revision, choices, activity, globalFile: plan?.instructions ?? '', routingError,
+    const accounts = await vscode.commands.executeCommand('codexNavigator.accountStatus');
+    send({ type: 'state', accounts, routing, labels: labelsStatus(), replaceChoices, revision: ++revision, choices, activity, globalFile: plan?.instructions ?? '', routingError,
       repositories: repositories() });
     if (JSON.stringify(routingChoices()) !== JSON.stringify(choices)) { send({ type: 'stale' }); }
     return routing;
@@ -78,7 +79,7 @@ export async function openSetupPage(context: vscode.ExtensionContext, canUse?: (
   if (git) { subscriptions.push(git.onDidOpenRepository(listChanged), git.onDidCloseRepository(listChanged)); }
   subscriptions.push(panel.webview.onDidReceiveMessage(async message => {
     if (!message || typeof message !== 'object' || typeof message.type !== 'string' || busy || disposed) { return; }
-    const allowed = ['ready', 'refresh', 'browseMain', 'browseScope', 'saveRouting', 'disableRouting', 'enableAutomaticLabels', 'disableAutomaticLabels', 'installHooks', 'disableHooks', 'verifyHooks', 'reviewHooks', 'showNavigator', 'arrangeNavigator', 'reload', 'focusSettings', 'done'];
+    const allowed = ['enableAccounts', 'disableAccounts', 'forgetAccounts', 'manageAccounts', 'ready', 'refresh', 'browseMain', 'browseScope', 'saveRouting', 'disableRouting', 'enableAutomaticLabels', 'disableAutomaticLabels', 'installHooks', 'disableHooks', 'verifyHooks', 'reviewHooks', 'showNavigator', 'arrangeNavigator', 'reload', 'focusSettings', 'done'];
     if (!allowed.includes(message.type)) { return; }
     if (message.type === 'done') { panel.dispose(); return; }
     if (vscode.env.remoteName || !vscode.workspace.isTrusted || !vscode.workspace.workspaceFolders?.length) {
@@ -87,10 +88,14 @@ export async function openSetupPage(context: vscode.ExtensionContext, canUse?: (
     busy = true;
     send({ type: 'busy', busy: true });
     try {
-      if (['saveRouting', 'enableAutomaticLabels', 'installHooks'].includes(message.type) && canUse && !await canUse()) {
+      if (['enableAccounts', 'saveRouting', 'enableAutomaticLabels', 'installHooks'].includes(message.type) && canUse && !await canUse()) {
         send({ type: 'error', text: 'Start your trial or activate Navigator before enabling features. Removal remains available here.' }); return;
       }
-      if (message.type === 'ready' || message.type === 'refresh') { await refresh(); }
+      if (['enableAccounts', 'disableAccounts', 'forgetAccounts', 'manageAccounts'].includes(message.type)) {
+        await vscode.commands.executeCommand('codexNavigator.' + message.type);
+        send({ type: 'accounts', accounts: await vscode.commands.executeCommand('codexNavigator.accountStatus') });
+      }
+      else if (message.type === 'ready' || message.type === 'refresh') { await refresh(); }
       else if (message.type === 'browseMain' || message.type === 'browseScope') {
         const file = message.type === 'browseMain';
         const selected = await vscode.window.showOpenDialog({ title: file ? 'Choose shared instructions' : 'Choose project folder',

@@ -5,7 +5,7 @@ const fs = require('node:fs'), path = require('node:path');
 const { pipeline } = require('node:stream/promises');
 const { execFileSync } = require('node:child_process');
 const { ZipFile } = require('yazl');
-const { hash, revision, inspectVsix } = require('../tools/release-evidence.cjs');
+const { hash, revision, testSourceState, inspectVsix } = require('../tools/release-evidence.cjs');
 const scratch = path.resolve(__dirname, '../.codex-temp');
 
 test('VSIX inspection requires exact runtime bytes and rejects source leaks, stale output and duplicates', async t => {
@@ -51,4 +51,13 @@ test('release revisions reject dirty inputs and a parent masquerading as the pri
   assert.throws(() => revision(path.join(root, 'proprietary')), /independent Git roots/);
   fs.writeFileSync(path.join(root, 'input.txt'), 'changed');
   assert.throws(() => revision(root), /Commit reviewed release inputs/);
+  fs.writeFileSync(path.join(root, 'README.md'), 'uncommitted test source');
+  const state = testSourceState(root);
+  assert.equal(state.baseRevision, before);
+  assert.ok(state.status.includes('README.md'));
+  assert.equal(state.files['README.md'], hash('uncommitted test source'));
+  fs.writeFileSync(path.join(root, 'README.md'), 'changed during packaging');
+  assert.notDeepEqual(testSourceState(root), state, 'test packaging detects uncommitted source drift');
+  assert.throws(() => testSourceState(path.join(root, 'proprietary')), /independent Git root/);
+  assert.throws(() => revision(root), /Commit reviewed release inputs/, 'test snapshots do not relax the normal release guard');
 });

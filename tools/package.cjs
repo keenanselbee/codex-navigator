@@ -3,9 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
-const { hash, revision, payload, inspectVsix } = require('./release-evidence.cjs');
+const { hash, revision, testSourceState, payload, inspectVsix } = require('./release-evidence.cjs');
 
-async function packageExtension(root) {
+async function packageExtension(root, { testBuild = false } = {}) {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   if (!/^\d+\.\d\.\d$/.test(manifest.version) || manifest.version !== lock.version
@@ -18,7 +18,9 @@ async function packageExtension(root) {
   }
   require('./build.cjs').verifyPrivate(root);
   const privateRoot = path.join(root, 'proprietary');
-  const revisions = { public: revision(root), private: revision(privateRoot) };
+  // An explicit local test keeps exact working-tree evidence; normal releases still require clean commits.
+  const sourceState = testBuild ? testSourceState(root) : undefined;
+  const revisions = { public: sourceState?.baseRevision ?? revision(root), private: revision(privateRoot) };
   require('./build.cjs').build(root);
   const configurationPath = path.join(root, 'dist', 'commercial', 'license-configuration.js');
   delete require.cache[require.resolve(configurationPath)];
@@ -40,16 +42,18 @@ async function packageExtension(root) {
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`Packaging failed (${result.status ?? result.signal}).`);
     const files = await inspectVsix(temporary, expected, { universal: true });
-    if (revision(root) !== revisions.public || revision(privateRoot) !== revisions.private
+    const publicChanged = testBuild ? JSON.stringify(testSourceState(root)) !== JSON.stringify(sourceState) : revision(root) !== revisions.public;
+    if (publicChanged || revision(privateRoot) !== revisions.private
         || JSON.stringify([...payload(root)]) !== JSON.stringify([...expected])) {
       throw new Error('Release inputs changed during packaging. Review and retry with stable inputs.');
     }
     const receipt = { version: manifest.version, target: 'universal', environment: 'production',
+      ...(testBuild ? { testBuild: true, sourceState } : {}),
       revisions, sha256: hash(fs.readFileSync(temporary)), files, createdAt: new Date().toISOString() };
     // Publish without overwriting an artifact produced by another package process.
     fs.linkSync(temporary, output);
     fs.writeFileSync(output + '.json', JSON.stringify(receipt, null, 2) + '\n', { flag: 'wx' });
-    console.log(`Release artifact: ${output}`);
+    console.log(`${testBuild ? 'Uncommitted local test' : 'Release'} artifact: ${output}`);
   } finally {
     if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
   }
@@ -57,5 +61,7 @@ async function packageExtension(root) {
 
 module.exports = { packageExtension };
 if (require.main === module) {
-  packageExtension(path.resolve(__dirname, '..')).catch(error => { console.error(error.message); process.exitCode = 1; });
+  if (process.argv.slice(2).some(arg => arg !== '--test-build')) throw new Error('Unknown packaging option.');
+  packageExtension(path.resolve(__dirname, '..'), { testBuild: process.argv.includes('--test-build') })
+    .catch(error => { console.error(error.message); process.exitCode = 1; });
 }

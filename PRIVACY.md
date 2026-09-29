@@ -87,3 +87,51 @@ configured Polar pages in your browser. Deactivate the installation before
 transferring it or uninstalling. Uninstallation and settings resets are not
 licence deactivation or erasure requests. If a device is unavailable, remove its
 activation in the customer portal before using licence recovery.
+
+Optional account switching is off by default. Enabling it reads the local Codex
+credential file and stores reusable access, refresh and identity tokens in VS
+Code SecretStorage, including a temporary recovery copy during a pending switch.
+Passwords are not collected. A home-scoped SQLite catalog stores user/workspace
+identifiers, display email/name, known plan, consent, exclusions, generations and pending
+switch fingerprints; it contains no tokens. These records are separate from
+chat profiles and licensing.
+
+The plan can also come from the remembered sign-in's identity metadata. It is
+retained independently of quota availability and is a last known label, not
+verification of the account's current billing subscription.
+
+Opening the Accounts page can request quota metadata from OpenAI through a
+temporary native Codex helper. It uses the saved access token in ephemeral
+storage, without passing a refresh token or altering the live sign-in. Only
+validated plan, quota percentages/windows, reset timestamps, banked-reset count
+and last-checked time are cached locally alongside the matching account. Reads
+are sequential, bounded and cached for five minutes; closing the page or starting
+a switch cancels unfinished reads. Forgetting an account also removes its cache.
+Unavailable responses keep the last known snapshot, identified by its timestamp.
+
+Account capability checks start a private native Codex helper. Add Account
+starts Codex's browser login in a temporary isolated Codex home; authentication
+uses OpenAI's services and privacy practices. Navigator deletes that temporary
+home after completion or cancellation once its helper has stopped. If shutdown
+cannot be confirmed, that temporary home is retained rather than deleted while
+the helper might still be writing credentials.
+Switching replaces the supported local
+Codex credential file and reloads this window. Other clients sharing that home
+may need reloading. Navigator cannot verify their live account automatically.
+
+Turn Off stops capture but keeps saved accounts. Forget removes the saved
+credential and matching recovery copy and excludes the identity from automatic
+capture. Forget All also turns capture off. Neither signs Codex out or removes
+its own credential file. Uninstalling is not a secure-storage erasure request;
+use Forget All first. No account secrets are put in webview messages, settings,
+logs, exports or source backups by Navigator.
+
+Before selecting a previously saved sign-in, Navigator asks the native Codex helper to
+check and refresh the selected saved sign-in in a temporary isolated home.
+This contacts OpenAI's authentication/account services and can rotate tokens.
+Refreshed credentials are saved back to SecretStorage before the active login
+changes, including when a later account lookup fails. Temporary check homes are
+removed after the helper stops. A freshly completed native login can continue
+the requested switch without another refresh. Navigator does not expose raw
+native errors or token values. Copy Email writes only the displayed email to
+the clipboard, and only when requested.
