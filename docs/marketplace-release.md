@@ -17,6 +17,25 @@ The hosting repository is [keenanselbee/codex-navigator](https://github.com/keen
 Package links and the local origin remote follow that name. This does not rename
 the local checkout folder or publish a Marketplace listing.
 
+Verified production package: 1.7.8
+---------------------------------
+
+The committed production archive is dist/codex-navigator-1.7.8.vsix, with its
+paired revision/hash receipt. It was built from public revision
+ea666b60c1ac6cbe10a8f458877c82d0721b13d9 and unchanged private revision
+279a6513450a108980544c6291bfad7f47343a65. SHA-256:
+91217b5aa507be9056569822b1394a440351e06160bb4e7431577dadf6724457.
+
+All 68 archive entries match the allowlisted payload. Exact-package installation
+and reinstallation pass in installed-acceptance-l7YnD8: 65 file hashes and the
+manifest match, and expired trial state survives reinstall. The disposable
+installation was removed. Desktop copies of the VSIX, receipt, release notes
+and verification JSON match their sources. Upload the VSIX only.
+
+No normal-profile installation, Git push or Marketplace publication was performed.
+The [verification qualifications](verification.md) remain applicable. This evidence
+update is excluded from the packaged payload and preserves its recorded revision.
+
 
 Prepared release inputs: 1.7.8
 -----------------------------

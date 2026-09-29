@@ -23,8 +23,12 @@ popup appearance remains unverified. The menu uses the supported view/title
 submenu contribution and retains the existing command handlers.
 
 Version 1.7.7 was packaged before this toolbar follow-up and remains reserved;
-the final Desktop release is 1.7.8. Exact-archive installation/reinstallation
-acceptance follows production packaging.
+the final Desktop release is 1.7.8. The exact production archive passes installed
+and reinstalled acceptance in installed-acceptance-l7YnD8: 65 file hashes and
+the manifest match, with expired trial state preserved. All 68 archive entries
+match the allowlist. Desktop copies of the archive, receipt, notes and verification
+JSON match their sources. The disposable installation was removed, and the normal
+profile was unchanged. No Git push or Marketplace upload was performed.
 
 Plan metadata and simplified account page: 1.7.7
 ----------------------------------------------
