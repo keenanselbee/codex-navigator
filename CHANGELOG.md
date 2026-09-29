@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.8.5
+-----
+
+- Clarify account credential storage and usage retries in privacy and help.
+- Add help navigation, separate development instructions and consolidate release
+  evidence. Update the listing tagline to include accounts.
+
 1.8.4
 -----
 

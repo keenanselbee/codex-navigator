@@ -1,5 +1,7 @@
-Advanced use and development
-============================
+Setup and troubleshooting
+=========================
+
+<a id="advanced-use-and-development"></a>
 
 Codex Navigator owns its sidebar. It does not inject UI, rename native Codex tabs,
 patch extension bundles or automatically restore/reapply another extension's files.
@@ -8,6 +10,21 @@ Navigator's **...** actions menu is the first toolbar icon, before Search and
 Accounts. **Show New Chat Button** (`codexNavigator.showNewChatButton`) is off
 by default; enable it in Navigator's extension settings to show **+** between
 Search and Accounts. The preference takes effect without a reload.
+
+Find help
+---------
+
+- [Setup and hook troubleshooting](#setup)
+- [Accounts, usage and switching limits](#account-switching)
+- [Chat layout and ordering](#sidebar-layout-and-ordering)
+- [Chat menus, names and colours](#chat-and-repository-menus)
+- [Profiles and workspace filtering](#chat-profiles-and-workspace-filtering)
+- [Activity and goals](#activity-indicators)
+- [Project instructions](#project-instruction-routing)
+- [Supported platforms](#platform-support)
+- [Licence and transfer](#licence-and-transfer)
+- [Settings and local storage](#settings-and-storage)
+
 
 Setup
 -----
@@ -196,8 +213,10 @@ Navigator regenerates the same defaults for the same repository set, theme type
 assignments; changing that history or opening a different workspace can change
 the defaults after a reset.
 
-Activity indicator prototype
-----------------------------
+<a id="activity-indicator-prototype"></a>
+
+Activity indicators
+-------------------
 
 Hooks write one bounded status record per chat. UserPromptSubmit records working;
 matching Stop or Interrupt records idle; SessionEnd records unknown. Late events
@@ -239,7 +258,7 @@ An active goal also displays one animated circle immediately after its goal icon
 even between turns. A working turn shares that spinner;
 pausing the goal removes it only when the chat is not working. When a goal and another activity indicator appear together, the chat title uses
 one line with an ellipsis so the indicators do not add another text row. The full
-title stays in its tooltip. Status dots retain their existing meanings. The goal-only spinner is labelled "Goal running".
+title is available when Show Chat Tooltips is enabled. Status dots retain their existing meanings. The goal-only spinner is labelled "Goal running".
 
 Goal status is separate from turn activity. Persisted goal reads expose objective,
 status and usage for visible chats. Goal clicks request a status-only change through
@@ -298,8 +317,7 @@ extension does not inspect or alter that installation.
 Verification and release
 ------------------------
 
-Platform support
-~~~~~~~~~~~~~~~~
+### Platform support
 
 Windows x64 is the natively tested platform. macOS and Linux on x64 and ARM64
 are best effort; Windows ARM64 is also unverified. Use local desktop VS Code
@@ -334,47 +352,12 @@ native binaries. This makes it installable across desktop platforms, but does
 not certify native behavior. Real-device runtime, setup, secure-storage and
 licence-transfer acceptance remains pending on macOS/Linux.
 
-Build and checks
-~~~~~~~~~~~~~~~~
+### Build and checks
 
-`npm test` compiles and runs the public unit tests. `npm run test:public-only`
-exports an explicit public source snapshot without `proprietary/`, runs its
-tests and verifies that a full build fails without the private checkout.
-
-The independent `codex-navigator-private` repository belongs at `proprietary/`.
-It is ignored by the public parent and has separate Git operations. `npm run
-build` compiles one extension from both checkouts; `npm run test:commercial`
-tests the private licensing service. Missing private source never enables a
-fallback application. Credentials belong in neither repository.
-
-`npm run test:integration` builds both checkouts and uses an isolated
-VS Code profile, real Git repositories and fixture chat URIs. Hook events are
-synthetic within that fixture; no authenticated chat or user installation is
-modified. Current native metadata API checks are read-only. Runtime compatibility
-and complete authenticated UI acceptance must be reported separately.
-
-The isolated launchers detect common VS Code locations on each OS. For a custom
-location, set `VSCODE_EXECUTABLE` to the absolute Electron executable, not the
-`code` shell script. Installed-package tests also accept `VSCODE_CLI` for that
-installation's `resources/app/out/cli.js`. Test profiles remain under
-`.codex-temp`; the normal installation is not changed. A desktop session is
-required. Icon regeneration via `tools/render-icon.ps1` remains Windows-only;
-the checked-in PNG is used by builds and packaging on every OS.
-
-`package.json` owns the release version; root lockfile metadata must match.
-`npm run package` requires clean, committed public and private checkouts and
-complete production licensing configuration. It builds both, inspects every VSIX
-entry against the expected runtime files and hashes, and rejects changed inputs.
-It emits an immutable VSIX and adjacent JSON receipt containing both Git revisions,
-the archive SHA-256 and every payload hash. It refuses to overwrite a reserved
-version. Private TypeScript, tests and source maps are excluded; compiled commercial
-modules are required runtime payload. Synthetic archive checks run with the public
-tests; a passing fixture is not an approved production release.
-`npm run test:package` additionally exercises the real VSIX packager in a disposable
-0.0.0 fixture, including private-source and source-map exclusion sentinels. It
-does not install or reserve a release version.
-Packaging, installation, commits and publication are distinct operations.
-Development and redistribution permissions are governed by [the license](../LICENSE.md).
+Build and test instructions are in the
+[developer guide](https://github.com/keenanselbee/codex-navigator/blob/main/docs/development.md).
+Packaging and publication steps are in
+[Release preparation](https://github.com/keenanselbee/codex-navigator/blob/main/docs/marketplace-release.md).
 
 
 Licence and transfer
@@ -445,7 +428,7 @@ See [VS Code webview context menus](https://code.visualstudio.com/api/extension-
 
 Rename Chat saves a Navigator-only name for that chat ID in the current chat profile.
 It does not change the Codex title or repository label. The current Codex title
-appears in the rename dialog and hover tooltip. Search matches either name.
+appears in the rename dialog and, when Show Chat Tooltips is enabled, the hover tooltip. Search matches either name.
 Reset Chat Name appears below Rename Chat only when the chat has a custom name;
 it removes that override and restores the current Codex title. A blank rename
 also removes the override.

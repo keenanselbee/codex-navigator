@@ -48,8 +48,10 @@ Codex instructions and backs up the original. Automatic labels independently add
 a separate reporting section; turning them off removes only that section and
 stops applying agent reports. Shared/project rules are read, not changed. Diagnostic output may contain paths and identifiers, never chat text.
 
-The extension does not modify Codex or VS Code files and does not import data from
-Repo Companion. Codex operates under OpenAI's terms and privacy practices. VS Code
+The extension does not modify Codex or VS Code application files and does not
+import data from Repo Companion. Optional setup changes Codex hook and instruction
+configuration; optional account switching replaces its local credential file
+as described below. Codex operates under OpenAI's terms and privacy practices. VS Code
 handles downloads and update checks; opening external project links visits the
 hosting service under its own policies.
 
@@ -88,6 +90,10 @@ transferring it or uninstalling. Uninstallation and settings resets are not
 licence deactivation or erasure requests. If a device is unavailable, remove its
 activation in the customer portal before using licence recovery.
 
+
+Account data
+------------
+
 Optional account switching is off by default. Enabling it reads the local Codex
 credential file and stores reusable access, refresh and identity tokens in VS
 Code SecretStorage, including a temporary recovery copy during a pending switch.
@@ -105,8 +111,11 @@ temporary native Codex helper. It uses the saved access token in ephemeral
 storage, without passing a refresh token or altering the live sign-in. Only
 validated plan, quota percentages/windows, reset timestamps, banked-reset count
 and last-checked time are cached locally alongside the matching account. Reads
-are sequential, bounded and cached for five minutes; closing the page or starting
-a switch cancels unfinished reads. Forgetting an account also removes its cache.
+are sequential and bounded. Successful quota results are cached for five minutes.
+While Accounts is visible, missing usage retries after ten seconds, then with
+increasing delays up to five minutes. Closing the page stops those retries;
+closing it or starting a switch cancels unfinished reads. Forgetting an account
+also removes its cache.
 Unavailable responses keep the last known snapshot, identified by its timestamp.
 
 Account capability checks start a private native Codex helper. Add Account

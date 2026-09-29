@@ -1,7 +1,13 @@
 Codex Account Switching Plan
 ============================
 
-Status: local test versions delivered; owner approved a committed production
+Status: historical design and acceptance record. Account switching is now a
+release feature. Use [Account switching](advanced.md#account-switching) for
+current behavior and [Verification](verification.md) for release evidence.
+The proposals and test-candidate descriptions below are preserved as history,
+not current setup instructions.
+
+Production milestone: local test versions delivered; owner approved a committed production
 Desktop package, version 1.7.7 (2026-09-29). Real owner-account sign-in and IDE
 adoption are not claimed by the synthetic acceptance checks.
 

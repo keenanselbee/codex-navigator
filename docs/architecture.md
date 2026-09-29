@@ -14,8 +14,10 @@ offers label and management actions. Messages contain metadata and validated
 action IDs, never credentials. Chat context menus remain native.
 No code is injected into Codex, and no Codex or VS Code bundle is modified.
 
-Account usage checks start only on opening the page or explicit refresh, use
-cached results for five minutes and query sequentially under the account lease.
+Opening Accounts or choosing Refresh usage starts sequential checks under the
+account lease. Successful quota results are cached for five minutes. While the
+page is visible, missing usage retries after ten seconds, with increasing delays
+up to five minutes. Closing Accounts stops retries and cancels unfinished reads.
 An isolated ephemeral helper receives only the access token and workspace ID;
 it cannot rotate a refresh token or replace the active auth file. Switching or
 closing the page cancels optional reads. The home-scoped catalog retains only

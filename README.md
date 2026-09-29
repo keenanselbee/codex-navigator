@@ -2,7 +2,7 @@
 
 <h2 align="center">Codex Navigator</h2>
 
-<p align="center"><em>Your Codex chats, at a glance.</em></p>
+<p align="center"><em>Your Codex chats and accounts, at a glance.</em></p>
 
 <p align="center">An independent extension. Not affiliated with or endorsed by OpenAI.</p>
 
