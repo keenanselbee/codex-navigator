@@ -32,6 +32,7 @@ const selectedChats = new Map(Object.entries(saved.selectedChats || {}).filter((
 let highlightDurationMs = 3600000;
 let emptyMessage = 'No saved local chats yet.';
 let highlightRecentlyViewedChats = true, highlightOnlyLastViewedChat = false;
+let showChatTooltips = false;
 let repositories = [], repositoryPageActive = false, welcome = false;
 let licenseVisible = false;
 let heldOrder = null, pointerInside = false, visibleSignature = '';
@@ -72,11 +73,11 @@ function render() {
       preventDefaultContextMenuItems: true, navigatorHasCustomLabel: !!row.hasCustomLabel, navigatorHasCustomName: !!row.hasCustomName });
     if (/^#[0-9a-f]{6}$/i.test(row.colour ?? '')) item.style.setProperty('--chat-colour', row.colour);
     const activityText = row.activityDetail || ({ working: 'Working', ready: 'Finished since last viewed', waiting: 'Waiting for your input', error: 'Turn failed', unknown: 'Activity status unavailable' }[row.activity] || '');
-    item.title = [row.tooltip || row.title, activityText, item.classList.contains('selected') ? 'Recently viewed through Navigator' : ''].filter(Boolean).join('\n');
+    item.title = showChatTooltips ? [row.tooltip || row.title, activityText, item.classList.contains('selected') ? 'Recently viewed through Navigator' : ''].filter(Boolean).join('\n') : '';
     item.addEventListener('click', event => { if (!event.target.closest('button')) send('open', { id: row.id }); });
     const open = button('', item.title, () => send('open', { id: row.id })); open.className = 'open'; open.dataset.focus = row.id + ':open';
     open.setAttribute('aria-label', ['Open ' + row.title, row.label, activityText].filter(Boolean).join(', '));
-    const label = document.createElement('span'); label.className = 'label'; label.textContent = row.label || 'Chat'; label.title = label.textContent;
+    const label = document.createElement('span'); label.className = 'label'; label.textContent = row.label || 'Chat'; label.title = showChatTooltips ? label.textContent : '';
     const title = document.createElement('span'); title.className = 'title'; title.textContent = row.title || 'Untitled chat'; open.append(title);
     const name = document.createElement('div'); name.className = 'name';
     const star = button('', row.starred ? 'Unstar chat' : 'Star chat', event => { if (event.detail > 0) star.blur(); send('action', { id: row.id, action: 'star' }); }); star.className = 'star'; star.dataset.focus = row.id + ':star'; star.setAttribute('aria-pressed', String(row.starred));
@@ -270,8 +271,9 @@ window.addEventListener('message', event => {
   emptyMessage = message.emptyMessage || 'No saved local chats yet.';
   highlightRecentlyViewedChats = message.highlightRecentlyViewedChats !== false;
   highlightOnlyLastViewedChat = message.highlightOnlyLastViewedChat === true;
+  showChatTooltips = message.showChatTooltips === true;
   highlightDurationMs = (Number.isInteger(message.highlightDurationSeconds) ? Math.max(1, Math.min(3600, message.highlightDurationSeconds)) : 180) * 1000;
-  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, message.welcome, message.activityNotice, message.workspaceOnly]);
+  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, showChatTooltips, message.welcome, message.activityNotice, message.workspaceOnly]);
   if (next === signature) return;
   signature = next; rows = message.rows;
   sizeSignature = ''; resize();

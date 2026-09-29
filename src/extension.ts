@@ -511,15 +511,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }));
     const picked = repositoryUri instanceof vscode.Uri
       ? picks.find(item => sameRoot(item.assignment.root, repositoryUri.toString()))
-      : await vscode.window.showQuickPick(picks, { title: 'Choose repository for this chat', matchOnDescription: true });
+      : await vscode.window.showQuickPick([
+        ...(customLabels[current.key] ? [{ label: 'No repository association', description: 'Keep the custom label without a repository', assignment: undefined }] : []),
+        ...picks,
+      ], { title: 'Choose repository for this chat', matchOnDescription: true });
     if (repositoryUri && !picked) { throw new Error('The requested repository is not an open local Git repository.'); }
     if (!picked || !license.allowed() || disposed) { return; }
-    delete customRouting[current.key];
+    if (customLabels[current.key] && picked.assignment) customRouting[current.key] = vscode.Uri.parse(picked.assignment.root).fsPath;
+    else delete customRouting[current.key];
     await profiles.update('customRouting.v1', customRouting);
-    delete customLabels[current.key];
-    await profiles.update('customLabels.v1', customLabels);
-    assignments[current.key] = picked.assignment;
-    await saveManualChoice(current.key, true);
+    if (picked.assignment) assignments[current.key] = picked.assignment;
+    else delete assignments[current.key];
+    await saveManualChoice(current.key, !customLabels[current.key]);
     knownKeys.add(current.key);
     await profiles.update(modeKey, modes);
     await profiles.update(assignmentKey, assignments);
@@ -547,7 +550,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await profiles.update('customLabelColours.v1', labelColours);
     }
     if (!customLabels[key]) {
-      delete customRouting[key];
+      const assignment = assignments[key];
+      if (assignment && effectiveMode(modes[key], assignment) !== 'none') customRouting[key] = vscode.Uri.parse(assignment.root).fsPath;
+      else delete customRouting[key];
       await profiles.update('customRouting.v1', customRouting);
     }
     customLabels[key] = value.trim();
@@ -738,19 +743,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       })).sort((a, b) => a.label.localeCompare(b.label));
       const picked = await vscode.window.showQuickPick(picks, { title: 'Starred Codex chats', matchOnDescription: true, matchOnDetail: true });
       if (picked) { await openSavedChat(picked.key.slice(6)); }
-    }],
-    ['associateLabelRepository', async (uri?: vscode.Uri) => {
-      await syncMetadata();
-      const key = uri instanceof vscode.Uri ? conversationKey(uri) : chat()?.key;
-      if (!key || !customLabels[key]) { throw new Error('This action links custom label text to a repository. Choose Custom Label first, or use the repository list to assign a normal repository label.'); }
-      const picked = await vscode.window.showQuickPick([
-        { label: 'No repository association', description: 'Keep this custom label organizational', root: '' },
-        ...git!.repositories.filter(repo => repo.rootUri.scheme === 'file').map(repo => ({ label: repositoryLabel(repo.rootUri.fsPath, repositoryNames()), description: repo.rootUri.fsPath, root: repo.rootUri.fsPath })),
-      ], { title: 'Repository for custom-label instruction routing', matchOnDescription: true });
-      if (!picked || !license.allowed() || disposed) { return; }
-      if (picked.root) { customRouting[key] = picked.root; } else { delete customRouting[key]; }
-      await profiles.update('customRouting.v1', customRouting);
-      refresh(true);
     }],
     ['setRepositoryAlias', async () => {
       const config = vscode.workspace.getConfiguration('codexNavigator');

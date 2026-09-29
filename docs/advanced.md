@@ -104,8 +104,8 @@ At the default text size, content heights below 180px use the compact grid,
 around each boundary prevents flicker while resizing. Larger fonts scale these
 thresholds proportionally. Width adds
 readable columns. Text scales within bounded limits. Chat names and repository
-labels each stay on one line with an ellipsis in every layout. Hover for the full
-text. Actual rendered bounds determine how many complete
+labels each stay on one line with an ellipsis in every layout. Enable **Show Chat Tooltips** to see the full
+text on hover. Actual rendered bounds determine how many complete
 entries fit. Very small views can show no entries until enlarged.
 
 Order is Codex's `thread/list` with `sortKey: recency_at`, descending, persisted
@@ -451,9 +451,11 @@ it removes that override and restores the current Codex title. A blank rename
 also removes the override.
 The native menu cannot put a different title directly in its text for each chat.
 
-Associate Custom Label with Repository is available only for custom text labels.
-It preserves that text while linking it to a repository for routing and inherited
-colour. Ordinary repository assignment does not require a custom label.
+Choose Repository preserves an existing custom label while associating the chat
+with the selected repository for filtering and optional instruction routing.
+When a custom label is present, choose No repository association to remove that
+link without clearing the label. Adding a custom label to an assigned chat keeps
+its primary repository association. Label text and repository choice are separate.
 
 Open **Repository Colours** from Navigator's top overflow menu. It replaces the
 chat contents with repository names. Click a name to open its colour picker directly.
@@ -515,8 +517,8 @@ height up to 1.5 times their natural height. Fonts and controls do not scale.
 Sparse lists may retain blank space to avoid oversized cards. VS Code still owns
 the outer view's minimum height and divider position.
 
-Account switching (test build)
------------------------------
+Account switching
+-----------------
 
 In Set Up Codex Navigator, enable Account Switching. The account icon appears
 after Search and the optional New Chat button. Navigator remembers compatible local credential

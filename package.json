@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Organise your Codex chats, switch saved accounts and see last known usage in one compact sidebar.",
-  "version": "1.7.9",
+  "version": "1.8.0",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -83,11 +83,6 @@
         "category": "Codex Navigator"
       },
       {
-        "command": "codexNavigator.associateLabelRepository",
-        "title": "Associate Custom Label with Repository",
-        "category": "Codex Navigator"
-      },
-      {
         "command": "codexNavigator.toggleStar",
         "title": "Star / Unstar Chat",
         "category": "Codex Navigator"
@@ -148,11 +143,6 @@
       {
         "command": "codexNavigator.sidebar.colour",
         "title": "Chat Colour...",
-        "category": "Codex Navigator"
-      },
-      {
-        "command": "codexNavigator.sidebar.associate",
-        "title": "Associate Custom Label with Repository...",
         "category": "Codex Navigator"
       },
       {
@@ -287,11 +277,6 @@
           "group": "2_navigator@3"
         },
         {
-          "command": "codexNavigator.sidebar.associate",
-          "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat && navigatorHasCustomLabel",
-          "group": "2_navigator@4"
-        },
-        {
           "command": "codexNavigator.sidebar.clear",
           "when": "webviewId == 'codexNavigator.chats' && webviewSection == navigatorChat",
           "group": "3_navigator@3"
@@ -333,10 +318,6 @@
         },
         {
           "command": "codexNavigator.sidebar.colour",
-          "when": "false"
-        },
-        {
-          "command": "codexNavigator.sidebar.associate",
           "when": "false"
         },
         {
@@ -479,6 +460,12 @@
             "default": false,
             "description": "Show the New Chat (+) button in the Navigator toolbar.",
             "order": 4
+          },
+          "codexNavigator.showChatTooltips": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show chat details when hovering over a chat title or repository label. Button, activity, goal and account tooltips are unaffected.",
+            "order": 5
           }
         }
       },

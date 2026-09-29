@@ -14,9 +14,9 @@
 
 It was built to make development in a multi-repository workspace more enjoyable, with less time spent hunting for conversations and more time focused on your work.
 
-<p align="center"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/navigator-demo.gif" alt="Animated demonstration of Codex Navigator's project labels and switching between saved conversations" width="100%"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/keenanselbee/codex-navigator/main/images/navigator-demo.gif" alt="Animated demonstration of Codex Navigator chats, colours, goals and saved accounts" width="100%"></p>
 
-<p align="center">Recognise your projects and switch between saved chats.<br>
+<p align="center">Organise your chats, personalise project colours and switch saved accounts.<br>
 Recent chat highlights fade over time, showing which conversations you visited most recently.</p>
 
 <h3 align="center">A layout that fits your workspace</h3>
@@ -32,7 +32,7 @@ Recent chat highlights fade over time, showing which conversations you visited m
 Features
 --------
 
-- **Keep your Codex accounts ready (Preview):** Save sign-ins securely on your device, give accounts recognisable names, and switch with a click and window reload. See last known usage, plan and reset details before choosing an account. [Supported environments and limits](docs/advanced.md#account-switching-test-build).
+- **Keep your Codex accounts ready:** Save sign-ins securely on your device, give accounts recognisable names, and switch with a click and window reload. See last known usage, plan and reset details before choosing an account. [Supported environments and limits](docs/advanced.md#account-switching).
 - **Recognise each project:** Give chats repository labels or custom labels. Projects get distinct, repeatable automatic colours, and you can choose your own.
 - **Switch conversations quickly:** Browse and search saved chats from a sidebar that adapts to your available space. The order stays steady while you interact with the list.
 - **Keep favourites close:** Star chats to filter favourites. Pin a chat to hold its position and keep it visible beyond the default 24-hour recency filter.
@@ -49,6 +49,7 @@ Get started
 1. Install Navigator and open its view. Choose **Try for free** or **Activate Licence**. On macOS/Linux, follow the storage check first: fully quit and reopen VS Code when prompted.
 2. Choose **Set Up Codex Navigator**, then **Install Hooks**.
 3. Choose **Open Hook Review**, type `/hooks` in the Codex terminal, and review and trust all Navigator hooks.
+4. In setup, enable **Account Switching** to save sign-ins, **Automatic Labels** to follow your projects, and **Project Instructions** to help Codex find repository rules, as needed. Start a new Codex chat after enabling labels or instructions.
 
 Navigator shows your chats once hooks are installed, enabled and trusted. Later hook problems keep your chats available, with a compact notice when attention is needed.
 
@@ -64,6 +65,8 @@ Right-click a chat for naming and label options. Matching custom labels share a 
 - **Automatic labels:** Enable this option in setup, then start a new Codex chat. Labels follow the repositories the agent reports; you can always choose a repository yourself.
 - **Chat history:** Turn off **Recent Chats Only** to include older chats.
 - **New Chat button:** Enable **Show New Chat Button** to add the optional + button to Navigator's toolbar.
+- **Chat tooltips:** Enable **Show Chat Tooltips** for chat details on hover. Off by default.
+- **Custom labels and repositories:** Choose Repository keeps your custom label. Choose No repository association to keep a custom label without linking it to a project.
 - **Visit highlights:** Choose which visited chats glow and how long the highlight lasts.
 - **Project instructions:** Optionally help Codex find your repository's AGENTS.md and shared rules.
 

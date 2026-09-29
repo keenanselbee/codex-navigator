@@ -87,6 +87,7 @@ exports.run = async function (context, fixtureVscode) {
           }
           if(m.type==='fixture:probe') api.postMessage({type:'fixture:probe', licenseVisible:!el('licensePage').hidden,licenseText:el('licenseStatus').textContent, welcome:!el('welcomePage').hidden,setupMessage:el('setupMessage').textContent,skipPresent:!!el('continueWithoutSetup')||!!el('dismissActivityPrompt'),rows:document.querySelectorAll('.chat').length,
             ids:[...document.querySelectorAll('.chat')].map(n=>JSON.parse(n.dataset.vscodeContext).navigatorChatId),pinOrder:[...(document.querySelector('.label-row')?.children || [])].map(n=>n.className),text:document.getElementById('chats').textContent, label:document.querySelector('.label')?.textContent,repositoryPageHidden:document.getElementById('repositoryPage').hidden,repositoryRoots:[...document.querySelectorAll('.repository')].map(n=>n.dataset.root),customMenuPresent:!!document.getElementById('contextMenu'),
+            chatTooltips:[...document.querySelectorAll('.chat,.chat .open,.chat .label')].map(n=>n.title),
             colour:document.querySelector('.label')?getComputedStyle(document.querySelector('.label')).color:null,
             starColour:document.querySelector('.star')?getComputedStyle(document.querySelector('.star')).color:null,
             selectionTimes:Object.fromEntries(selectedChats),selectionDelays:Object.fromEntries([...document.querySelectorAll('.chat.selected')].map(n=>[JSON.parse(n.dataset.vscodeContext).navigatorChatId,getComputedStyle(n).animationDelay])),
@@ -274,6 +275,15 @@ exports.run = async function (context, fixtureVscode) {
     try { await until(async () => {const p=await probe();return p.rows>0&&p.rows<8&&p.fits;}, 'only complete chats in a small view'); }
     catch(error) { throw new Error(error.message+' '+JSON.stringify({probe:await probe(),storedWelcome:companionContext.globalState.get('navigatorWelcome.v1'),stateLog:stateLog.slice(-15)})); }
     assert.ok((await probe()).text.includes('Fixture'),'local chat index renders before metadata or any Codex chat is opened');
+    const tooltipConfig=vscode.workspace.getConfiguration('codexNavigator');
+    assert.equal(tooltipConfig.get('showChatTooltips'),false,'chat hover details default off');
+    assert.ok((await probe()).chatTooltips.every(title=>title===''),'no chat hover text by default');
+    await tooltipConfig.update('showChatTooltips',true,vscode.ConfigurationTarget.Global);
+    await until(async()=>(await probe()).chatTooltips.some(Boolean),'enabling chat tooltips updates the view');
+    await tooltipConfig.update('showChatTooltips',false,vscode.ConfigurationTarget.Global);
+    await until(async()=>(await probe()).chatTooltips.every(title=>title===''),'disabling chat tooltips clears hover text');
+    await tooltipConfig.update('showChatTooltips',true,vscode.ConfigurationTarget.Global);
+    await until(async()=>(await probe()).chatTooltips.some(Boolean),'restore optional hover details for layout checks');
     releaseMetadata();
     assert.equal((await probe()).more,false,'no Show more control');
     assert.equal((await probe()).overflow,'clip','no scroll container');
@@ -348,6 +358,7 @@ exports.run = async function (context, fixtureVscode) {
     await vscode.workspace.getConfiguration('codexNavigator').update('repositoryColours', { [path.join(root, 'parent')]: '#FF0000' }, vscode.ConfigurationTarget.Global);
     await vscode.commands.executeCommand('codexNavigator.assignRepository', target, vscode.Uri.file(path.join(root, 'parent')));
     await until(async () => (await probe()).colour === 'rgb(255, 0, 0)', 'coloured label text without a patch');
+    assert.equal((await probe()).label,'Coloured project','repository choice preserves custom label text');
     assert.equal((await probe()).dots, 0);
     assert.equal((await probe()).actions, 0, 'no ellipsis button');
     assert.equal((await probe()).starCount,0,'unstarred chats have no filled star');
@@ -418,26 +429,30 @@ exports.run = async function (context, fixtureVscode) {
       assert.equal(result.truncated,true);assert.equal(result.controls,true);assert.equal(result.hoverMatches,true);
     }
     await companion.webview.postMessage({type:'fixture:size',width:780,height:140});
-    const colourChoice=vscode.commands.executeCommand('codexNavigator.setChatColour',target);
-    await until(async () => !(await probe()).pickerHidden,'colour options replace Navigator contents');
-    assert.ok((await probe()).paletteCount>=32,'expanded palette plus presets');
-    assert.ok(!(await probe()).pickerTarget.includes('local/'),'picker heading uses a chat title rather than an internal ID');
-    await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'#abc'});
-    await until(async () => (await probe()).pickerNative==='#aabbcc','hex synchronises picker');
-    await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'invalid'});
-    await until(async () => (await probe()).pickerDisabled,'invalid hex cannot be applied');
-    await companion.webview.postMessage({type:'fixture:click',selector:'#colour-custom'});
-    await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hue',value:'120'});
-    await until(async () => !(await probe()).pickerDisabled,'spectrum controls select valid colour');
-    await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'#abc'});
-    await companion.webview.postMessage({type:'fixture:click',selector:'#colour-apply'});
-    await colourChoice;
-    await until(async () => (await probe()).pickerHidden&&(await probe()).colour==='rgb(170, 187, 204)','apply returns to coloured chats');
-    const cancelChoice=vscode.commands.executeCommand('codexNavigator.setChatColour',target);
-    await until(async () => !(await probe()).pickerHidden,'reopen in-panel picker');
-    await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'#f00'});
-    await companion.webview.postMessage({type:'fixture:click',selector:'#colour-cancel'});await cancelChoice;
-    await until(async () => (await probe()).pickerHidden&&(await probe()).colour==='rgb(170, 187, 204)','cancel preserves saved colour');
+    const colourTargetPicker=navigatorUi.window.showQuickPick;
+    navigatorUi.window.showQuickPick=async items=>(await items).find(item=>item.shared===false);
+    try {
+      const colourChoice=vscode.commands.executeCommand('codexNavigator.setChatColour',target);
+      await until(async () => !(await probe()).pickerHidden,'colour options replace Navigator contents');
+      assert.ok((await probe()).paletteCount>=32,'expanded palette plus presets');
+      assert.ok(!(await probe()).pickerTarget.includes('local/'),'picker heading uses a chat title rather than an internal ID');
+      await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'#abc'});
+      await until(async () => (await probe()).pickerNative==='#aabbcc','hex synchronises picker');
+      await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'invalid'});
+      await until(async () => (await probe()).pickerDisabled,'invalid hex cannot be applied');
+      await companion.webview.postMessage({type:'fixture:click',selector:'#colour-custom'});
+      await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hue',value:'120'});
+      await until(async () => !(await probe()).pickerDisabled,'spectrum controls select valid colour');
+      await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'#abc'});
+      await companion.webview.postMessage({type:'fixture:click',selector:'#colour-apply'});
+      await colourChoice;
+      await until(async () => (await probe()).pickerHidden&&(await probe()).colour==='rgb(170, 187, 204)','apply returns to coloured chats');
+      const cancelChoice=vscode.commands.executeCommand('codexNavigator.setChatColour',target);
+      await until(async () => !(await probe()).pickerHidden,'reopen in-panel picker');
+      await companion.webview.postMessage({type:'fixture:input',selector:'#colour-hex',value:'#f00'});
+      await companion.webview.postMessage({type:'fixture:click',selector:'#colour-cancel'});await cancelChoice;
+      await until(async () => (await probe()).pickerHidden&&(await probe()).colour==='rgb(170, 187, 204)','cancel preserves saved colour');
+    } finally { navigatorUi.window.showQuickPick=colourTargetPicker; }
     await companion.webview.postMessage({type:'fixture:size',width:1100,height:600});
     await companion.webview.postMessage({type:'fixture:click',selector:'.goal'});
     await until(async () => (await probe()).goalStatus==='active'&&(await probe()).spinners===1,'running goal animates without activity hooks');
@@ -628,7 +643,7 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'#repositoryBack'});
     await until(async()=>(await probe()).repositoryPageHidden&&(await probe()).rows>0,'back restores chats');
     const labelPicker = navigatorUi.window.showQuickPick;
-    const routingBefore = JSON.stringify(companionProvider.profiles.get('customRouting.v1'));
+    const routingBefore = { ...companionProvider.profiles.get('customRouting.v1') };
     const labelColour = async (uri, hex, shared) => {
       navigatorUi.window.showQuickPick = async items => (await items).find(item => item.shared === shared);
       const changing = vscode.commands.executeCommand('codexNavigator.setChatColour', uri);
@@ -649,7 +664,7 @@ exports.run = async function (context, fixtureVscode) {
       await labelColour(defaultTarget,'#FF0000',false);
       await labelColour(target,'#6655FF',true);
       await until(async()=>{const c=(await probe()).rowColours;return c[id(11)]==='rgb(255, 0, 0)'&&c[id(12)]==='rgb(102, 85, 255)';},'explicit chat override survives shared colour changes');
-      assert.equal(JSON.stringify(companionProvider.profiles.get('customRouting.v1')),routingBefore,'matching labels never copy repository routing');
+      assert.deepEqual(companionProvider.profiles.get('customRouting.v1'),{...routingBefore,['local/'+id(11)]:vscode.Uri.file(path.join(root,'parent')).fsPath},'new custom labels retain their assigned repository; shared colours do not change routing');
     } finally { navigatorUi.window.showQuickPick = labelPicker; }
     const filled = await probe();
     assert.ok(filled.fits, 'frame filling keeps complete chat cells within bounds');

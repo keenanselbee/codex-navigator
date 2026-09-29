@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+1.8.0
+-----
+
+- Make chat hover details optional with Show Chat Tooltips, off by default.
+- Preserve custom labels when choosing a repository and keep the primary
+  repository when adding a custom label. Remove the separate association action.
+- Refresh the demonstration GIF, layout image and account setup instructions.
+- Present account switching as a release feature without the Preview label.
+
 1.7.9
 -----
 
@@ -538,7 +547,7 @@ Release Notes
 - Protect existing release packages from accidental overwriting.
 
 The earlier `local-tools` builds have a separate identity and saved chat state.
-See [switching from a local build](docs/advanced.md#switching-from-a-local-build)
+See [switching from a local build](docs/advanced.md#replacing-repo-companion)
 before installing this build alongside one.
 
 

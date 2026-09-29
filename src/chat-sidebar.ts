@@ -33,7 +33,7 @@ export interface SidebarChat extends RecentConversation {
 
 const actions: Record<string, string> = {
   scope: 'scopeMenu', hide: 'hideChat', star: 'toggleStar', label: 'setCustomLabel', repositories: 'assignRepository', colour: 'setChatColour',
-  automatic: 'useAutomaticScope', clear: 'clearRepository', associate: 'associateLabelRepository',
+  automatic: 'useAutomaticScope', clear: 'clearRepository',
 };
 const nameActions = ['rename', 'originalName', 'resetName'];
 
@@ -216,7 +216,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     const highlights = highlightMode(settings);
     if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome, profileId: profileToken, profileChanged, profileView: this.profiles?.get('profileView.v1', {}), workspaceOnly: !!preferences.workspaceOnly,
       setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message, activityNotice: notice,
-      rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Check Chat Profile, workspace filtering, hidden chats or Recent Chats Only.' : 'No saved local chats yet.' }); }
+      rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), showChatTooltips: settings.get('showChatTooltips', false), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Check Chat Profile, workspace filtering, hidden chats or Recent Chats Only.' : 'No saved local chats yet.' }); }
   }
 
   private async refreshGoals(): Promise<void> {

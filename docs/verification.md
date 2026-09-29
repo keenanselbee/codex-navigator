@@ -1,10 +1,28 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.7.9. This is a fresh extension identity with no
+Current candidate: Codex Navigator 1.8.0. This is a fresh extension identity with no
 migration or backward compatibility for Repo Companion or its former patch.
 Earlier development records and immutable packages remain local; the changelog
 retains release history. Old patch checks are not evidence for this product.
+
+Listing and label workflow: 1.8.0
+---------------------------------
+
+The listing uses the owner-supplied demonstration GIF and updated adaptive-layout
+image. Account switching no longer carries a Preview label. Get started includes
+optional account switching, automatic labels and project instruction setup.
+Chat tooltips default off and can be enabled in Settings. Choose Repository
+preserves custom labels; adding a custom label keeps the assigned primary project.
+The separate association command is removed.
+
+All 228 public tests, the missing-private guard and 24 commercial tests pass.
+Real isolated VS Code initial, restart and second-window checks pass in
+`integration-3figYM`, including tooltip toggling and preserved repository labels.
+Local documentation links and anchors pass; the README external URLs respond
+with HTTP 200. The GIF copy matches its supplied source hash. The private
+checkout is unchanged. Presentation fixtures stay ignored and outside release
+payloads. Git push and Marketplace publication remain separate owner actions.
 
 Account audit fixes and listing: 1.7.9
 -------------------------------------
