@@ -1,10 +1,34 @@
 Verification
 ============
 
-Current candidate: Codex Navigator 1.8.4. This is a fresh extension identity with no
-migration or backward compatibility for Repo Companion or its former patch.
-Earlier development records and immutable packages remain local; the changelog
-retains release history. Old patch checks are not evidence for this product.
+Current documentation release: **1.8.6**. Packaging and exact-archive checks
+will be recorded here after completion. Runtime code and styles are unchanged
+from the previously verified release.
+
+Use [Release preparation](marketplace-release.md) for the current procedure and
+[Development](development.md) for build commands. Record each release result here
+once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Reserved documentation package: 1.8.5
+-------------------------------------
+
+The canonical production package passed all 68 archive-entry checks from public
+revision `bdee21e12bcc704a5ccb5538c35bd2308764f266`. Its SHA-256 is
+`176a2b6a79cabd049b0f317e132db56d157366cc63081c9b4c2d7a7663f2c10d`. The archive and receipt remain immutable
+in dist/. The owner then requested revised tagline placement; version 1.8.6
+supersedes this package for Desktop delivery. Exact installed acceptance was
+not run for 1.8.5, and it was not delivered or published.
+
+
+Historical evidence
+-------------------
+
+The dated/versioned entries below describe their original release only. Earlier
+statements such as pending, prototype or uncommitted do not describe the current
+release. Fixture checks do not prove live account adoption or native macOS/Linux
+support. Owner acceptance is identified separately from automated checks.
+
 
 Verified Desktop package: 1.8.4
 -------------------------------

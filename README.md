@@ -2,7 +2,7 @@
 
 <h2 align="center">Codex Navigator</h2>
 
-<p align="center"><em>Your Codex chats and accounts, at a glance.</em></p>
+<p align="center"><em>Your Codex chats and accounts, in one place.</em></p>
 
 <p align="center">An independent extension. Not affiliated with or endorsed by OpenAI.</p>
 
@@ -10,7 +10,7 @@
 
 ---
 
-**Your Codex chats and accounts, in one place.** Find conversations by project, switch between saved accounts, and see their last known usage, all from a compact sidebar. Make it yours with custom names, labels, colours and favourites.
+Find conversations by project, switch between saved accounts, and see their last known usage, all from a compact sidebar. Make it yours with custom names, labels, colours and favourites.
 
 It was built to make development in a multi-repository workspace more enjoyable, with less time spent hunting for conversations and more time focused on your work.
 

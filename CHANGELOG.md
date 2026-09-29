@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+1.8.6
+-----
+
+- Use the chats-and-accounts tagline in the original italic style and remove
+  its repetition from the opening paragraph. Includes the documentation cleanup from 1.8.5.
+
 1.8.5
 -----
 
