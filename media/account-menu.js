@@ -93,6 +93,19 @@ function createNavigatorAccounts(api, navigation) {
       + ' ' + remaining(window)).join(' · ');
   }
 
+  function bankedExpiry(usage) {
+    const seconds = usage?.bankedResetExpiresAt;
+    if (!(usage?.bankedResets > 0) || !Number.isSafeInteger(seconds) || seconds <= 0 || seconds > 32503680000) return '';
+    const date = new Date(seconds * 1000), remaining = date.getTime() - Date.now();
+    const options = { month: 'short', day: 'numeric' };
+    if (date.getFullYear() !== new Date().getFullYear()) options.year = 'numeric';
+    if (remaining >= 0 && remaining <= 3 * 24 * 60 * 60 * 1000) {
+      options.hour = 'numeric'; options.minute = '2-digit';
+    }
+    return ' · expiry: ' + date.toLocaleString(undefined, options)
+      + (remaining < 0 ? ' (passed; refresh usage)' : '');
+  }
+
   function tooltip(account) {
     const usage = account.usage;
     const lines = [identity(account)];
@@ -105,7 +118,7 @@ function createNavigatorAccounts(api, navigation) {
       if (left !== 'unavailable') lines.push(label + ' remaining: ' + left);
       if (reset !== 'unavailable') lines.push(label + ' reset: ' + reset);
     }
-    lines.push('Banked resets: ' + (Number.isSafeInteger(usage?.bankedResets) ? usage.bankedResets : 'unavailable'));
+    lines.push('Banked resets: ' + (Number.isSafeInteger(usage?.bankedResets) ? usage.bankedResets : 'unavailable') + bankedExpiry(usage));
     lines.push('Checked: ' + when(usage?.checkedAt));
     if (account.usageProblem) lines.push('Usage: ' + account.usageProblem);
     return lines.join('\n');

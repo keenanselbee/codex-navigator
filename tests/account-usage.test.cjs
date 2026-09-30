@@ -35,6 +35,48 @@ function usageWithClient(Client) {
   return exports;
 }
 
+test('banked expiry uses the earliest valid available credit and survives the cache whitelist', () => {
+  const credits = [
+    { status: 'available', expiresAt: 5000, id: 'private' },
+    { status: 'redeemed', expiresAt: 2000 },
+    { status: 'redeeming', expiresAt: 2100 },
+    { status: 'unknown', expiresAt: 2200 },
+    { status: 'available', expiresAt: null },
+    { status: 'available', expiresAt: 1 },
+    { status: 'available', expiresAt: '2500' },
+    { status: 'available', expiresAt: Infinity },
+    { status: 'available', expiresAt: 32503680001 },
+    { status: 'available', expiresAt: 3000 },
+  ];
+  const parsed = parseAccountUsage({ rateLimitResetCredits: { availableCount: 20, credits } }, 1000);
+  assert.deepEqual(parsed, { checkedAt: 1000, bankedResets: 20, bankedResetExpiresAt: 3000 });
+  assert.deepEqual(sanitizeAccountUsage(JSON.parse(JSON.stringify(parsed))), parsed);
+  for (const details of [null, [], [{ status: 'available', expiresAt: null }]])
+    assert.deepEqual(parseAccountUsage({ rateLimitResetCredits: { availableCount: 2, credits: details } }, 1000),
+      { checkedAt: 1000, bankedResets: 2 });
+  for (const count of [0, undefined]) assert.equal(sanitizeAccountUsage({ checkedAt: 1000,
+    plan: 'plus', bankedResets: count, bankedResetExpiresAt: 3000 }).bankedResetExpiresAt, undefined);
+});
+
+test('banked expiry tooltip uses local dates, time within three days and an honest stale indication', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../media/account-menu.js'), 'utf8');
+  const start = source.indexOf('  function bankedExpiry('), end = source.indexOf('\n  function tooltip(', start);
+  assert.ok(start > 0 && end > start);
+  const now = new Date(2026, 9, 9, 15, 0).getTime();
+  class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
+  const context = { Date: Clock }; vm.createContext(context);
+  vm.runInContext(source.slice(start, end) + '\nthis.format = bankedExpiry;', context);
+  const usage = delta => ({ bankedResets: 2, bankedResetExpiresAt: (now + delta) / 1000 });
+  const dateOptions = { month: 'short', day: 'numeric' }, day = 86400000;
+  assert.equal(context.format(usage(4 * day)), ' · expiry: ' + new Date(now + 4 * day).toLocaleString(undefined, dateOptions));
+  assert.equal(context.format(usage(3 * day)), ' · expiry: ' + new Date(now + 3 * day).toLocaleString(undefined,
+    { ...dateOptions, hour: 'numeric', minute: '2-digit' }));
+  assert.match(context.format(usage(-day)), /passed; refresh usage/);
+  assert.equal(context.format({ bankedResets: 0, bankedResetExpiresAt: (now + day) / 1000 }), '');
+  assert.equal(context.format({ bankedResets: 2 }), '');
+  assert.match(context.format({ bankedResets: 2, bankedResetExpiresAt: new Date(2027, 0, 1).getTime() / 1000 }), /2027/);
+});
+
 test('quota parser selects only Codex metadata and strips unknown fields', () => {
   assert.deepEqual(parseAccountUsage(usageFixture(), 1000), {
     checkedAt: 1000, plan: 'plus',

@@ -18,6 +18,8 @@ export interface AccountUsage {
   primary?: AccountUsageWindow;
   secondary?: AccountUsageWindow;
   bankedResets?: number;
+  /** Earliest expiry among available credits returned by Codex; Unix seconds. */
+  bankedResetExpiresAt?: number;
 }
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -50,6 +52,10 @@ export function sanitizeAccountUsage(value: unknown): AccountUsage | undefined {
   if (secondary) result.secondary = secondary;
   if (Number.isSafeInteger(value.bankedResets) && (value.bankedResets as number) >= 0 &&
       (value.bankedResets as number) <= 1000000) result.bankedResets = value.bankedResets as number;
+  if (result.bankedResets && Number.isSafeInteger(value.bankedResetExpiresAt) &&
+      (value.bankedResetExpiresAt as number) > (value.checkedAt as number) / 1000 &&
+      (value.bankedResetExpiresAt as number) <= 32503680000)
+    result.bankedResetExpiresAt = value.bankedResetExpiresAt as number;
   return result.plan !== undefined || result.primary || result.secondary || result.bankedResets !== undefined ? result : undefined;
 }
 
@@ -61,12 +67,20 @@ export function parseAccountUsage(raw: unknown, checkedAt = Date.now()): Account
     (object(raw.rateLimits) && raw.rateLimits.limitId === 'codex' ? raw.rateLimits : undefined) : raw.rateLimits;
   const selected = object(bucket) && (bucket.limitId == null || bucket.limitId === 'codex') ? bucket : undefined;
   const credits = object(raw.rateLimitResetCredits) ? raw.rateLimitResetCredits : undefined;
+  let earliestExpiry: number | undefined;
+  // Only retain a timestamp, never credit identifiers or backend display text.
+  if (Array.isArray(credits?.credits)) for (const credit of credits.credits.slice(0, 1000)) {
+    if (!object(credit) || credit.status !== 'available' || !Number.isSafeInteger(credit.expiresAt) ||
+        (credit.expiresAt as number) <= checkedAt / 1000 || (credit.expiresAt as number) > 32503680000) continue;
+    earliestExpiry = Math.min(earliestExpiry ?? Infinity, credit.expiresAt as number);
+  }
   const usage = sanitizeAccountUsage({
     checkedAt,
     plan: selected?.planType,
     primary: selected?.primary,
     secondary: selected?.secondary,
     bankedResets: credits?.availableCount,
+    bankedResetExpiresAt: earliestExpiry,
   });
   if (!usage) throw new AccountError('Codex account usage is unavailable.');
   return usage;

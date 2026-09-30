@@ -7,7 +7,8 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
   const first = { id: 'a'.repeat(32), generation: 1, name: '', email: 'first@example.invalid',
     workspace: 'Personal workspace', selected: true, plan: 'Plus',
     usage: { checkedAt: Date.now(), primary: { usedPercent: 25, windowDurationMins: 300, resetsAt: Math.floor(Date.now() / 1000) + 3600 },
-      secondary: { usedPercent: 40, windowDurationMins: 10080, resetsAt: Math.floor(Date.now() / 1000) + 86400 }, bankedResets: 2 } };
+      secondary: { usedPercent: 40, windowDurationMins: 10080, resetsAt: Math.floor(Date.now() / 1000) + 86400 }, bankedResets: 2,
+      bankedResetExpiresAt: Math.floor(Date.now() / 1000) + 86400 } };
   const second = { id: 'b'.repeat(32), generation: 2, name: '<script>Work</script>', email: 'second@example.invalid',
     workspace: 'Work workspace', selected: false, plan: 'prolite' };
   const state = { enabled: true, supported: true, label: 'Remembering accounts',
@@ -43,6 +44,9 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
     assert.ok(result.text.includes('5h 75% left · week 60% left'));
     assert.ok(result.text.includes('unavailable'), 'missing usage is not presented as zero');
     assert.ok(result.title.includes('Banked resets: 2'));
+    assert.ok(result.title.includes('expiry: '));
+    assert.ok(result.title.includes(new Date(first.usage.bankedResetExpiresAt * 1000).toLocaleString(undefined,
+      { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })));
     assert.ok(result.title.includes('Checked:'));
     const secondary = first.usage.secondary;
     delete first.usage.secondary;

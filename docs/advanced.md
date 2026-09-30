@@ -518,7 +518,12 @@ sign in again or forget it. Clear a custom label to show the email again.
 Back returns to the chat list.
 
 The second line shows last known remaining quota. Hover for full identity,
-plan, window/reset details, banked resets and the observation time. Missing data
+plan, window/reset details, banked resets and the observation time. When provided,
+banked resets show expiry beside the count, such as `expiry: Oct 12`. Local time
+is included within three days; dates in another year include the year. This is
+the earliest valid expiry among available credit details returned by Codex, which
+may be incomplete. Missing dates are omitted. Passed cached dates ask for a refresh
+and never automatically reduce the count. No extra requests are made. Missing data
 means unavailable, not zero. A reset time that has passed requires another
 successful read before the quota can be described as replenished. The page
 refreshes stale information on open; explicit refresh retries it. These reads

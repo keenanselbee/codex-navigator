@@ -1,13 +1,28 @@
 Verification
 ============
 
-Current verified Desktop release: **1.8.7**, covering the Windows-only WSL guard
-and clearer account/Node.js setup diagnostics. Native macOS/Linux account and
-secure-storage acceptance remains outstanding. Publication remains with the owner.
+Current candidate: **1.8.8**, adding banked-reset expiry to account tooltips.
+Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Banked-reset expiry checks: 1.8.8
+--------------------------------
+
+All 233 public and 24 commercial tests pass. Coverage includes earliest valid
+available-credit expiry, absent/non-expiring details, invalid timestamps,
+cache sanitization, local date formatting, the three-day time threshold,
+passed dates and year boundaries. The count remains backend-reported.
+Fifty local/repository Markdown links and anchors and diff whitespace pass.
+
+Isolated VS Code 1.137.0 integration passes initial/restart/second-window checks
+in `integration-SReqdM`. Its actual account webview verifies expiry beside the
+banked count and the localized near-term time. These use synthetic metadata;
+they do not establish complete credit detail availability for live accounts.
+Production packaging and exact-archive checks follow the release-input commit.
 
 
 Verified Desktop package: 1.8.7

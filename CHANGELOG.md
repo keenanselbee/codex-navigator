@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.8.8
+-----
+
+- Show the earliest reported banked-reset expiry beside its count in account
+  tooltips. Show local time within three days, omit missing expiry details and
+  mark passed cached dates without changing the reported count.
+
 1.8.7
 -----
 

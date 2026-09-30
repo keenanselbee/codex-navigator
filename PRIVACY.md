@@ -109,8 +109,9 @@ verification of the account's current billing subscription.
 Opening the Accounts page can request quota metadata from OpenAI through a
 temporary native Codex helper. It uses the saved access token in ephemeral
 storage, without passing a refresh token or altering the live sign-in. Only
-validated plan, quota percentages/windows, reset timestamps, banked-reset count
-and last-checked time are cached locally alongside the matching account. Reads
+validated plan, quota percentages/windows, reset timestamps, banked-reset count,
+the earliest reported available-credit expiry and last-checked time are cached
+locally alongside the matching account. Credit IDs and descriptions are not retained. Reads
 are sequential and bounded. Successful quota results are cached for five minutes.
 While Accounts is visible, missing usage retries after ten seconds, then with
 increasing delays up to five minutes. Closing the page stops those retries;
