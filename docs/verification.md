@@ -1,12 +1,29 @@
 Verification
 ============
 
-Current candidate: **1.8.8**, adding banked-reset expiry to account tooltips.
+Current verified Desktop release: **1.8.8**, adding banked-reset expiry to account tooltips.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.8.8
+-------------------------------
+
+Public build revision: `81f337cc2d4c13e0e84f9916c4770de76b728535`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `6b95d7af282691a4f22478fd34ebbb2caf64b091600f9121c11fbe3c1f12b1bb`.
+
+All 68 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-bNN1TM` under VS Code 1.137.0,
+checking 65 payload hashes, the manifest and retained trial expiry. The disposable
+extension was removed; the normal installation and live accounts were unchanged.
+
+Desktop VSIX, receipt, notes and verification JSON match their source hashes.
+No Git push or Marketplace publication was performed. This evidence is excluded
+from the VSIX and preserves the recorded build revision and immutable payload.
 
 
 Banked-reset expiry checks: 1.8.8
