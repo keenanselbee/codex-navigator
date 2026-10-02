@@ -6,6 +6,21 @@ const {parseHookTrust,activityCommand,lastHookEvent}=exportsFixture;
 const home=path.resolve('.codex-temp/hooks-trust-home'),cwd=path.resolve('.codex-temp/project');
 const events=['userPromptSubmit','stop','interrupt','sessionEnd'];
 
+test('hook review starts the bundled runtime without requiring a standalone daemon package',()=>{
+ const exports={},extensionPath=path.resolve('.codex-temp/codex-extension'),binary=path.join(extensionPath,'codex');
+ let options,shown=false;
+ const fixture={workspace:{workspaceFolders:[{uri:{fsPath:cwd}}]},
+  extensions:{getExtension:id=>{assert.equal(id,'openai.chatgpt');return {extensionPath};}},
+  window:{createTerminal:value=>{options=value;return {show(){shown=true;}};}}};
+ vm.runInNewContext(fs.readFileSync(require.resolve('../dist/hook-setup'),'utf8'),{exports,require:name=>
+  name==='vscode'?fixture:name==='./platform'?{codexBinary:root=>{assert.equal(root,extensionPath);return binary;},codexRuntimeIssue:()=>''}:
+  name.startsWith('./')?require('../dist/'+name.slice(2)):require(name)});
+ exports.openHookReview(home);
+ assert.equal(options.name,'Codex hook review');assert.equal(options.shellPath,binary);
+ assert.deepEqual(Array.from(options.shellArgs),['--no-daemon']);
+ assert.equal(options.cwd,cwd);assert.equal(options.env.CODEX_HOME,home);assert.equal(shown,true);
+});
+
 test('Node probe reports bounded actionable failures without exposing process output', async () => {
  for (const [error,stdout,expected] of [
   [undefined,'v22.20.0\n',''],

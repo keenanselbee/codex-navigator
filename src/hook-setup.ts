@@ -134,7 +134,8 @@ export function openHookReview(home: string): void {
   const binary = codexBinary(codex.extensionPath);
   const issue = codexRuntimeIssue(binary);
   if (issue) throw new Error(issue);
-  const terminal = vscode.window.createTerminal({ name: 'Codex hook review', shellPath: binary,
+  // The extension bundles the runtime, not the standalone CLI package needed by the daemon.
+  const terminal = vscode.window.createTerminal({ name: 'Codex hook review', shellPath: binary, shellArgs: ['--no-daemon'],
     cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath, env: { CODEX_HOME: home } });
   terminal.show();
 }

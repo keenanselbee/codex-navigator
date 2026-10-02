@@ -64,7 +64,8 @@ Activity setup has three checks:
    into the effective `<CODEX_HOME>/hooks.json` and installs the local collector.
    Existing unrelated hooks are retained, and changed JSON is backed up.
 2. **Open Hook Review** launches the installed Codex binary in a terminal with this
-   workspace and Codex home. Type `/hooks`, review the four Navigator definitions
+   workspace and Codex home, using `--no-daemon` so the bundled runtime does not
+   require a standalone CLI package. Type `/hooks`, review the four Navigator definitions
    and trust all Navigator hooks. Navigator never writes trust records or bypasses review.
    The terminal runs the CLI bundled with the installed Codex extension, so you
    do not need a separate CLI installation. Wait for Codex to finish starting,

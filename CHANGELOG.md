@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+1.8.9
+-----
+
+- Fix Open Hook Review exiting immediately with the bundled Codex runtime by
+  starting it without the standalone CLI background server.
+
 1.8.8
 -----
 

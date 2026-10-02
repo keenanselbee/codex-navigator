@@ -9,6 +9,25 @@ Use [Release preparation](marketplace-release.md) for the current procedure and
 once; packaging receipts remain the authority for archive and payload hashes.
 
 
+Hook Review release checks: 1.8.9
+--------------------------------
+
+The bundled Codex 0.159.0-alpha.12.1 runtime exits with a missing standalone
+package error when starting its default daemon. `--no-daemon` reaches interactive
+folder setup; the probe was closed without granting folder or hook trust.
+Hook Review now passes that option, with regression coverage for the terminal
+arguments, workspace, Codex home and visible launch.
+
+All 234 public tests and 24 commercial tests pass. Eighteen local links and
+anchors in the changed documentation and diff whitespace pass.
+Isolated VS Code 1.139.1 integration passes initial and restart phases in
+`integration-8MH2K7`, including second-window checks. The first run in
+`integration-e4OjL9` failed the resize keyboard-focus assertion; the unchanged
+retry passed. These fixtures use synthetic hooks and credentials.
+Production packaging, exact-archive installation/reinstallation and Desktop
+delivery remain pending the reviewed release-input commit.
+
+
 Verified Desktop package: 1.8.8
 -------------------------------
 
