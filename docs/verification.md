@@ -9,6 +9,31 @@ Use [Release preparation](marketplace-release.md) for the current procedure and
 once; packaging receipts remain the authority for archive and payload hashes.
 
 
+Notification release checks: 1.9.0
+---------------------------------
+
+All 256 public tests and 24 commercial tests pass. Coverage includes shared-window
+focus suppression, event claims, initial/hidden-view baselines, distinct input
+requests, delayed observations, sound preference, platform command arguments,
+failed helpers and focus returning during delivery. Public-only source export and
+package-content acceptance pass; the Balafon WAV and its licence are allowlisted.
+Changed documentation links, WAV format and diff whitespace pass.
+
+Isolated VS Code 1.139.1 integration passes initial and restart phases in
+`integration-mZvfYF`, including second-window checks and synthetic completion/input
+events reaching delivery exactly once. Native delivery is stubbed in these UI
+fixtures. An earlier retry hit the existing resize keyboard-focus assertion.
+Live testing exposed webview autoplay rejection; the shipped implementation uses
+native playback for all sound choices and adds no webview audio or background poll.
+
+Windows installed-Codex discovery returns the current Store package's WAV. Native
+playback helpers return success for that WAV and the bundled Balafon; the Windows
+toast helper also returns success. Audible output and toast appearance have not
+been owner-confirmed. macOS/Linux command paths have unit coverage only; native
+acceptance remains outstanding. Production packaging and exact-archive acceptance
+are recorded separately below after the release-input commit.
+
+
 Hook Review release checks: 1.8.9
 --------------------------------
 

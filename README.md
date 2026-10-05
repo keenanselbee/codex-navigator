@@ -39,6 +39,7 @@ Features
 - **Keep your organisation across workspaces:** Use the shared Default chat profile, or choose separate profiles for work, school or personal projects. Optionally show only chats associated with the current workspace, plus unassigned chats.
 - **Make the list yours:** Rename chats while keeping the original Codex name available. Hide conversations you no longer need and restore them without deleting anything.
 - **See activity and goals:** See working, ready, waiting and error states where Codex supplies them. Pause or resume goals from Navigator, where supported.
+- **Hear when Codex needs you:** Get a sound and desktop notification when a response finishes or a chat needs an answer or approval. Keep Navigator visible; alerts stay quiet while a VS Code window running Navigator has focus.
 - **Spot recent visits:** Chats opened through Navigator briefly glow in their label colour. Adjust the fade, highlight only the last visited chat, or turn highlights off.
 
 ---
@@ -66,6 +67,7 @@ Right-click a chat for naming and label options. Matching custom labels share a 
 - **Chat history:** Turn off **Recent Chats Only** to include older chats.
 - **New Chat button:** Enable **Show New Chat Button** to add the optional + button to Navigator's toolbar.
 - **Chat tooltips:** Enable **Show Chat Tooltips** for chat details on hover. Off by default.
+- **Notifications:** Control sounds and desktop alerts separately in Extension Settings. Use **Codex Navigator: Test Notification** to preview them. The sound preference is installed Codex audio, your platform's notification sound, then a bundled Balafon chime.
 - **Custom labels and repositories:** Choose Repository keeps your custom label. Choose No repository association to keep a custom label without linking it to a project.
 - **Visit highlights:** Choose which visited chats glow and how long the highlight lasts.
 - **Project instructions:** Optionally help Codex find your repository's AGENTS.md and shared rules.

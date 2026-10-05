@@ -33,5 +33,7 @@ dist/legacy-restore.js
 !media/*.css
 !media/*.html
 !media/*.png
+!media/notification-balafon.wav
 !docs/advanced.md
+!docs/notification-sound-license.txt
 !tools/chat-activity.cjs

@@ -2,6 +2,8 @@ import { accountErrorMessage } from './account-errors';
 import { Accounts } from './accounts';
 import { ChatProfiles } from './chat-profiles';
 import { chatPins } from './chat-pins';
+import { ChatNotifications } from './chat-notifications';
+import { NotificationDelivery } from './notification-delivery';
 import * as vscode from 'vscode';
 import { codexBinary } from './platform';
 import { migrateHighlightSettings } from './highlight-settings';
@@ -168,6 +170,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const recency = new ChatRecency(profiles.shared('chatRecencyOrder.v1', []));
   async function readSidebarChats(startup = false) {
+    const sampledAt = Date.now();
     hydrateProfile();
     if (!license.allowed() || disposed) return [];
     let index: Awaited<ReturnType<typeof readRecentConversations>> = [];
@@ -212,14 +215,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const hook = await readChatActivity(home, item.id);
         const filename = await sessions.fileFor(item.id);
         const transcript = filename ? await transcriptActivity.read(filename) : { status: 'unknown' as const, workedAt: 0 };
-        activity = combineActivity(hook, transcript, seen[item.id]);
+        activity = combineActivity(hook, transcript);
         const live = runtime.get(item.id);
-        if (live) activity = { ...live, workedAt: Math.max(activity.workedAt, live.workedAt) };
-        if (activity.status === 'ready' && (activity.completedAt || 0) <= (seen[item.id] || 0)) activity = { ...activity, status: 'idle', detail: undefined };
+        if (live) activity = { ...live, turnId: live.turnId || activity.turnId,
+          inputId: live.status === 'waiting' && activity.status === 'waiting' ? activity.inputId : undefined,
+          workedAt: Math.max(activity.workedAt, live.workedAt) };
         if (items.length < 200) activityDiagnostics.record(item.id, hook, transcript, live, activity);
       }
+      const alreadySeen = activity?.status === 'ready' && (activity.completedAt || 0) <= (seen[item.id] || 0);
       items.push({ ...item, roots: scopeRoots(key), label: display.label, hasCustomLabel: !!customLabels[key], colour: colour.colour, starred: !!starredChats[key],
-        activity: activity?.status, activityDetail: activity?.detail, completedAt: activity?.completedAt,
+        alertActivity: activity, activitySampledAt: sampledAt,
+        activity: alreadySeen ? 'idle' as const : activity?.status, activityDetail: alreadySeen ? undefined : activity?.detail, completedAt: activity?.completedAt,
         tooltip: [item.title, display.tooltip, colour.detail].filter(Boolean).join('\n') });
     }
     return items;
@@ -232,6 +238,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       colour: repositoryColours()[repositoryColourKey(repo.rootUri.fsPath)],
     })), async () => hookReadiness(await hookSetupStatus(context, home, true)), () => readSidebarChats(true), license, profiles);
   sidebar.accounts = accounts;
+  let notifications: ChatNotifications | undefined;
+  const notificationReport = (message: string) => output.appendLine('Notifications: ' + message);
+  try {
+    if (!vscode.env.remoteName) {
+      notifications = new ChatNotifications(context.globalStorageUri.fsPath, home, vscode.window.state.focused);
+      context.subscriptions.push(notifications, vscode.window.onDidChangeWindowState(state => {
+        try { notifications?.setFocused(state.focused); } catch { notificationReport('Window focus could not be shared.'); }
+      }));
+    }
+  } catch { notificationReport('Shared alert storage is unavailable; automatic alerts are disabled.'); }
+  const notificationDelivery = new NotificationDelivery({ extensionPath: context.extensionPath,
+    report: notificationReport });
+  let notificationQueue = Promise.resolve();
+  let monitoringEpoch = 0;
+  sidebar.onMonitoringStopped = () => { monitoringEpoch++; notifications?.reset(); };
+  sidebar.onActivities = rows => {
+    if (!notifications || !license.allowed()) return;
+    const settings = vscode.workspace.getConfiguration('codexNavigator');
+    try {
+      const candidates = rows.filter(row => row.alertActivity);
+      const alerts = notifications.observe(candidates.map(row => ({ id: row.id, title: row.title, activity: row.alertActivity! })),
+        candidates[0]?.activitySampledAt || Date.now(), settings.get('notificationSounds', true) || settings.get('desktopNotifications', true),
+        settings.get('notificationsOnlyWhenUnfocused', true), Date.now());
+      const epoch = monitoringEpoch;
+      for (const alert of alerts) notificationQueue = notificationQueue.then(async () => {
+        const config = vscode.workspace.getConfiguration('codexNavigator');
+        if (epoch !== monitoringEpoch || !sidebar.visible || !license.allowed() || config.get('notificationsOnlyWhenUnfocused', true) && notifications!.anyFocused()) return;
+        await notificationDelivery.deliver({ ...alert, sound: config.get('notificationSounds', true), desktop: config.get('desktopNotifications', true),
+          canDeliver: () => epoch === monitoringEpoch && sidebar.visible && license.allowed() && (!vscode.workspace.getConfiguration('codexNavigator').get('notificationsOnlyWhenUnfocused', true) || !notifications!.anyFocused()) });
+      }).catch(() => notificationReport('An alert could not be delivered.'));
+    } catch { notificationReport('An activity alert could not be coordinated.'); }
+  };
   accounts.onChange = () => { void sidebar.publishAccounts(); };
   function hydrateProfile(reset = false) {
     if (profiles.current.id !== profiles.activeId) {
@@ -697,6 +735,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ['setUp', () => setUpNavigator(context, () => license.requireAccess())],
     ['license', () => license.show()],
     ['openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:keenanselbee.codex-navigator')],
+    ['testNotification', async () => {
+      if (!await license.requireAccess()) return;
+      await vscode.commands.executeCommand('codexNavigator.chats.focus');
+      await notificationDelivery.deliver({ title: 'Codex Navigator', message: 'Notification preview: a response finished or needs your attention.', sound: true, desktop: true });
+    }],
     ['chatProfiles', () => manageProfiles()],
     ['workspaceChats', () => sidebar.toggleWorkspaceFilter()],
     ['showChats', () => vscode.commands.executeCommand('codexNavigator.chats.focus')],

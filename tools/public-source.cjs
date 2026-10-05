@@ -10,7 +10,8 @@ function publicFiles(root) {
     if (stat.isSymbolicLink()) throw new Error('Public source export does not follow links: '+relative);
     if (stat.isDirectory()) {
       for (const entry of fs.readdirSync(absolute).sort()) if (!excluded.has(entry)) visit(path.join(relative,entry));
-    } else if (/\.(?:ts|js|cjs|json|md|css|html|svg|png|gif|jpe?g|ps1|txt|ya?ml)$/.test(relative)) files.push(relative);
+    } else if (/\.(?:ts|js|cjs|json|md|css|html|svg|png|gif|jpe?g|ps1|txt|ya?ml)$/.test(relative)
+      || relative.replaceAll(path.sep, '/') === 'media/notification-balafon.wav') files.push(relative);
   }
   for (const directory of ['src','media','tests','tools','docs','images']) if (fs.existsSync(path.join(root,directory))) visit(directory);
   for (const name of ['AGENTS.md','README.md','LICENSE.md','PRIVACY.md','CHANGELOG.md','package.json','package-lock.json','tsconfig.json','.gitignore','.vscodeignore']) {

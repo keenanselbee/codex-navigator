@@ -26,6 +26,17 @@ stderr or conversation contents.
 Activity detection can also read bounded local transcript lifecycle/tool records
 and query an existing local runtime. It does not answer approvals or store messages.
 
+Sound and desktop alerts use the visible Navigator view's existing refresh;
+there is no additional background activity poll. A local SQLite file in extension
+storage shares window process IDs, focus flags, event identifiers and timestamps
+to suppress focused and duplicate alerts. Event records expire after seven days.
+Desktop notifications pass the chat name and a generic completion/input message
+to your operating system, which may display them on the lock screen or keep them
+in notification history. No conversation messages are included. Navigator reads
+known local Codex installation directories to find its notification sound without
+copying or changing the app. If unavailable, it tries a system sound and its bundled
+Balafon fallback. Native playback and notifications launch short-lived local helpers.
+
 Hook setup copies the collector, merges its entries into hooks.json and backs up
 changed JSON. It preserves unrelated hooks. Verification reads exact hook metadata,
 Codex's trust state and recent collector diagnostics. The page launches a Codex

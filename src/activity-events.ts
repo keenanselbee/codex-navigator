@@ -2,7 +2,7 @@ import { open, stat } from 'node:fs/promises';
 import { ChatActivity } from './chat-activity';
 
 export interface ActivitySnapshot {
-  status: ChatActivity; workedAt: number; observedAt?: number; turnId?: string; completedAt?: number; detail?: string;
+  status: ChatActivity; workedAt: number; observedAt?: number; turnId?: string; completedAt?: number; detail?: string; inputId?: string;
 }
 interface TranscriptState extends ActivitySnapshot { pendingInput?: string; contextAt?: number; ended?: boolean }
 const unknown = (): TranscriptState => ({ status: 'unknown', workedAt: 0 });
@@ -40,10 +40,10 @@ export function reduceActivity(state: TranscriptState, record: any, now: number)
   if (record.type === 'response_item' && !state.ended && ['unknown', 'working', 'waiting'].includes(state.status)) {
     if (p.type === 'function_call' && ['request_user_input', 'functions.request_user_input'].includes(p.name)
         && typeof p.call_id === 'string') {
-      return { ...state, status: 'waiting', pendingInput: p.call_id, observedAt: time, detail: 'Waiting for your answer (local activity)' };
+      return { ...state, status: 'waiting', pendingInput: p.call_id, inputId: p.call_id, observedAt: time, detail: 'Waiting for your answer (local activity)' };
     }
     if (p.type === 'function_call_output' && state.pendingInput === p.call_id && typeof p.call_id === 'string') {
-      return { ...state, status: 'working', pendingInput: undefined, observedAt: time, detail: 'Working (local activity)' };
+      return { ...state, status: 'working', pendingInput: undefined, inputId: undefined, observedAt: time, detail: 'Working (local activity)' };
     }
     const invocation = ['function_call', 'custom_tool_call'].includes(p.type)
       && typeof p.name === 'string' && typeof p.call_id === 'string';

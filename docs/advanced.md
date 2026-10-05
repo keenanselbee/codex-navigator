@@ -48,7 +48,7 @@ or claim that the layout changed.
 Navigator's title-bar overflow menu ends its extension actions with **Extension
 Settings**, which opens VS Code Settings filtered to Codex Navigator.
 
-Settings are grouped into Chat list, Labels and colours, Project instructions,
+Settings are grouped into Chat list, Notifications, Labels and colours, Project instructions,
 and Advanced. Repository Colours and Repository Aliases link to visual pickers.
 Use setup to enable Automatic labels or Project instructions: their settings
 alone do not install the required guidance.
@@ -250,6 +250,39 @@ Rotated transcript files retain the conversation ID before their optional rollou
 ID suffix. Navigator selects the newest filename timestamp, verifies its session
 identity, and refreshes cached paths on file creation/removal or after 30 seconds.
 This activity refresh is independent of optional repository-focus detection.
+
+### Sounds and desktop notifications
+
+By default, a new completed response or a detected blocking question/approval
+request produces a sound and desktop notification with the chat name. In Extension
+Settings, turn Notification Sounds and Desktop Notifications on or off separately.
+Notifications Only When Unfocused keeps both quiet while any local VS Code window
+running Navigator in the same VS Code profile has focus, even if that window is
+showing a different chat. Turning it off allows alerts while working in VS Code.
+Use **Codex Navigator: Test Notification** to preview both, including while focused.
+
+Detection uses the existing approximately five-second refresh while Navigator is
+visible. It adds no background polling when the view is hidden. Startup and reopening
+establish a quiet baseline; historical and suppressed events are not replayed.
+Windows sharing the same local profile coordinate to avoid duplicate alerts.
+Requests that begin and finish between refreshes can be missed. Questions written
+only in response text produce a completion alert, not a separate input alert.
+
+Sound preference is the locally installed Codex app's `codex-notification.wav`,
+then Windows' notification sound, macOS Glass or Linux's `message-new-instant`
+theme sound, then the bundled Scoba Sounds Balafon notification. Codex audio is
+read from known installation locations and is not bundled or copied by Navigator.
+The Balafon sound's [licence](notification-sound-license.txt) ships with the extension.
+
+Native alerts use Windows notification APIs through PowerShell, macOS notification
+services through `osascript`, or Linux `notify-send`. Windows requires the existing
+VS Code Start menu app identity; Linux needs a desktop notification service and
+`notify-send`. Sound playback uses Windows `SoundPlayer`, macOS `afplay`, or Linux
+`paplay`/`aplay`; Linux theme sounds use `canberra-gtk-play`. These helpers must be
+available for their respective sounds. OS notification permissions and quiet modes still control
+desktop delivery; explicit audio playback also depends on your output volume.
+macOS/Linux native delivery is best effort pending native testing. Failures appear
+in the Codex Navigator output channel; they never interrupt chats.
 
 The Codex Navigator output channel records activity state changes for up to 200
 chats per refresh, with thread

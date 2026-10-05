@@ -31,6 +31,7 @@ function payload(root) {
     files.set('extension/' + relative, hash(fs.readFileSync(filename)));
   };
   for (const name of ['package.json', 'README.md', 'LICENSE.md', 'PRIVACY.md', 'CHANGELOG.md', 'docs/advanced.md', 'tools/chat-activity.cjs']) include(name);
+  for (const name of ['media/notification-balafon.wav', 'docs/notification-sound-license.txt']) include(name);
   for (const name of fs.readdirSync(path.join(root, 'media')).filter(name => /\.(js|css|html|png)$/.test(name))) include('media/' + name);
   for (const [source, output] of [['src', 'dist'], ['proprietary/src', 'dist/commercial']]) {
     for (const name of fs.readdirSync(path.join(root, source)).filter(name => name.endsWith('.ts') && !name.endsWith('.d.ts'))) {

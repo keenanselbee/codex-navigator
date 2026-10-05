@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+1.9.0
+-----
+
+- Add sounds and desktop notifications for new completed responses and requests
+  for input or approval, using Navigator's existing visible-view refresh.
+- Keep alerts quiet while a Navigator-enabled VS Code window has focus, prevent
+  duplicates across windows and skip historical events when opening the view.
+- Prefer locally installed Codex notification audio, then a native platform
+  sound, with Scoba Sounds' Balafon notification as the bundled fallback.
+- Add separate sound and desktop notification settings and a Test Notification
+  command. Native macOS/Linux delivery remains unverified.
+
 1.8.9
 -----
 

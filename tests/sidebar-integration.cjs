@@ -36,6 +36,9 @@ exports.run = async function (context, fixtureVscode) {
     const metadataGate=new Promise(resolve=>{releaseMetadata=resolve;});
     ChatGoals.prototype.readRecency = async function() { await metadataGate; return nativeRecent; };
     const { RuntimeActivity } = require('../dist/activity-runtime');
+    const notificationRequests = [];
+    const { NotificationDelivery } = require('../dist/notification-delivery');
+    NotificationDelivery.prototype.deliver = async request => { notificationRequests.push(request); };
     let fixtureGoal = { status: 'paused', objective: 'Fixture goal <safe text>', tokensUsed: 42, tokenBudget: 100 };
     let goalReads=0, goalWrites=0;
     ChatGoals.prototype.read = async function(ids) { goalReads++; return ids.includes(id(12)) ? { [id(12)]: fixtureGoal } : {}; };
@@ -463,6 +466,7 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'.goal'});
     await until(async () => (await probe()).goalStatus==='active'&&(await probe()).spinners===1,'resuming restores goal animation');
     await companionContext.globalState.update('activityHooks.enabled',true);
+    await vscode.workspace.getConfiguration('codexNavigator').update('notificationsOnlyWhenUnfocused', false, vscode.ConfigurationTarget.Global);
     const { recordEvent } = require('../tools/chat-activity.cjs');
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-a',hook_event_name:'UserPromptSubmit'});
     await until(async () => (await probe()).spinners===1,'hook record starts spinner via watcher');
@@ -481,6 +485,10 @@ exports.run = async function (context, fixtureVscode) {
     fs.appendFileSync(activityTranscript,JSON.stringify({timestamp:new Date().toISOString(),type:'event_msg',payload:{type:'task_complete',turn_id:'fixture-a'}})+'\n');
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-a',hook_event_name:'Stop'});
     await until(async () => (await probe()).spinners===2&&(await probe()).readyDots===1,'active goal keeps spinning after turn completion');
+    await until(() => notificationRequests.some(request => request.message === 'Codex finished a response.'), 'completion reaches alert delivery');
+    const completionAlerts = notificationRequests.length;
+    await companionProvider.refresh();
+    assert.equal(notificationRequests.length, completionAlerts, 'repeated completion refresh never delivers twice');
     await companion.webview.postMessage({type:'fixture:click',selector:'.goal'});
     await until(async () => (await probe()).goalStatus==='paused'&&(await probe()).spinners===1,'pause clears only the goal spinner');
     await companion.webview.postMessage({ type:'fixture:click',selector:'.chat .open' });
@@ -490,6 +498,17 @@ exports.run = async function (context, fixtureVscode) {
     // Exercise the complete reader -> host -> webview path with no live runtime,
     // no active goal and an expired hook. The compaction body is synthetic.
     const activityLine=(type,payload)=>JSON.stringify({timestamp:new Date().toISOString(),type,payload})+'\n';
+    fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'task_started', turn_id: 'fixture-question' }));
+    await companionProvider.refresh();
+    fs.appendFileSync(activityTranscript, activityLine('response_item', { type: 'function_call', name: 'request_user_input', call_id: 'fixture-question-1' }));
+    await companionProvider.refresh();
+    await until(() => notificationRequests.some(request => request.message === 'Codex needs your answer.'), 'blocking question reaches alert delivery');
+    const inputAlerts = notificationRequests.length;
+    await companionProvider.refresh();
+    assert.equal(notificationRequests.length, inputAlerts, 'repeated waiting refresh never delivers twice');
+    fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'turn_aborted', turn_id: 'fixture-question' }));
+    await companionProvider.refresh();
+    await vscode.workspace.getConfiguration('codexNavigator').update('notificationsOnlyWhenUnfocused', undefined, vscode.ConfigurationTarget.Global);
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-compaction',hook_event_name:'UserPromptSubmit'});
     fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_started',turn_id:'fixture-compaction'}));
     await companionProvider.refresh();
@@ -757,6 +776,7 @@ exports.run = async function (context, fixtureVscode) {
         'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'single-line repository labels keep row heights and control space', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt', 'compaction item completion and large tool results retain sidebar spinner with expired hook', 'newer interrupt clears cached working transcript'],
       scope: 'Real isolated VS Code; fixture URI handler and synthetic hook events. Native-menu context data and command dispatch exercised with synthetic mouse/keyboard events; picker choices supplied by fixture. Native overlay appearance is not inspected. No authenticated Codex conversation.' };
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
+    result.verified.push('completion and blocking input reach notification delivery once');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));
   } catch (error) {
     fs.writeFileSync(path.join(root, 'failure.txt'), error.stack || String(error)); throw error;

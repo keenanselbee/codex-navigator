@@ -58,6 +58,8 @@ for copies released under the MIT license, an earlier version of this license
 (including earlier free official releases), or another license. Those copies remain
 subject to their original terms. Third-party material, if any, remains subject to
 its own license; this license does not override those rights or requirements.
+The bundled Balafon notification by Scoba Sounds is covered by the included
+[Sonniss bundle licence](docs/notification-sound-license.txt).
 This is a source-available license, not an open-source license.
 
 Termination

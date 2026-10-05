@@ -27,8 +27,20 @@ function fixture() {
     onDidDispose: fn => { disposed = fn; return { dispose() {} }; }, onDidChangeVisibility: fn => { visibleChanged = fn; return { dispose() {} }; } };
   sidebar.activityReady = async () => ({ ready: true, message: 'Hook delivery is verified.' });
   sidebar.resolveWebviewView(view);
-  return { sidebar, calls, sent, id, view, exports, vscode, commands, stored, receive: m => sidebar.receive(m) };
+  return { sidebar, calls, sent, id, view, exports, vscode, commands, stored, visibilityChanged: () => visibleChanged(), receive: m => sidebar.receive(m) };
 }
+
+test('notification observation uses eligible rows and stops with the hidden view', async () => {
+  const f = fixture(), observed = []; let stopped = 0;
+  f.sidebar.onActivities = rows => observed.push(rows.map(row => row.id));
+  f.sidebar.onMonitoringStopped = () => stopped++;
+  try {
+    await f.sidebar.refresh(); assert.deepEqual([...observed[0]], [f.id]);
+    f.view.visible = false; f.visibilityChanged(); await f.sidebar.refresh();
+    assert.equal(stopped, 1); assert.equal(observed.length, 1);
+    f.sidebar.profileChanged(); assert.equal(stopped, 2);
+  } finally { f.sidebar.dispose(); }
+});
 
 test('opening accounts delivers once whether the view becomes ready before or after focus', async () => {
   for (const readyFirst of [true, false]) {

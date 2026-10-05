@@ -2,6 +2,7 @@ import { ChatProfiles, SavedState } from './chat-profiles';
 import { sameRoot } from './model';
 import * as vscode from 'vscode';
 import { readFileSync } from 'node:fs';
+import { ActivitySnapshot } from './activity-events';
 import { randomBytes } from 'node:crypto';
 import * as path from 'node:path';
 import { RecentConversation, threadIdPattern } from './history';
@@ -29,6 +30,8 @@ export interface SidebarChat extends RecentConversation {
   activityDetail?: string;
   completedAt?: number;
   goal?: ChatGoal;
+  alertActivity?: ActivitySnapshot;
+  activitySampledAt?: number;
 }
 
 const actions: Record<string, string> = {
@@ -56,6 +59,9 @@ export async function openSidebarChat(id: string): Promise<void> {
 
 export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposable {
   accounts?: Accounts;
+  onActivities?: (rows: SidebarChat[]) => void;
+  onMonitoringStopped?: () => void;
+  get visible() { return !!this.view?.visible && !this.disposed; }
   private accountsRequested = false;
   private accountsViewReady = false;
   get hasActiveWork() { return this.rows.some(row => row.activity === 'working' || row.activity === 'waiting'); }
@@ -132,9 +138,9 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
       .replace('{{accountStyle}}', asset('account-menu.css')).replace('{{accountScript}}', asset('account-menu.js'));
     this.subscriptions.push(view.webview.onDidReceiveMessage(message => {
       void this.receive(message).catch(error => view.webview.postMessage({ type: 'error', message: String(error.message ?? error) }));
-    }), view.onDidChangeVisibility(() => { if (view.visible) { void this.refresh(); void this.refreshGoals(); } else { this.goalHost?.stop(); } }),
+    }), view.onDidChangeVisibility(() => { if (view.visible) { void this.refresh(); void this.refreshGoals(); } else { this.goalHost?.stop(); this.onMonitoringStopped?.(); } }),
     view.onDidDispose(() => {
-      if (this.view === view) { this.view = undefined; this.visibleIds = []; this.goalHost?.stop(); clearInterval(this.timer); this.colour?.resolve(undefined); this.colour = undefined; }
+      if (this.view === view) { this.view = undefined; this.visibleIds = []; this.goalHost?.stop(); this.onMonitoringStopped?.(); clearInterval(this.timer); this.colour?.resolve(undefined); this.colour = undefined; }
     }));
     clearInterval(this.timer);
     this.timer = setInterval(() => { if (view.visible) { void this.refresh(); void this.refreshGoals(); } }, 5000);
@@ -145,6 +151,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     if (this.license) {
       await this.view.webview.postMessage({ type: 'license', license: this.license.snapshot() });
       if (!this.license.allowed()) {
+        this.onMonitoringStopped?.();
         this.visibleIds = []; this.goals = {}; this.goalHost?.stop();
         this.colour?.resolve(undefined); this.colour = undefined;
         return;
@@ -168,7 +175,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
         if (version !== this.profileVersion) { this.dirty = true; continue; }
         this.rows = rows;
         await this.publishState();
-      } while (this.dirty && !this.disposed && (!this.license || this.license.allowed()));
+      } while (this.dirty && this.visible && (!this.license || this.license.allowed()));
     } catch (error) {
       await this.view?.webview.postMessage({ type: 'error', message: error instanceof Error ? error.message : String(error) });
     } finally { this.pending = false; }
@@ -209,6 +216,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     const setupStarted = this.context.globalState.get('navigatorSetup.started', false)
       || !!this.context.globalState.get('activityHooks.installedAt', 0);
     if (welcome) {
+      this.onMonitoringStopped?.();
       this.visibleIds = []; this.goals = {}; this.goalHost?.stop();
       this.colour?.resolve(undefined); this.colour = undefined;
     }
@@ -217,6 +225,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome, profileId: profileToken, profileChanged, profileView: this.profiles?.get('profileView.v1', {}), workspaceOnly: !!preferences.workspaceOnly,
       setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message, activityNotice: notice,
       rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), showChatTooltips: settings.get('showChatTooltips', false), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Check Chat Profile, workspace filtering, hidden chats or Recent Chats Only.' : 'No saved local chats yet.' }); }
+    if (this.visible && !welcome) this.onActivities?.(visible);
   }
 
   private async refreshGoals(): Promise<void> {
@@ -432,6 +441,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
   }
 
   profileChanged(): void {
+    this.onMonitoringStopped?.();
     this.profileVersion++; this.rows = []; this.visibleIds = []; this.goals = {}; this.dirty = true;
     this.colour?.resolve(undefined); this.colour = undefined;
   }
@@ -463,6 +473,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
 
   dispose(): void {
     this.disposed = true;
+    this.onMonitoringStopped?.();
     this.goalHost?.stop();
     this.colour?.resolve(undefined); this.colour = undefined;
     clearInterval(this.timer);

@@ -1,0 +1,122 @@
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs'), path = require('node:path');
+const { ChatNotifications } = require('../dist/chat-notifications');
+
+function fixture(t) {
+  const scratch = path.join(__dirname, '..', '.codex-temp'); fs.mkdirSync(scratch, { recursive: true });
+  const directory = fs.mkdtempSync(path.join(scratch, 'notifications-'));
+  const windows = [], dead = new Set();
+  const create = (focused = false, pid = 1, home = 'home') => {
+    const instance = new ChatNotifications(directory, home, focused, id => !dead.has(id), pid);
+    windows.push(instance); return instance;
+  };
+  t.after(() => { windows.forEach(w => w.dispose()); fs.rmSync(directory, { recursive: true, force: true }); });
+  return { create, dead };
+}
+const chat = (status, extra = {}) => [{ id: 'chat-a', title: 'Build Navigator', activity: { status, workedAt: 0, turnId: 'turn-a', ...extra } }];
+const observe = (window, rows, time = 10000, enabled = true, suppress = true) => window.observe(rows, time, enabled, suppress);
+
+test('a completed turn alerts once across windows and repeated refreshes', t => {
+  const f = fixture(t), a = f.create(), b = f.create();
+  observe(a, chat('working')); observe(b, chat('working'));
+  const finished = chat('ready', { completedAt: 11000 });
+  assert.equal(observe(a, finished, 12000).length, 1);
+  assert.equal(observe(b, finished, 12000).length, 0);
+  assert.equal(observe(a, finished, 17000).length, 0);
+});
+
+test('focus in any Navigator window suppresses alerts and never replays them on blur', t => {
+  const f = fixture(t), a = f.create(), b = f.create(true, 2, 'another-home');
+  observe(a, chat('working'));
+  const finished = chat('ready', { completedAt: 11000 });
+  assert.deepEqual(observe(a, finished, 12000), []);
+  b.setFocused(false);
+  assert.deepEqual(observe(a, finished, 17000), []);
+  observe(a, chat('working', { turnId: 'turn-b' }), 18000);
+  assert.equal(observe(a, chat('ready', { turnId: 'turn-b', completedAt: 19000 }), 20000).length, 1);
+});
+
+test('startup and reopening establish a quiet baseline, including old questions', t => {
+  const f = fixture(t), a = f.create();
+  assert.deepEqual(observe(a, chat('ready', { completedAt: 9000 })), []);
+  observe(a, chat('working'), 12000); a.reset();
+  assert.deepEqual(observe(a, chat('waiting', { inputId: 'q1' }), 13000), []);
+  assert.deepEqual(observe(a, chat('waiting', { inputId: 'q1' }), 18000), []);
+  assert.equal(observe(a, chat('waiting', { inputId: 'q2' }), 23000).length, 1);
+});
+
+test('new question IDs and runtime-only approval episodes alert once each', t => {
+  const f = fixture(t), a = f.create(), b = f.create();
+  observe(a, chat('working')); observe(b, chat('working'));
+  const waiting = chat('waiting', { detail: 'Waiting for approval' });
+  assert.match(observe(a, waiting, 11000)[0].message, /approval/);
+  assert.deepEqual(observe(b, waiting, 12000), []);
+  observe(a, chat('working'), 13000); observe(b, chat('working'), 13000);
+  assert.equal(observe(b, waiting, 14000).length, 1);
+  assert.deepEqual(observe(a, waiting, 15000), []);
+});
+
+test('another window opening on the new state cannot consume an existing observer alert', t => {
+  const f = fixture(t), a = f.create(), b = f.create();
+  observe(a, chat('working'));
+  const finished = chat('ready', { completedAt: 11000 });
+  assert.deepEqual(observe(b, finished, 12000), []);
+  assert.equal(observe(a, finished, 13000).length, 1);
+});
+
+test('stale samples, unknown signal gaps, disabled alerts and old completions stay quiet', t => {
+  const f = fixture(t), a = f.create(), b = f.create();
+  observe(a, chat('working')); observe(b, chat('working'));
+  const waiting = chat('waiting');
+  assert.equal(observe(a, waiting, 12000).length, 1);
+  observe(b, chat('working'), 11000);
+  assert.deepEqual(observe(b, waiting, 13000), []);
+  observe(a, chat('unknown'), 14000);
+  assert.deepEqual(observe(a, waiting, 15000), []);
+  observe(a, chat('working'), 16000);
+  assert.deepEqual(observe(a, chat('ready', { completedAt: 17000 }), 18000, false), []);
+  assert.deepEqual(observe(a, chat('ready', { completedAt: 17000 }), 19000), []);
+  observe(a, chat('working', { turnId: 'old' }), 90000);
+  assert.deepEqual(observe(a, chat('ready', { turnId: 'old', completedAt: 19000 }), 91000), []);
+});
+
+test('dead windows do not suppress alerts, and users can opt into focused alerts', t => {
+  const f = fixture(t), a = f.create(), b = f.create(true, 2);
+  f.dead.add(2); assert.equal(a.anyFocused(), false);
+  a.setFocused(true); observe(a, chat('working'));
+  assert.equal(observe(a, chat('waiting', { inputId: 'q1' }), 11000, true, false).length, 1);
+});
+
+test('runtime request enrichment shares one episode across observers and new IDs still alert', t => {
+  const f = fixture(t), a = f.create(), b = f.create();
+  observe(a, chat('working')); observe(b, chat('working'));
+  assert.equal(observe(a, chat('waiting'), 11000).length, 1);
+  assert.deepEqual(observe(b, chat('waiting', { inputId: 'q1' }), 12000), []);
+  assert.deepEqual(observe(a, chat('waiting', { inputId: 'q1' }), 13000), []);
+  assert.equal(observe(a, chat('waiting', { inputId: 'q2' }), 14000).length, 1);
+  assert.deepEqual(observe(b, chat('waiting', { inputId: 'q2' }), 15000), []);
+});
+
+test('initial unknown signals do not turn recovery into a historical input alert', t => {
+  const f = fixture(t), a = f.create();
+  observe(a, chat('unknown'));
+  assert.deepEqual(observe(a, chat('waiting', { inputId: 'old' }), 15000), []);
+  a.reset(); observe(a, chat('unknown'), 20000);
+  assert.deepEqual(observe(a, chat('ready', { completedAt: 18000 }), 25000), []);
+});
+
+test('a completion during a slow read uses delivery time for freshness', t => {
+  const f = fixture(t), a = f.create(); observe(a, chat('working'));
+  assert.equal(a.observe(chat('ready', { completedAt: 18000 }), 11000, true, true, 21000).length, 1);
+});
+
+test('a newer window baseline cannot permanently consume a slower observer transition', t => {
+  const f = fixture(t), a = f.create(), b = f.create(); observe(a, chat('working'));
+  const finished = chat('ready', { completedAt: 16000 });
+  assert.deepEqual(observe(b, finished, 17000), []);
+  assert.deepEqual(a.observe(finished, 15000, true, true, 18000), []);
+  assert.equal(observe(a, finished, 20000).length, 1);
+  assert.deepEqual(observe(b, finished, 21000), []);
+});
