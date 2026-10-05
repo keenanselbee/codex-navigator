@@ -1,12 +1,27 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.1**, fixing alerts for asynchronous question prompts.
+Current verified Desktop release: **1.9.2**, adding independent event and focus notification rules.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.2
+-------------------------------
+
+Public build revision: `ee08a5a136ec7d3308b79ab96e1302b64f041428`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `d8fdd4a80a5604ae963986f17557dd77f400c2519eb4a10c37aebff444c4dd88`.
+
+All 73 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-p7W72v` under VS Code 1.139.1,
+checking 70 payload hashes, the production manifest and retained trial expiry.
+The disposable extension was removed; the normal installation was unchanged.
+Desktop VSIX and paired receipt hashes match their source files. No Git push or
+Marketplace publication was performed. This evidence is excluded from the VSIX.
 
 
 Notification policy release checks: 1.9.2
