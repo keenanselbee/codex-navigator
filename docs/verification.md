@@ -1,12 +1,27 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.2**, adding independent event and focus notification rules.
+Current verified Desktop release: **1.9.3**, adding Windows notification click-to-chat.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.3
+-------------------------------
+
+Public build revision: `17644fe952f11048c5a083f1f6a3c14641b4406f`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `db775c6a12fe411872f405231ed28df4704d1f68ee7373d1b9e3a296daf92519`.
+
+All 73 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-O92bvT` under VS Code 1.139.1,
+checking 70 payload hashes, the production manifest and retained trial expiry.
+The disposable extension was removed; the normal installation was unchanged.
+Desktop VSIX and paired receipt hashes match their source files. No Git push or
+Marketplace publication was performed. This evidence is excluded from the VSIX.
 
 
 Notification click release checks: 1.9.3
