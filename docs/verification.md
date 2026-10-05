@@ -1,12 +1,30 @@
 Verification
 ============
 
-Current verified Desktop release: **1.8.8**, adding banked-reset expiry to account tooltips.
+Current verified Desktop release: **1.9.0**, adding coordinated completion and input notifications.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.0
+-------------------------------
+
+Public build revision: `739ef52e92cee87bc777452f5882c8ef45d372fa`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `6de91a3cd40975b6d49945ea6912c87cdb2f5b3219461902a8b8308b0898d5fb`.
+
+All 72 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-n32X1O` under VS Code 1.139.1,
+checking 69 payload hashes, the manifest and retained trial expiry. The disposable
+extension was removed; the normal installation and live accounts were unchanged.
+
+`codex-navigator-1.9.0.vsix` and its paired JSON receipt were copied to the Desktop
+and both destination hashes match their source files. No Git push or Marketplace
+publication was performed. This evidence is excluded from the VSIX and preserves
+the recorded build revision and immutable payload.
 
 
 Notification release checks: 1.9.0
@@ -31,7 +49,7 @@ playback helpers return success for that WAV and the bundled Balafon; the Window
 toast helper also returns success. Audible output and toast appearance have not
 been owner-confirmed. macOS/Linux command paths have unit coverage only; native
 acceptance remains outstanding. Production packaging and exact-archive acceptance
-are recorded separately below after the release-input commit.
+are recorded separately above after the release-input commit.
 
 
 Hook Review release checks: 1.8.9
