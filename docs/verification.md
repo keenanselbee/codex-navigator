@@ -1,12 +1,27 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.0**, adding coordinated completion and input notifications.
+Current verified Desktop release: **1.9.1**, fixing alerts for asynchronous question prompts.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.1
+-------------------------------
+
+Public build revision: `06e2a3500acf43f0aade3fa025cbd48ce4e96252`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `36d6b9840ca6400066782e441231162196486e2c415202bf9825ad830e8bf105`.
+
+All 72 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-FWFjFV` under VS Code 1.139.1,
+checking 69 payload hashes, the production manifest and retained trial expiry.
+The disposable extension was removed; the normal installation was unchanged.
+Desktop VSIX and paired receipt hashes match their source files. No Git push or
+Marketplace publication was performed. This evidence is excluded from the VSIX.
 
 
 Async question release checks: 1.9.1
