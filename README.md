@@ -67,7 +67,7 @@ Right-click a chat for naming and label options. Matching custom labels share a 
 - **Chat history:** Turn off **Recent Chats Only** to include older chats.
 - **New Chat button:** Enable **Show New Chat Button** to add the optional + button to Navigator's toolbar.
 - **Chat tooltips:** Enable **Show Chat Tooltips** for chat details on hover. Off by default.
-- **Notifications:** Set separate sound and desktop rules for finished responses and questions: Off, Always, Only when VS Code is focused, or Only when VS Code is unfocused. Use **Codex Navigator: Test Notification** to preview delivery. Sound preference remains installed Codex audio, your platform's notification sound, then a bundled Balafon chime.
+- **Notifications:** Set separate sound and desktop rules for finished responses and questions: Off, Always, Only when VS Code is focused, or Only when VS Code is unfocused. Set **Notification Volume** from 0 to 100% (default 50%; 0 mutes sounds). Use **Codex Navigator: Test Notification** to preview delivery at that volume. Sound preference remains installed Codex audio, your platform's notification sound, then a bundled Balafon chime.
 - **Custom labels and repositories:** Choose Repository keeps your custom label. Choose No repository association to keep a custom label without linking it to a project.
 - **Visit highlights:** Choose which visited chats glow and how long the highlight lasts.
 - **Project instructions:** Optionally help Codex find your repository's AGENTS.md and shared rules.

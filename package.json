@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Organise Codex chats, switch saved accounts and get completion alerts in one compact sidebar.",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -554,6 +554,15 @@
             "default": "always",
             "markdownDescription": "Show a desktop notification when a chat asks a question or requires approval, including async prompts. Focus means any Navigator-enabled window in this local VS Code profile. Navigator must remain visible. Suppressed events are not replayed. [Test notification](command:codexNavigator.testNotification) previews sound and desktop delivery regardless of these rules.",
             "order": 4
+          },
+          "codexNavigator.notificationVolume": {
+            "type": "integer",
+            "default": 50,
+            "minimum": 0,
+            "maximum": 100,
+            "scope": "application",
+            "markdownDescription": "Volume for all notification sounds, from 0% (mute) to 100%, relative to system volume. Applies to completion, question and approval sounds, including [Test Notification](command:codexNavigator.testNotification). Desktop messages are unaffected.",
+            "order": 5
           }
         }
       },

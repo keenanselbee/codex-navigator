@@ -64,12 +64,14 @@ test('migration preserves new choices and recovers from failure at every write o
   assert.equal(f.values.responseFinishedNotification, 'off');
 });
 
-test('manifest exposes exactly four application-scoped policies with matching defaults', () => {
+test('manifest exposes four application-scoped policies and notification volume with matching defaults', () => {
   const properties = require('../package.json').contributes.configuration.find(g => g.id === 'notifications.codexNavigator').properties;
-  assert.equal(Object.keys(properties).length, 4);
+  assert.equal(Object.keys(properties).length, 5);
+  const volume=properties['codexNavigator.notificationVolume'];
+  assert.deepEqual([volume.type,volume.default,volume.minimum,volume.maximum,volume.scope],['integer',50,0,100,'application']);
   const config = fixture(Object.fromEntries(Object.entries(properties).map(([key, value]) => [key.replace('codexNavigator.',''),value.default]))).config;
   assert.deepEqual(notificationSettings(config), notificationSettings(fixture().config));
-  for (const property of Object.values(properties)) {
+  for (const property of Object.values(properties).filter(p=>p.type==='string')) {
     assert.equal(property.scope, 'application');
     assert.deepEqual(property.enum, ['off','always','whenFocused','whenUnfocused']);
   }

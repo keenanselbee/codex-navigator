@@ -36,8 +36,10 @@ in notification history. Windows notifications also carry a local activation lin
 containing the chat ID and VS Code window routing so a click can open the chat.
 No conversation messages are included. Navigator reads
 known local Codex installation directories to find its notification sound without
-copying or changing the app. If unavailable, it tries a system sound and its bundled
-Balafon fallback. Native playback and notifications launch short-lived local helpers.
+changing the app. Windows playback and the Linux ALSA fallback may create a
+volume-adjusted temporary WAV copy, removed after playback. If the Codex sound is
+unavailable, Navigator tries a system sound and its bundled Balafon fallback.
+Native playback and notifications launch short-lived local helpers.
 
 Hook setup copies the collector, merges its entries into hooks.json and backs up
 changed JSON. It preserves unrelated hooks. Verification reads exact hook metadata,

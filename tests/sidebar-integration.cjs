@@ -205,6 +205,7 @@ exports.run = async function (context, fixtureVscode) {
     assert.equal(notificationConfig.get('responseFinishedNotification'),'whenUnfocused');
     assert.equal(notificationConfig.get('questionSound'),'always');
     assert.equal(notificationConfig.get('questionNotification'),'always');
+    assert.equal(notificationConfig.get('notificationVolume'),50);
     const { AccountStore } = require('../dist/account-store');
     const accountTestHome = path.join(root, 'synthetic-account-storage-home');
     const accountStore = new AccountStore(companionContext.globalStorageUri.fsPath, accountTestHome, companionContext.secrets);
@@ -508,6 +509,10 @@ exports.run = async function (context, fixtureVscode) {
     await until(async () => (await probe()).spinners===2&&(await probe()).readyDots===1,'active goal keeps spinning after turn completion');
     await until(() => notificationRequests.some(request => request.message === 'Codex finished a response.'), 'completion reaches alert delivery');
     assert.equal(notificationRequests.find(request => request.kind === 'finished').sound, true, 'default completion sound is enabled in either focus state');
+    assert.equal(notificationRequests.find(request => request.kind === 'finished').volume,50);
+    await notificationConfig.update('notificationVolume',25,vscode.ConfigurationTarget.Global);
+    await vscode.commands.executeCommand('codexNavigator.testNotification');
+    assert.equal(notificationRequests.at(-1).volume,25,'preview uses changed volume without reload');
     const completionAlerts = notificationRequests.length;
     await companionProvider.refresh();
     assert.equal(notificationRequests.length, completionAlerts, 'repeated completion refresh never delivers twice');
@@ -526,6 +531,8 @@ exports.run = async function (context, fixtureVscode) {
     await companionProvider.refresh();
     await until(() => notificationRequests.some(request => request.message === 'Codex needs your answer.'), 'blocking question reaches alert delivery');
     assert.equal(notificationRequests.find(request => request.kind === 'input').desktop, true, 'default question desktop notification is enabled in either focus state');
+    assert.equal(notificationRequests.find(request => request.kind === 'input').volume,25,'question uses changed volume');
+    await notificationConfig.update('notificationVolume',undefined,vscode.ConfigurationTarget.Global);
     const inputAlerts = notificationRequests.length;
     await companionProvider.refresh();
     assert.equal(notificationRequests.length, inputAlerts, 'repeated waiting refresh never delivers twice');

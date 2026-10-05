@@ -10,7 +10,8 @@ function fixture() {
   fs.mkdirSync(codex, { recursive: true }); fs.mkdirSync(media, { recursive: true });
   const installed = path.join(codex, 'codex-notification.wav');
   const bundled = path.join(media, 'notification-balafon.wav');
-  fs.writeFileSync(installed, 'installed'); fs.writeFileSync(bundled, 'bundled');
+  const wav=fs.readFileSync(path.join(__dirname,'../media/notification-balafon.wav'));
+  fs.writeFileSync(installed, wav); fs.writeFileSync(bundled, wav);
   return { root, codexAppPath: path.join(root, 'Codex'), extensionPath: path.join(root, 'extension'), installed, bundled };
 }
 
@@ -76,7 +77,7 @@ test('desktop and sound toggles are independent on Linux', async t => {
   assert.ok(calls[0].args.includes('--hint=boolean:suppress-sound:true'));
   await delivery.deliver({ title: 'Chat', message: 'Ready', desktop: false, sound: true });
   assert.deepEqual(calls.map(call => call.file), ['notify-send', 'paplay']);
-  assert.deepEqual(calls[1].args, [files.installed]); assert.deepEqual(reports, []);
+  assert.deepEqual(calls[1].args, ['--volume=52016', files.installed]); assert.deepEqual(reports, []);
 });
 
 test('sound priority reaches Linux theme and bundled fallback after installed sound fails', async t => {
@@ -84,21 +85,27 @@ test('sound priority reaches Linux theme and bundled fallback after installed so
   const calls = [], reports = [];
   const delivery = new NotificationDelivery({ ...files, platform: 'linux', report: value => reports.push(value),
     run: async (file, args) => { calls.push({ file, args }); return file === 'aplay' && args[0] === files.bundled; } });
-  await delivery.deliver({ title: 'Chat', message: 'Ready', desktop: false, sound: true });
+  await delivery.deliver({ title: 'Chat', message: 'Ready', desktop: false, sound: true, volume:100 });
   assert.deepEqual(calls.map(call => call.file), ['paplay', 'aplay', 'canberra-gtk-play', 'paplay', 'aplay']);
-  assert.deepEqual(calls[0].args, [files.installed]); assert.deepEqual(calls.at(-1).args, [files.bundled]);
+  assert.deepEqual(calls[0].args, ['--volume=65536', files.installed]); assert.deepEqual(calls.at(-1).args, [files.bundled]);
   assert.deepEqual(reports, []);
 });
 
-test('Windows system sound follows installed Codex sound and does not require a bundled file', async t => {
-  const files = fixture(); t.after(() => fs.rmSync(files.root, { recursive: true, force: true }));
-  const scripts = [];
-  const delivery = new NotificationDelivery({ ...files, platform: 'win32', report: () => {},
-    run: async (_file, args) => { scripts.push(Buffer.from(args.at(-1), 'base64').toString('utf16le')); return scripts.length === 2; } });
-  await delivery.deliver({ title: 'Chat', message: 'Ready', desktop: false, sound: true });
-  assert.equal(scripts.length, 2); assert.match(scripts[0], /SoundPlayer/);
-  assert.match(scripts[1], /HKCU:\\AppEvents\\Schemes\\Apps\\\.Default\\Notification.Default\\\.Current/);
-  assert.match(scripts[1], /Media\\Windows Notify System Generic.wav/);
+test('Windows system sound follows installed Codex sound at the same reduced gain', async t => {
+  const files=fixture();t.after(()=>fs.rmSync(files.root,{recursive:true,force:true}));
+  const source=fs.readFileSync(files.installed),calls=[];let resolved=0;
+  const {attenuateWav}=require('../dist/notification-volume');
+  const delivery=new NotificationDelivery({...files,platform:'win32',report:()=>{},
+    windowsSystemSound:async()=>{resolved++;assert.equal(calls.length,1);return files.bundled;},
+    run:async(_file,args,env)=>{
+      calls.push(env.CODEX_NAVIGATOR_SOUND);
+      assert.deepEqual(fs.readFileSync(env.CODEX_NAVIGATOR_SOUND),attenuateWav(source,0.5));
+      assert.match(Buffer.from(args.at(-1),'base64').toString('utf16le'),/SoundPlayer/);
+      return calls.length===2;
+    }});
+  await delivery.deliver({title:'Chat',message:'Ready',desktop:false,sound:true});
+  assert.equal(resolved,1);assert.equal(calls.length,2);
+  for(const file of calls)assert.equal(fs.existsSync(file),false);
 });
 
 test('failed commands and playback report failures without throwing or claiming success', async t => {
@@ -148,7 +155,7 @@ test('macOS passes notification text as arguments and plays the installed WAV', 
   await delivery.deliver({ title: 'Chat "quoted"', message: 'Ready', desktop: true, sound: true });
   assert.deepEqual(calls.map(call => call.file), ['osascript', 'afplay']);
   assert.deepEqual(calls[0].args.slice(-3), ['--', 'Chat "quoted"', 'Ready']);
-  assert.deepEqual(calls[1].args, [files.installed]);
+  assert.deepEqual(calls[1].args, ['-v','0.5', files.installed]);
 });
 
 test('delivery rechecks sound and desktop eligibility independently', async t => {
@@ -163,4 +170,44 @@ test('delivery rechecks sound and desktop eligibility independently', async t =>
   const delivery=new NotificationDelivery({...files,platform:'linux',report:()=>{},run:async file=>{calls.push(file);desktop=false;return true;}});
   await delivery.deliver({title:'Chat',message:'Ready',sound:true,desktop:true,canDeliver:channel=>channel==='sound'||desktop});
   assert.deepEqual(calls,['notify-send','paplay'],'returning focus does not cancel an always-enabled sound');
+});
+
+test('zero volume mutes every platform without suppressing desktop notifications or reporting failure', async () => {
+  for (const platform of ['win32','darwin','linux']) {
+    const calls=[],reports=[];
+    const delivery=new NotificationDelivery({extensionPath:'/extension',platform,report:m=>reports.push(m),run:async file=>{calls.push(file);return true;}});
+    await delivery.deliver({title:'Chat',message:'Ready',desktop:true,sound:true,volume:0});
+    assert.deepEqual(calls,[platform==='win32'?'powershell.exe':platform==='darwin'?'osascript':'notify-send']);
+    assert.deepEqual(reports,[]);
+  }
+});
+
+test('volume is normalized and applies exact sample gain to Windows playback', async t => {
+  const files=fixture();t.after(()=>fs.rmSync(files.root,{recursive:true,force:true}));
+  const source=fs.readFileSync(files.installed),{attenuateWav}=require('../dist/notification-volume');
+  for(const [volume,expected] of [[undefined,50],[NaN,50],['25',50],[25,25],[200,100],[24.6,25]]) {
+    let calls=0;
+    const delivery=new NotificationDelivery({...files,platform:'win32',report:()=>{},run:async(_file,args,env)=>{
+      calls++;assert.deepEqual(fs.readFileSync(env.CODEX_NAVIGATOR_SOUND),attenuateWav(source,expected/100));return true;
+    }});
+    await delivery.deliver({title:'Chat',message:'Ready',desktop:false,sound:true,volume});
+    assert.equal(calls,1);assert.deepEqual(fs.readFileSync(files.installed),source);
+  }
+});
+
+test('Linux fallbacks retain gain through ALSA, theme and bundled audio',async t=>{
+  const files=fixture();t.after(()=>fs.rmSync(files.root,{recursive:true,force:true}));
+  const calls=[],temporary=[];
+  const source=fs.readFileSync(files.installed);
+  const {attenuateWav}=require('../dist/notification-volume');
+  const delivery=new NotificationDelivery({...files,platform:'linux',report:()=>{},run:async(file,args)=>{
+    calls.push({file,args});
+    if(file==='aplay'){temporary.push(args[0]);assert.deepEqual(fs.readFileSync(args[0]),attenuateWav(source,0.25));}
+    return calls.length===5;
+  }});
+  await delivery.deliver({title:'Chat',message:'Ready',desktop:false,sound:true,volume:25});
+  assert.deepEqual(calls.map(c=>c.file),['paplay','aplay','canberra-gtk-play','paplay','aplay']);
+  assert.equal(calls[0].args[0],'--volume=41285');assert.equal(calls[3].args[0],'--volume=41285');
+  assert.ok(Math.abs(Number(calls[2].args.at(-1).split('=')[1])+12.0412)<0.0001);
+  for(const file of temporary) assert.equal(fs.existsSync(file),false);
 });

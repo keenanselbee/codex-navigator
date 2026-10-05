@@ -1,10 +1,11 @@
 import * as path from 'node:path';
 import { accessSync, readdirSync } from 'node:fs';
 import { execFile } from 'node:child_process';
+import { playAdjustedWav } from './notification-volume';
 import type { NotificationChannel } from './notification-settings';
 
 type Platform = 'win32' | 'darwin' | 'linux';
-export type NotificationRequest = { chatId?: string; title: string; message: string; sound: boolean; desktop: boolean; canDeliver?: (channel: NotificationChannel) => boolean };
+export type NotificationRequest = { chatId?: string; title: string; message: string; sound: boolean; desktop: boolean; volume?: number; canDeliver?: (channel: NotificationChannel) => boolean };
 export type NotificationCommand = (file: string, args: string[], env?: NodeJS.ProcessEnv) => Promise<boolean>;
 
 export interface NotificationDeliveryOptions {
@@ -14,6 +15,7 @@ export interface NotificationDeliveryOptions {
   platform?: NodeJS.Platform;
   run?: NotificationCommand;
   codexAppPath?: string;
+  windowsSystemSound?: () => Promise<string | undefined>;
 }
 
 const WINDOWS_TOAST = `
@@ -44,16 +46,23 @@ $player = [System.Media.SoundPlayer]::new($sound)
 $player.PlaySync()
 `;
 
-const WINDOWS_SYSTEM_PLAY = String.raw`
+const WINDOWS_SYSTEM_SOUND = String.raw`
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $key = Get-Item -LiteralPath 'HKCU:\AppEvents\Schemes\Apps\.Default\Notification.Default\.Current' -ErrorAction SilentlyContinue
 $sound = if ($key) { $key.GetValue('') } else { $null }
 if ($sound) { $sound = [Environment]::ExpandEnvironmentVariables($sound) }
 if (-not $sound -or -not [IO.File]::Exists($sound)) { $sound = Join-Path $env:WINDIR 'Media\Windows Notify System Generic.wav' }
 if (-not [IO.File]::Exists($sound)) { exit 2 }
-$player = [System.Media.SoundPlayer]::new($sound)
-$player.PlaySync()
+[Console]::Write($sound)
 `;
+
+async function findWindowsSystemSound(): Promise<string | undefined> {
+  return new Promise(resolve => execFile('powershell.exe', [
+    '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', Buffer.from(WINDOWS_SYSTEM_SOUND, 'utf16le').toString('base64'),
+  ], { encoding: 'utf8', windowsHide: true, timeout: 3000, maxBuffer: 4096 },
+  (error, stdout) => resolve(error ? undefined : stdout.trim() || undefined)));
+}
 
 const MAC_TOAST = 'on run argv\n display notification (item 2 of argv) with title (item 1 of argv)\nend run';
 
@@ -131,6 +140,7 @@ export class NotificationDelivery {
   }
 
   async deliver(request: NotificationRequest): Promise<void> {
+    const volume = typeof request.volume === 'number' && Number.isFinite(request.volume) ? Math.max(0, Math.min(100, Math.round(request.volume))) : 50;
     const canDeliver = (channel: NotificationChannel) => request[channel] && request.canDeliver?.(channel) !== false;
     const title = cleanText(request.title, 200) || 'Codex Navigator';
     const message = cleanText(request.message, 500) || 'Chat update';
@@ -150,7 +160,7 @@ export class NotificationDelivery {
       else if (this.platform === 'linux') shown = await this.tryRun('notify-send', ['--app-name=Codex Navigator', '--hint=boolean:suppress-sound:true', '--', title, message]);
       if (!shown && canDeliver('desktop')) this.options.report('Codex Navigator could not show a desktop notification. Check that system notifications are available.');
     }
-    if (canDeliver('sound') && !await this.playSound(() => canDeliver('sound')) && canDeliver('sound')) {
+    if (volume > 0 && canDeliver('sound') && !await this.playSound(volume, () => canDeliver('sound')) && canDeliver('sound')) {
       this.options.report('Codex Navigator could not play a notification sound. Check the system audio output.');
     }
   }
@@ -163,30 +173,41 @@ export class NotificationDelivery {
     try { return await this.run(file, args, env); } catch { return false; }
   }
 
-  private async playNativeFile(filename: string, canDeliver: () => boolean): Promise<boolean> {
-    if (this.platform === 'win32') return this.powershell(WINDOWS_PLAY, { CODEX_NAVIGATOR_SOUND: filename });
-    if (this.platform === 'darwin') return this.tryRun('afplay', [filename]);
-    if (this.platform === 'linux') return await this.tryRun('paplay', [filename]) || canDeliver() && await this.tryRun('aplay', [filename]);
+  private async playNativeFile(filename: string, volume: number, canDeliver: () => boolean): Promise<boolean> {
+    if (this.platform === 'win32') return playAdjustedWav(filename, volume, adjusted => canDeliver()
+      ? this.powershell(WINDOWS_PLAY, { CODEX_NAVIGATOR_SOUND: adjusted }) : Promise.resolve(false));
+    if (this.platform === 'darwin') return this.tryRun('afplay', ['-v', String(volume / 100), filename]);
+    if (this.platform === 'linux') {
+      // PulseAudio's volume scale is cubic; match the linear gain of other players.
+      if (await this.tryRun('paplay', [`--volume=${Math.round(65536 * Math.cbrt(volume / 100))}`, filename])) return true;
+      if (!canDeliver()) return false;
+      return playAdjustedWav(filename, volume, adjusted => canDeliver() ? this.tryRun('aplay', [adjusted]) : Promise.resolve(false));
+    }
     return false;
   }
 
-  private async playSound(canDeliver: () => boolean): Promise<boolean> {
+  private async playSound(volume: number, canDeliver: () => boolean): Promise<boolean> {
     if (this.platform !== 'win32' && this.platform !== 'darwin' && this.platform !== 'linux') return false;
     const codexSound = await findCodexNotificationSound(this.platform, this.options.codexAppPath);
     if (!canDeliver()) return false;
     if (codexSound) {
-      if (await this.playNativeFile(codexSound, canDeliver)) return true;
+      if (await this.playNativeFile(codexSound, volume, canDeliver)) return true;
     }
     if (!canDeliver()) return false;
-    if (this.platform === 'win32' && await this.powershell(WINDOWS_SYSTEM_PLAY)) return true;
+    if (this.platform === 'win32') {
+      let systemSound: string | undefined;
+      try { systemSound = await (this.options.windowsSystemSound ?? findWindowsSystemSound)(); } catch { /* Try bundled audio. */ }
+      if (!canDeliver()) return false;
+      if (systemSound && await this.playNativeFile(systemSound, volume, canDeliver)) return true;
+    }
     if (!canDeliver()) return false;
     if (this.platform === 'darwin') {
       const glass = '/System/Library/Sounds/Glass.aiff';
-      if (exists(glass) && await this.tryRun('afplay', [glass])) return true;
+      if (exists(glass) && await this.playNativeFile(glass, volume, canDeliver)) return true;
     }
-    if (this.platform === 'linux' && await this.tryRun('canberra-gtk-play', ['-i', 'message-new-instant'])) return true;
+    if (this.platform === 'linux' && await this.tryRun('canberra-gtk-play', ['-i', 'message-new-instant', `--volume=${20 * Math.log10(volume / 100)}`])) return true;
     if (!canDeliver()) return false;
     const bundled = path.join(this.options.extensionPath, 'media', 'notification-balafon.wav');
-    return exists(bundled) && await this.playNativeFile(bundled, canDeliver);
+    return exists(bundled) && await this.playNativeFile(bundled, volume, canDeliver);
   }
 }

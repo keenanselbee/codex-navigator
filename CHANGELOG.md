@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.9.4
+-----
+
+- Add Notification Volume (0 to 100%, default 50%) for completion, question and
+  approval sounds, including Test Notification. Zero mutes sounds while keeping
+  desktop messages enabled, without changing system volume.
+
 1.9.3
 -----
 

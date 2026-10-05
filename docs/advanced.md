@@ -273,6 +273,9 @@ activity indicator to waiting. Existing explicitly configured notification switc
 migrate to equivalent rules; untouched settings receive the defaults above.
 Use **Codex Navigator: Test Notification** to preview sound and desktop delivery
 regardless of these rules, including while focused or when a rule is Off.
+**Notification Volume** controls every sound and preview from 0 to 100%, defaulting
+to 50%. Set it to 0 to mute sounds without disabling desktop messages. Changes
+apply to subsequent alerts without reloading; system volume stays unchanged.
 
 On Windows, clicking a chat notification opens that saved Codex chat. Navigator
 uses VS Code's external-link API to target the window that emitted the notification,
@@ -293,7 +296,8 @@ only in response text produce a completion alert, not a separate input alert.
 Sound preference is the locally installed Codex app's `codex-notification.wav`,
 then Windows' notification sound, macOS Glass or Linux's `message-new-instant`
 theme sound, then the bundled Scoba Sounds Balafon notification. Codex audio is
-read from known installation locations and is not bundled or copied by Navigator.
+read from known installation locations and is not bundled. Windows playback and
+the Linux ALSA fallback may create an attenuated temporary WAV copy, removed after playback.
 The Balafon sound's [licence](notification-sound-license.txt) ships with the extension.
 
 Native alerts use Windows notification APIs through PowerShell, macOS notification
