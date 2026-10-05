@@ -9,6 +9,24 @@ Use [Release preparation](marketplace-release.md) for the current procedure and
 once; packaging receipts remain the authority for archive and payload hashes.
 
 
+Async question release checks: 1.9.1
+-------------------------------------
+
+The owner reported completion alerts working while VS Code was unfocused, but
+timed question prompts produced no question alert. Read-only inspection confirmed
+`request_user_input_async` followed by `{"accepted":true}` and continued work.
+Replaying those lifecycle records with the corrected parser detects both accepted
+questions while retaining the working state. No conversation content is in fixtures.
+
+All 260 public tests and 24 commercial tests pass. Added coverage includes rejected
+and unmatched acknowledgements, continued work and completion, cross-window claims,
+focus suppression and historical prompts. Isolated VS Code 1.139.1 integration
+passes initial/restart and second-window checks in `integration-I3Zfd9`; its async
+question scenario includes a live working-status fixture, one delivery and no
+repeated alert. Native delivery remains stubbed in this fixture; delivery helpers
+are unchanged from 1.9.0. No additional background poll was added.
+
+
 Verified Desktop package: 1.9.0
 -------------------------------
 

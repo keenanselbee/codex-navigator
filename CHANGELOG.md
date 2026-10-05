@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.9.1
+-----
+
+- Notify when Codex opens an asynchronous question prompt, including prompts
+  that remain open while Codex continues working. Keep the working indicator
+  accurate and prevent repeated alerts for the same question across windows.
+
 1.9.0
 -----
 

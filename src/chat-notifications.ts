@@ -73,6 +73,11 @@ export class ChatNotifications {
         // Unknown signals do not prove a new event. Reopening the view creates
         // a baseline, never a backlog of notifications from hidden activity.
         if (!previous) continue;
+        const question = current.asyncQuestion;
+        if (question && question.id !== previous.asyncQuestion?.id && question.askedAt >= now - 60000 && question.askedAt <= now + 5000) {
+          const claimed = this.db.prepare('INSERT OR IGNORE INTO events VALUES (?, ?)').run(thread + '/async-input/' + question.id, sampledAt);
+          if (claimed.changes && !quiet) alerts.push({ title: chat.title || 'Untitled chat', message: 'Codex has a question for you.' });
+        }
         let event: string | undefined;
         if (current.status === 'ready' && current.completedAt && current.completedAt >= now - 60000
           && current.completedAt <= now + 5000

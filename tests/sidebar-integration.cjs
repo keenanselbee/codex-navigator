@@ -508,6 +508,24 @@ exports.run = async function (context, fixtureVscode) {
     assert.equal(notificationRequests.length, inputAlerts, 'repeated waiting refresh never delivers twice');
     fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'turn_aborted', turn_id: 'fixture-question' }));
     await companionProvider.refresh();
+    fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'task_started', turn_id: 'fixture-async-question' }));
+    await companionProvider.refresh();
+    const readRuntime = RuntimeActivity.prototype.read;
+    RuntimeActivity.prototype.read = async () => new Map([[id(12), { status: 'working', workedAt: 0 }]]);
+    try {
+      fs.appendFileSync(activityTranscript,
+        activityLine('response_item', { type: 'function_call', name: 'request_user_input_async', call_id: 'async-q1' })
+        + activityLine('response_item', { type: 'function_call_output', call_id: 'async-q1', output: '{"accepted":true}' })
+        + activityLine('response_item', { type: 'function_call', name: 'sleep', call_id: 'async-sleep' }));
+      await companionProvider.refresh();
+      await until(() => notificationRequests.some(request => request.message === 'Codex has a question for you.'), 'async prompt survives acknowledgement and live working status');
+      assert.equal(companionProvider.rows.find(row => row.id === id(12)).activity, 'working');
+      const asyncAlerts = notificationRequests.length;
+      await companionProvider.refresh();
+      assert.equal(notificationRequests.length, asyncAlerts, 'async question alerts once while work continues');
+    } finally { RuntimeActivity.prototype.read = readRuntime; }
+    fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'turn_aborted', turn_id: 'fixture-async-question' }));
+    await companionProvider.refresh();
     await vscode.workspace.getConfiguration('codexNavigator').update('notificationsOnlyWhenUnfocused', undefined, vscode.ConfigurationTarget.Global);
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-compaction',hook_event_name:'UserPromptSubmit'});
     fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_started',turn_id:'fixture-compaction'}));
@@ -776,7 +794,7 @@ exports.run = async function (context, fixtureVscode) {
         'no ellipsis control', 'outline stars on keyboard focus', 'more than four columns', 'in-panel colour palette and spectrum', 'hex validation and cancel', 'ready dot and acknowledgement', 'hook status watcher', 'spinner order', 'aligned goal controls and 10px spinner', 'goal pause/resume fixture', 'themed separators', 'single-line repository labels keep row heights and control space', 'pins preserve position and survive age/history filtering', 'simultaneous activity and stop/interrupt', 'compaction item completion and large tool results retain sidebar spinner with expired hook', 'newer interrupt clears cached working transcript'],
       scope: 'Real isolated VS Code; fixture URI handler and synthetic hook events. Native-menu context data and command dispatch exercised with synthetic mouse/keyboard events; picker choices supplied by fixture. Native overlay appearance is not inspected. No authenticated Codex conversation.' };
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
-    result.verified.push('completion and blocking input reach notification delivery once');
+    result.verified.push('completion, blocking input and acknowledged async questions reach notification delivery once');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));
   } catch (error) {
     fs.writeFileSync(path.join(root, 'failure.txt'), error.stack || String(error)); throw error;

@@ -3,8 +3,9 @@ import { ChatActivity } from './chat-activity';
 
 export interface ActivitySnapshot {
   status: ChatActivity; workedAt: number; observedAt?: number; turnId?: string; completedAt?: number; detail?: string; inputId?: string;
+  asyncQuestion?: { id: string; askedAt: number };
 }
-interface TranscriptState extends ActivitySnapshot { pendingInput?: string; contextAt?: number; ended?: boolean }
+interface TranscriptState extends ActivitySnapshot { pendingInput?: string; pendingQuestion?: { id: string; askedAt: number }; contextAt?: number; ended?: boolean }
 const unknown = (): TranscriptState => ({ status: 'unknown', workedAt: 0 });
 
 // Only explicit lifecycle records are interpreted. Never classify prose or tool exit codes.
@@ -33,11 +34,25 @@ export function reduceActivity(state: TranscriptState, record: any, now: number)
     if (['task_complete', 'turn_aborted'].includes(p.type) && typeof p.turn_id === 'string'
         && (!state.turnId || state.turnId === p.turn_id)) {
       return { status: p.type === 'task_complete' ? 'ready' : 'unknown', turnId: p.turn_id,
+        asyncQuestion: p.type === 'task_complete' ? state.asyncQuestion : undefined,
         observedAt: time, workedAt: time, ended: true, completedAt: p.type === 'task_complete' ? time : undefined,
         detail: p.type === 'task_complete' ? 'Turn finished since last viewed' : 'Turn interrupted' };
     }
   }
   if (record.type === 'response_item' && !state.ended && ['unknown', 'working', 'waiting'].includes(state.status)) {
+    // Async prompts return immediately; acknowledgement opens the question UI
+    // but does not mean the user answered or that Codex stopped working.
+    if (p.type === 'function_call' && ['request_user_input_async', 'functions.request_user_input_async'].includes(p.name)
+        && typeof p.call_id === 'string') {
+      return { ...state, status: state.pendingInput ? 'waiting' : 'working', observedAt: time, workedAt: time,
+        pendingQuestion: { id: p.call_id, askedAt: time } };
+    }
+    if (p.type === 'function_call_output' && state.pendingQuestion && state.pendingQuestion.id === p.call_id) {
+      let accepted = false;
+      try { accepted = typeof p.output === 'string' && JSON.parse(p.output)?.accepted === true; } catch { /* Not an accepted question. */ }
+      return { ...state, pendingQuestion: undefined, observedAt: time,
+        asyncQuestion: accepted ? state.pendingQuestion : state.asyncQuestion };
+    }
     if (p.type === 'function_call' && ['request_user_input', 'functions.request_user_input'].includes(p.name)
         && typeof p.call_id === 'string') {
       return { ...state, status: 'waiting', pendingInput: p.call_id, inputId: p.call_id, observedAt: time, detail: 'Waiting for your answer (local activity)' };
@@ -95,6 +110,7 @@ export function combineActivity(hook: ActivitySnapshot, transcript: ActivitySnap
   // so a definitive completion from the same turn is allowed to supply the ready dot.
   let result = transcript.observedAt && (transcript.observedAt >= (hook.observedAt || hook.workedAt)
     || transcript.turnId === hook.turnId && hook.status === 'idle' && transcript.status === 'ready') ? transcript : hook;
+  if (transcript.asyncQuestion && result.turnId === transcript.turnId) result = { ...result, asyncQuestion: transcript.asyncQuestion };
   if (result.status === 'ready' && (result.completedAt || 0) <= seenAt) result = { ...result, status: 'idle', detail: undefined };
   return result;
 }

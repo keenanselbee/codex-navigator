@@ -23,6 +23,34 @@ test('only explicit blocking input calls wait; tool failures and prose never mar
  assert.equal(reduceActivity(s,item({type:'function_call_output',call_id:'x',output:'answer'}),now).status,'working');
  assert.equal(reduceActivity(s,event('turn_aborted'),now).status,'unknown');
 });
+
+test('accepted async prompts survive tool acknowledgement, ongoing work and completion without waiting', () => {
+ for (const name of ['request_user_input_async', 'functions.request_user_input_async']) {
+   const item=(payload,time=now)=>({timestamp:new Date(time).toISOString(),type:'response_item',payload});
+   let s=reduceActivity(initial,event('task_started'),now);
+   s=reduceActivity(s,item({type:'function_call',name,call_id:'q'}),now);
+   assert.equal(s.status,'working'); assert.equal(s.asyncQuestion,undefined);
+   s=reduceActivity(s,item({type:'function_call_output',call_id:'q',output:'{"accepted":true}'},now+1),now+1);
+   assert.deepEqual(s.asyncQuestion,{id:'q',askedAt:now}); assert.equal(s.pendingInput,undefined);
+   s=reduceActivity(s,item({type:'function_call',name:'sleep',call_id:'sleep'},now+2),now+2);
+   assert.equal(s.status,'working'); assert.equal(s.asyncQuestion.id,'q');
+   const hook={status:'idle',turnId:'a',observedAt:now+3,workedAt:now+3};
+   assert.equal(combineActivity(hook,s).asyncQuestion.id,'q');
+   assert.equal(combineActivity({...hook,turnId:'new'},s).asyncQuestion,undefined);
+   s=reduceActivity(s,event('task_complete','a',now+4),now+4);
+   assert.equal(s.status,'ready'); assert.equal(s.asyncQuestion.id,'q');
+   assert.equal(reduceActivity(s,event('task_started','new',now+5),now+5).asyncQuestion,undefined);
+ }
+});
+
+test('rejected, malformed and unmatched async acknowledgements do not announce a question', () => {
+ const item=payload=>({timestamp:new Date(now).toISOString(),type:'response_item',payload});
+ const called=reduceActivity(initial,item({type:'function_call',name:'request_user_input_async',call_id:'q'}),now);
+ for (const output of ['{"accepted":false}','error','{}']) {
+   assert.equal(reduceActivity(called,item({type:'function_call_output',call_id:'q',output}),now).asyncQuestion,undefined);
+ }
+ assert.equal(reduceActivity(called,item({type:'function_call_output',call_id:'other',output:'{"accepted":true}'}),now).asyncQuestion,undefined);
+});
 test('tail reader handles partial writes, truncation and stale working signals', async () => {
  const folder=await fs.mkdtemp(path.resolve('.codex-temp/activity-reader-')), file=path.join(folder,'chat.jsonl');
  try {

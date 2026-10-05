@@ -218,6 +218,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         activity = combineActivity(hook, transcript);
         const live = runtime.get(item.id);
         if (live) activity = { ...live, turnId: live.turnId || activity.turnId,
+          asyncQuestion: !live.turnId || live.turnId === activity.turnId ? activity.asyncQuestion : undefined,
           inputId: live.status === 'waiting' && activity.status === 'waiting' ? activity.inputId : undefined,
           workedAt: Math.max(activity.workedAt, live.workedAt) };
         if (items.length < 200) activityDiagnostics.record(item.id, hook, transcript, live, activity);

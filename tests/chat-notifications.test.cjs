@@ -18,6 +18,32 @@ function fixture(t) {
 const chat = (status, extra = {}) => [{ id: 'chat-a', title: 'Build Navigator', activity: { status, workedAt: 0, turnId: 'turn-a', ...extra } }];
 const observe = (window, rows, time = 10000, enabled = true, suppress = true) => window.observe(rows, time, enabled, suppress);
 
+test('async question alerts once across windows while working and preserves a separate completion', t => {
+  const f = fixture(t), a = f.create(), b = f.create();
+  observe(a, chat('working')); observe(b, chat('working'));
+  const asyncQuestion = { id: 'async-q1', askedAt: 11000 };
+  const prompt = chat('working', { asyncQuestion });
+  assert.match(observe(a, prompt, 12000)[0].message, /has a question/);
+  assert.deepEqual(observe(b, prompt, 13000), []);
+  assert.deepEqual(observe(a, prompt, 14000), []);
+  const ready = chat('ready', { asyncQuestion, completedAt: 15000 });
+  assert.match(observe(a, ready, 16000)[0].message, /finished/);
+  assert.deepEqual(observe(b, ready, 17000), []);
+  assert.match(observe(a, chat('working', { asyncQuestion: { id: 'async-q2', askedAt: 18000 } }), 19000)[0].message, /has a question/);
+});
+
+test('async questions seen with completion still alert, but old, initial and suppressed prompts do not replay', t => {
+  const f = fixture(t), a = f.create();
+  const prompt = chat('working', { asyncQuestion: { id: 'q1', askedAt: 11000 } });
+  assert.deepEqual(observe(a, prompt, 12000), []);
+  a.reset(); observe(a, chat('working'), 13000);
+  a.setFocused(true); assert.deepEqual(observe(a, prompt, 14000), []);
+  a.setFocused(false); assert.deepEqual(observe(a, prompt, 15000), []);
+  const ready = chat('ready', { asyncQuestion: { id: 'q2', askedAt: 16000 }, completedAt: 17000 });
+  assert.deepEqual(observe(a, ready, 18000).map(alert => alert.message), ['Codex has a question for you.', 'Codex finished a response.']);
+  assert.deepEqual(observe(a, chat('working', { asyncQuestion: { id: 'old', askedAt: 10000 } }), 90000), []);
+});
+
 test('a completed turn alerts once across windows and repeated refreshes', t => {
   const f = fixture(t), a = f.create(), b = f.create();
   observe(a, chat('working')); observe(b, chat('working'));

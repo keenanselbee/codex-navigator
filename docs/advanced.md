@@ -253,8 +253,10 @@ This activity refresh is independent of optional repository-focus detection.
 
 ### Sounds and desktop notifications
 
-By default, a new completed response or a detected blocking question/approval
-request produces a sound and desktop notification with the chat name. In Extension
+By default, a new completed response, an accepted asynchronous question prompt,
+or a detected blocking question/approval request produces a sound and desktop
+notification with the chat name. Async prompts can alert while Codex continues
+working; they do not change its activity indicator to waiting. In Extension
 Settings, turn Notification Sounds and Desktop Notifications on or off separately.
 Notifications Only When Unfocused keeps both quiet while any local VS Code window
 running Navigator in the same VS Code profile has focus, even if that window is
