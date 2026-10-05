@@ -274,6 +274,15 @@ migrate to equivalent rules; untouched settings receive the defaults above.
 Use **Codex Navigator: Test Notification** to preview sound and desktop delivery
 regardless of these rules, including while focused or when a rule is Off.
 
+On Windows, clicking a chat notification opens that saved Codex chat. Navigator
+uses VS Code's external-link API to target the window that emitted the notification,
+including when another VS Code window is active. The originating window must still
+be open for that routing to remain valid; old notifications may fall back to another
+window or fail to open if the window was closed or Codex is unavailable. VS Code may
+ask for confirmation before opening a link. Preview notifications have no chat action.
+Click-to-chat is Windows-only; macOS/Linux keep their existing notification behaviour.
+No additional background listener or polling is required.
+
 Detection uses the existing approximately five-second refresh while Navigator is
 visible. It adds no background polling when the view is hidden. Startup and reopening
 establish a quiet baseline; historical and suppressed events are not replayed.

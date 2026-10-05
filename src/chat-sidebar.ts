@@ -47,6 +47,14 @@ function chatNames(value: unknown): Record<string, string> {
 }
 
 // Uses Codex's existing URI handler. No file patch or private command is needed.
+export async function externalChatLink(id: string): Promise<string> {
+  if (!threadIdPattern.test(id) || vscode.env.remoteName) throw new Error('Choose a saved local Codex chat.');
+  const uri = vscode.Uri.from({ scheme: vscode.env.uriScheme, authority: 'openai.chatgpt', path: '/local/' + id });
+  // VS Code attaches its own window routing. Keep the resolved URI intact and
+  // regenerate it per notification rather than caching a window's old address.
+  return (await vscode.env.asExternalUri(uri)).toString();
+}
+
 export async function openSidebarChat(id: string): Promise<void> {
   if (!threadIdPattern.test(id)) { throw new Error('Choose a saved local Codex chat.'); }
   if (vscode.env.remoteName) { throw new Error('Sidebar chat selection currently supports local VS Code windows.'); }

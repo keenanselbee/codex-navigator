@@ -4,12 +4,13 @@ import { execFile } from 'node:child_process';
 import type { NotificationChannel } from './notification-settings';
 
 type Platform = 'win32' | 'darwin' | 'linux';
-export type NotificationRequest = { title: string; message: string; sound: boolean; desktop: boolean; canDeliver?: (channel: NotificationChannel) => boolean };
+export type NotificationRequest = { chatId?: string; title: string; message: string; sound: boolean; desktop: boolean; canDeliver?: (channel: NotificationChannel) => boolean };
 export type NotificationCommand = (file: string, args: string[], env?: NodeJS.ProcessEnv) => Promise<boolean>;
 
 export interface NotificationDeliveryOptions {
   extensionPath: string;
   report: (message: string) => void;
+  chatLink?: (id: string) => Promise<string>;
   platform?: NodeJS.Platform;
   run?: NotificationCommand;
   codexAppPath?: string;
@@ -21,6 +22,10 @@ $app = Get-StartApps | Where-Object { $_.Name -eq 'Visual Studio Code' -or $_.Na
 if (-not $app -or -not $app.AppID) { exit 2 }
 $manager = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime]
 $template = $manager::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+if ($env:CODEX_NAVIGATOR_CHAT_LINK) {
+  $template.DocumentElement.SetAttribute('activationType', 'protocol')
+  $template.DocumentElement.SetAttribute('launch', $env:CODEX_NAVIGATOR_CHAT_LINK)
+}
 $nodes = $template.GetElementsByTagName('text')
 $null = $nodes.Item(0).AppendChild($template.CreateTextNode($env:CODEX_NAVIGATOR_TITLE))
 $null = $nodes.Item(1).AppendChild($template.CreateTextNode($env:CODEX_NAVIGATOR_MESSAGE))
@@ -131,9 +136,16 @@ export class NotificationDelivery {
     const message = cleanText(request.message, 500) || 'Chat update';
     if (canDeliver('desktop')) {
       let shown = false;
-      if (this.platform === 'win32') shown = await this.powershell(WINDOWS_TOAST, {
-        CODEX_NAVIGATOR_TITLE: title, CODEX_NAVIGATOR_MESSAGE: message,
-      });
+      if (this.platform === 'win32') {
+        let link = '';
+        if (request.chatId && this.options.chatLink) {
+          try { link = await this.options.chatLink(request.chatId); }
+          catch { this.options.report('The chat link could not be prepared; this notification will have no chat action.'); }
+        }
+        if (canDeliver('desktop')) shown = await this.powershell(WINDOWS_TOAST, {
+          CODEX_NAVIGATOR_TITLE: title, CODEX_NAVIGATOR_MESSAGE: message, CODEX_NAVIGATOR_CHAT_LINK: link,
+        });
+      }
       else if (this.platform === 'darwin') shown = await this.tryRun('osascript', ['-e', MAC_TOAST, '--', title, message]);
       else if (this.platform === 'linux') shown = await this.tryRun('notify-send', ['--app-name=Codex Navigator', '--hint=boolean:suppress-sound:true', '--', title, message]);
       if (!shown && canDeliver('desktop')) this.options.report('Codex Navigator could not show a desktop notification. Check that system notifications are available.');

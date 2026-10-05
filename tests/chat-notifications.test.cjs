@@ -28,6 +28,7 @@ test('event-specific channels use shared focus and never replay a suppressed cha
   a.observe(chat('working'),10000,rules); b.observe(chat('working'),10000,rules);
   const finished = chat('ready',{completedAt:11000});
   const alerts = a.observe(finished,12000,rules);
+  assert.equal(alerts[0].chatId,'chat-a','notification retains the originating chat identity');
   assert.deepEqual(alerts.map(({kind,sound,desktop}) => ({kind,sound,desktop})), [{kind:'finished',sound:true,desktop:false}]);
   assert.deepEqual(b.observe(finished,12000,rules), []);
   b.setFocused(false);

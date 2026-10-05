@@ -32,7 +32,9 @@ storage shares window process IDs, focus flags, event identifiers and timestamps
 to apply your focus preferences and suppress duplicate alerts. Event records expire after seven days.
 Desktop notifications pass the chat name and a generic completion/input message
 to your operating system, which may display them on the lock screen or keep them
-in notification history. No conversation messages are included. Navigator reads
+in notification history. Windows notifications also carry a local activation link
+containing the chat ID and VS Code window routing so a click can open the chat.
+No conversation messages are included. Navigator reads
 known local Codex installation directories to find its notification sound without
 copying or changing the app. If unavailable, it tries a system sound and its bundled
 Balafon fallback. Native playback and notifications launch short-lived local helpers.

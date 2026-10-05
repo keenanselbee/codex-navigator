@@ -6,7 +6,7 @@ import { ActivitySnapshot } from './activity-events';
 import { notificationChannels, NotificationKind, NotificationPolicy } from './notification-settings';
 
 export interface NotificationChat { id: string; title: string; activity: ActivitySnapshot }
-export interface ChatAlert { title: string; message: string; kind: NotificationKind; sound: boolean; desktop: boolean }
+export interface ChatAlert { chatId: string; title: string; message: string; kind: NotificationKind; sound: boolean; desktop: boolean }
 
 // Window focus is published on VS Code events. Chat detection uses only the
 // existing visible-sidebar refresh. SQLite claims prevent cross-window races.
@@ -61,7 +61,7 @@ export class ChatNotifications {
         const claim = (event: string, kind: NotificationKind, message: string) => {
           const claimed = this.db.prepare('INSERT OR IGNORE INTO events VALUES (?, ?)').run(thread + '/' + event, sampledAt);
           const channels = notificationChannels(policy, kind, focused);
-          if (claimed.changes && (channels.sound || channels.desktop)) alerts.push({ title: chat.title || 'Untitled chat', message, kind, ...channels });
+          if (claimed.changes && (channels.sound || channels.desktop)) alerts.push({ chatId: chat.id, title: chat.title || 'Untitled chat', message, kind, ...channels });
         };
         const sample = this.db.prepare('SELECT * FROM samples WHERE id = ?').get(thread);
         // A slower window must not roll another window's newer observation back.

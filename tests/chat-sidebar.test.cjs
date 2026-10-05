@@ -30,6 +30,23 @@ function fixture() {
   return { sidebar, calls, sent, id, view, exports, vscode, commands, stored, visibilityChanged: () => visibleChanged(), receive: m => sidebar.receive(m) };
 }
 
+test('external chat links preserve VS Code window routing and reject nonlocal or invalid chats', async () => {
+  const f=fixture();
+  try {
+    let resolved=0;
+    f.vscode.env.uriScheme='vscode-insiders';
+    f.vscode.env.asExternalUri=async uri=>{
+      resolved++; assert.equal(uri.scheme,'vscode-insiders'); assert.equal(uri.authority,'openai.chatgpt'); assert.equal(uri.path,'/local/'+f.id);
+      return {toString:()=>uri.toString()+'?windowId='+resolved};
+    };
+    assert.equal(await f.exports.externalChatLink(f.id),'vscode-insiders://openai.chatgpt/local/'+f.id+'?windowId=1');
+    assert.match(await f.exports.externalChatLink(f.id),/windowId=2$/,'each notification resolves the current window');
+    await assert.rejects(f.exports.externalChatLink('../other'),/saved local/);
+    f.vscode.env.remoteName='ssh'; await assert.rejects(f.exports.externalChatLink(f.id),/saved local/);
+    assert.equal(resolved,2);
+  } finally { f.sidebar.dispose(); }
+});
+
 test('notification observation uses eligible rows and stops with the hidden view', async () => {
   const f = fixture(), observed = []; let stopped = 0;
   f.sidebar.onActivities = rows => observed.push(rows.map(row => row.id));

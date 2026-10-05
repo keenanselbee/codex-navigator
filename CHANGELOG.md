@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+1.9.3
+-----
+
+- Open the relevant saved Codex chat when a Windows notification is clicked,
+  using VS Code's external-link routing to return to its originating open window.
+- Preserve sound and focus rules without extra background polling. macOS/Linux
+  notifications and chat-free previews retain their existing behaviour.
+
 1.9.2
 -----
 

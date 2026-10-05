@@ -10,7 +10,7 @@ import { codexBinary } from './platform';
 import { migrateHighlightSettings } from './highlight-settings';
 import { assignAutomaticColours, resolvedRepositoryColours } from './automatic-colours';
 import { ChatGoals } from './chat-goals';
-import { ChatSidebar } from './chat-sidebar';
+import { ChatSidebar, externalChatLink } from './chat-sidebar';
 import { LicenseAccess } from './license-access';
 import { ActivityDiagnostics, TranscriptActivity, combineActivity } from './activity-events';
 import { RuntimeActivity } from './activity-runtime';
@@ -253,7 +253,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   } catch { notificationReport('Shared alert storage is unavailable; automatic alerts are disabled.'); }
   const notificationDelivery = new NotificationDelivery({ extensionPath: context.extensionPath,
-    report: notificationReport });
+    report: notificationReport, chatLink: externalChatLink });
   let notificationQueue = Promise.resolve();
   let monitoringEpoch = 0;
   sidebar.onMonitoringStopped = () => { monitoringEpoch++; notifications?.reset(); };

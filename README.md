@@ -39,7 +39,7 @@ Features
 - **Keep your organisation across workspaces:** Use the shared Default chat profile, or choose separate profiles for work, school or personal projects. Optionally show only chats associated with the current workspace, plus unassigned chats.
 - **Make the list yours:** Rename chats while keeping the original Codex name available. Hide conversations you no longer need and restore them without deleting anything.
 - **See activity and goals:** See working, ready, waiting and error states where Codex supplies them. Pause or resume goals from Navigator, where supported.
-- **Hear when Codex needs you:** Get sounds when responses finish or chats need an answer or approval, even while working in VS Code. Question notifications appear by default; completion banners appear when VS Code is unfocused. Keep Navigator visible for monitoring.
+- **Hear when Codex needs you:** Get sounds when responses finish or chats need an answer or approval, even while working in VS Code. Question notifications appear by default; completion banners appear when VS Code is unfocused. On Windows, click a notification to open its chat. Keep Navigator visible for monitoring.
 - **Spot recent visits:** Chats opened through Navigator briefly glow in their label colour. Adjust the fade, highlight only the last visited chat, or turn highlights off.
 
 ---

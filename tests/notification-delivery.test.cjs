@@ -37,6 +37,34 @@ test('Windows notification passes untrusted title and message through environmen
   assert.deepEqual(reports, []);
 });
 
+test('Windows chat notifications use protocol activation with the resolved chat link', async () => {
+  const calls=[], ids=[];
+  const link='vscode://openai.chatgpt/local/00000000-0000-0000-0000-000000000001?windowId=7&test=quoted%22';
+  const delivery=new NotificationDelivery({extensionPath:'/extension',platform:'win32',report:()=>{},
+    chatLink:async id=>{ids.push(id);return link;},run:async(file,args,env)=>{calls.push({args,env});return true;}});
+  await delivery.deliver({chatId:'chat-id',title:'Chat',message:'Question',desktop:true,sound:false});
+  assert.deepEqual(ids,['chat-id']); assert.equal(calls[0].env.CODEX_NAVIGATOR_CHAT_LINK,link);
+  const script=Buffer.from(calls[0].args.at(-1),'base64').toString('utf16le');
+  assert.match(script,/SetAttribute\('activationType', 'protocol'\)/);
+  assert.match(script,/SetAttribute\('launch', \$env:CODEX_NAVIGATOR_CHAT_LINK\)/);
+  assert.doesNotMatch(script,/windowId=7/,'link is data, not PowerShell source');
+  await delivery.deliver({title:'Preview',message:'Test',desktop:true,sound:false});
+  assert.equal(calls[1].env.CODEX_NAVIGATOR_CHAT_LINK,'','preview never inherits another notification link');
+});
+
+test('failed link resolution retains notification delivery and focus is rechecked after resolution', async () => {
+  const calls=[], reports=[]; let allowed=true;
+  const delivery=new NotificationDelivery({extensionPath:'/extension',platform:'win32',report:m=>reports.push(m),
+    chatLink:async()=>{throw Error('no resolver');},run:async(file,args,env)=>{calls.push(env);return true;}});
+  await delivery.deliver({chatId:'chat',title:'Chat',message:'Ready',desktop:true,sound:false});
+  assert.equal(calls[0].CODEX_NAVIGATOR_CHAT_LINK,''); assert.equal(reports.length,1);
+  let lateCalls=0;
+  const changed=new NotificationDelivery({extensionPath:'/extension',platform:'win32',report:()=>{},
+    chatLink:async()=>{allowed=false;return 'vscode://openai.chatgpt/local/chat';},run:async()=>{lateCalls++;return true;}});
+  await changed.deliver({chatId:'chat',title:'Chat',message:'Ready',desktop:true,sound:false,canDeliver:()=>allowed});
+  assert.equal(lateCalls,0);
+});
+
 test('desktop and sound toggles are independent on Linux', async t => {
   const files = fixture(); t.after(() => fs.rmSync(files.root, { recursive: true, force: true }));
   const calls = [], reports = [];

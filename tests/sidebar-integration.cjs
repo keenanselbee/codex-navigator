@@ -245,6 +245,9 @@ exports.run = async function (context, fixtureVscode) {
       assert.equal((await service.manager.status()).endsAt, expected.trialStartedAt + 7*86400000);
       releaseMetadata();
       const secondary = path.join(root, 'test-secondary.code-workspace');
+      const originLink = await require('../dist/chat-sidebar').externalChatLink(id(12));
+      selected = undefined;
+      fs.writeFileSync(path.join(root, 'notification-origin-link.json'), JSON.stringify({ uri: originLink }));
       fs.copyFileSync(path.join(root, 'test.code-workspace'), secondary);
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(secondary), { forceNewWindow: true });
       const windowMarker = name => path.join(root, 'license-window-' + name + '.json');
@@ -253,6 +256,10 @@ exports.run = async function (context, fixtureVscode) {
         return fs.existsSync(windowMarker(name));
       };
       await until(() => windowReached('ready'), 'second real VS Code window shares the installation');
+      await until(() => {
+        if (fs.existsSync(windowMarker('wrong-notification-window'))) throw new Error('Notification opened in the secondary window');
+        return selected?.path === '/local/' + id(12);
+      }, 'external notification link from second window returns to originating chat window');
       const profileNames = companionProvider.profiles.get('chatNames.v1', {});
       fs.writeFileSync(windowMarker('profile-start'), '{}');
       profileNames[id(90)] = 'First window edit';
@@ -270,6 +277,7 @@ exports.run = async function (context, fixtureVscode) {
       await until(() => windowReached('passed'), 'access restoration propagates to the second window');
       fs.writeFileSync(path.join(root, 'result-restart.json'), JSON.stringify({ phase:'restart', passed:true, vscode:vscode.version,
         verified:['account menu opens from toolbar after restart with keyboard controls and escaped metadata', 'saved synthetic account survives real VS Code SecretStorage process restart and can be forgotten', 'protected record survives real VS Code process restart', 'same installation and original trial deadline', 'no second trial', 'startup chat view restored before live metadata', 'second real window shares installation and observes expiry and restoration', 'new workspace shares Default labels and browsing admission', 'two real windows merge independent organisation edits'],
+        notificationClick: 'External CLI activation from a second window reached the originating window and exact chat URI.',
         scope:'Same isolated local profile after full host exit. No uninstall/reinstall or paid provider requests.' }, null, 2));
       return;
     }

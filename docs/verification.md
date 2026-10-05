@@ -9,6 +9,27 @@ Use [Release preparation](marketplace-release.md) for the current procedure and
 once; packaging receipts remain the authority for archive and payload hashes.
 
 
+Notification click release checks: 1.9.3
+-----------------------------------------
+
+All 271 public tests and 24 commercial tests pass. Added coverage verifies chat
+identity on alerts, current-window external-link resolution, invalid/remote chat
+rejection, protocol activation XML, environment-only link parameters, link failure
+fallback and focus changes during link resolution. Public-only export passes in
+`public-only-8oC6Da`, excludes private source and rejects the missing-private build.
+Eight local documentation targets and diff whitespace pass.
+
+Isolated VS Code 1.139.1 integration passes initial/restart and second-window checks
+in `integration-0xelBG`. The originating window creates the chat link through
+`asExternalUri`; the second window activates it through the isolated VS Code CLI.
+The exact chat URI reaches the originating window's fixture handler, and the
+secondary handler is not invoked. This tests external activation and window routing,
+not a physical Windows toast click or an authenticated Codex chat. Notification
+delivery is stubbed in the UI fixture. Windows notification XML is covered by unit
+tests; owner confirmation of the shell click remains outstanding. macOS/Linux
+click actions are not implemented. No background listener or polling was added.
+
+
 Verified Desktop package: 1.9.2
 -------------------------------
 

@@ -12,6 +12,9 @@ exports.run = async function (_fixtureContext, vscode) {
   };
   try {
     const { ChatSidebar } = require('../dist/chat-sidebar');
+    _fixtureContext.subscriptions.push(vscode.window.registerUriHandler({ handleUri: uri => {
+      fs.writeFileSync(marker('wrong-notification-window'), JSON.stringify({ path: uri.path }));
+    } }));
     const { ChatGoals } = require('../dist/chat-goals');
     ChatGoals.prototype.readRecency = async () => [];
     ChatGoals.prototype.read = async () => ({});
@@ -32,6 +35,12 @@ exports.run = async function (_fixtureContext, vscode) {
     assert.equal(profiles.shared('browsingCompleted', false), true, 'new workspace retains browsing admission');
     const names = profiles.get('chatNames.v1', {});
     fs.writeFileSync(marker('ready'), JSON.stringify({ installationId: record.installationId }));
+    const link=JSON.parse(fs.readFileSync(path.join(root,'notification-origin-link.json'),'utf8')).uri;
+    const { vscodeExecutable, vscodeCli } = require('../tools/vscode-runtime.cjs');
+    const executable=vscodeExecutable();
+    require('node:child_process').execFileSync(executable,[vscodeCli(executable),
+      '--user-data-dir='+path.join(root,'profile'),'--extensions-dir='+path.join(root,'extensions'),'--open-url',link],
+      {windowsHide:true,timeout:10000,env:{...process.env,ELECTRON_RUN_AS_NODE:'1'},stdio:'pipe'});
     await wait(() => fs.existsSync(marker('profile-start')), 'first window starts shared edit');
     names['00000000-0000-0000-0000-000000000091'] = 'Second window edit';
     await profiles.update('chatNames.v1', names);
