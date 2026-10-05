@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Organise Codex chats, switch saved accounts and get completion alerts in one compact sidebar.",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -479,26 +479,81 @@
         "title": "Notifications",
         "order": 1.5,
         "properties": {
-          "codexNavigator.notificationSounds": {
-            "type": "boolean",
+          "codexNavigator.responseFinishedSound": {
+            "type": "string",
             "scope": "application",
-            "default": true,
-            "description": "Play a sound when a monitored chat finishes a response or requests input. Uses installed Codex audio, then a system sound, then Balafon. Navigator must remain visible.",
+            "enum": [
+              "off",
+              "always",
+              "whenFocused",
+              "whenUnfocused"
+            ],
+            "enumItemLabels": [
+              "Off",
+              "Always",
+              "Only when VS Code is focused",
+              "Only when VS Code is unfocused"
+            ],
+            "default": "always",
+            "markdownDescription": "Play a sound when a monitored response finishes. Focus means any Navigator-enabled window in this local VS Code profile. Navigator must remain visible. Suppressed events are not replayed. [Test notification](command:codexNavigator.testNotification) previews sound and desktop delivery regardless of these rules.",
             "order": 1
           },
-          "codexNavigator.desktopNotifications": {
-            "type": "boolean",
+          "codexNavigator.responseFinishedNotification": {
+            "type": "string",
             "scope": "application",
-            "default": true,
-            "description": "Show desktop notifications with chat names for completed responses and input requests. Navigator must remain visible. Your operating system controls notification delivery.",
+            "enum": [
+              "off",
+              "always",
+              "whenFocused",
+              "whenUnfocused"
+            ],
+            "enumItemLabels": [
+              "Off",
+              "Always",
+              "Only when VS Code is focused",
+              "Only when VS Code is unfocused"
+            ],
+            "default": "whenUnfocused",
+            "markdownDescription": "Show a desktop notification when a monitored response finishes. Focus means any Navigator-enabled window in this local VS Code profile. Navigator must remain visible. Suppressed events are not replayed. [Test notification](command:codexNavigator.testNotification) previews sound and desktop delivery regardless of these rules.",
             "order": 2
           },
-          "codexNavigator.notificationsOnlyWhenUnfocused": {
-            "type": "boolean",
+          "codexNavigator.questionSound": {
+            "type": "string",
             "scope": "application",
-            "default": true,
-            "markdownDescription": "Suppress sound and desktop alerts while any VS Code window running Navigator in this local profile is focused. Suppressed events are not replayed. [Test notification](command:codexNavigator.testNotification) previews sound and desktop delivery even while focused.",
+            "enum": [
+              "off",
+              "always",
+              "whenFocused",
+              "whenUnfocused"
+            ],
+            "enumItemLabels": [
+              "Off",
+              "Always",
+              "Only when VS Code is focused",
+              "Only when VS Code is unfocused"
+            ],
+            "default": "always",
+            "markdownDescription": "Play a sound when a chat asks a question or requires approval, including async prompts. Focus means any Navigator-enabled window in this local VS Code profile. Navigator must remain visible. Suppressed events are not replayed. [Test notification](command:codexNavigator.testNotification) previews sound and desktop delivery regardless of these rules.",
             "order": 3
+          },
+          "codexNavigator.questionNotification": {
+            "type": "string",
+            "scope": "application",
+            "enum": [
+              "off",
+              "always",
+              "whenFocused",
+              "whenUnfocused"
+            ],
+            "enumItemLabels": [
+              "Off",
+              "Always",
+              "Only when VS Code is focused",
+              "Only when VS Code is unfocused"
+            ],
+            "default": "always",
+            "markdownDescription": "Show a desktop notification when a chat asks a question or requires approval, including async prompts. Focus means any Navigator-enabled window in this local VS Code profile. Navigator must remain visible. Suppressed events are not replayed. [Test notification](command:codexNavigator.testNotification) previews sound and desktop delivery regardless of these rules.",
+            "order": 4
           }
         }
       },

@@ -29,7 +29,7 @@ and query an existing local runtime. It does not answer approvals or store messa
 Sound and desktop alerts use the visible Navigator view's existing refresh;
 there is no additional background activity poll. A local SQLite file in extension
 storage shares window process IDs, focus flags, event identifiers and timestamps
-to suppress focused and duplicate alerts. Event records expire after seven days.
+to apply your focus preferences and suppress duplicate alerts. Event records expire after seven days.
 Desktop notifications pass the chat name and a generic completion/input message
 to your operating system, which may display them on the lock screen or keep them
 in notification history. No conversation messages are included. Navigator reads

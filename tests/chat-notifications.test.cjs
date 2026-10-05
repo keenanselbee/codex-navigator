@@ -16,7 +16,34 @@ function fixture(t) {
   return { create, dead };
 }
 const chat = (status, extra = {}) => [{ id: 'chat-a', title: 'Build Navigator', activity: { status, workedAt: 0, turnId: 'turn-a', ...extra } }];
-const observe = (window, rows, time = 10000, enabled = true, suppress = true) => window.observe(rows, time, enabled, suppress);
+const policy = (enabled = true, suppress = true) => {
+  const mode = !enabled ? 'off' : suppress ? 'whenUnfocused' : 'always';
+  return { finished: { sound: mode, desktop: mode }, input: { sound: mode, desktop: mode } };
+};
+const observe = (window, rows, time = 10000, enabled = true, suppress = true) => window.observe(rows, time, policy(enabled, suppress));
+
+test('event-specific channels use shared focus and never replay a suppressed channel', t => {
+  const f = fixture(t), a = f.create(), b = f.create(true, 2);
+  const rules = { finished: { sound: 'always', desktop: 'whenUnfocused' }, input: { sound: 'whenFocused', desktop: 'always' } };
+  a.observe(chat('working'),10000,rules); b.observe(chat('working'),10000,rules);
+  const finished = chat('ready',{completedAt:11000});
+  const alerts = a.observe(finished,12000,rules);
+  assert.deepEqual(alerts.map(({kind,sound,desktop}) => ({kind,sound,desktop})), [{kind:'finished',sound:true,desktop:false}]);
+  assert.deepEqual(b.observe(finished,12000,rules), []);
+  b.setFocused(false);
+  assert.deepEqual(a.observe(finished,13000,rules), [], 'desktop is not replayed after focus changes');
+  const prompt=chat('working',{asyncQuestion:{id:'q',askedAt:14000}});
+  assert.deepEqual(a.observe(prompt,15000,rules).map(({kind,sound,desktop}) => ({kind,sound,desktop})), [{kind:'input',sound:false,desktop:true}]);
+  b.setFocused(true); assert.deepEqual(b.observe(prompt,16000,rules), [], 'sound is not replayed in a second window');
+});
+
+test('switching a disabled policy on does not replay an already observed event', t => {
+  const a=fixture(t).create(), off=policy(false), on=policy(true,false);
+  a.observe(chat('working'),10000,off);
+  const question=chat('waiting',{inputId:'q'});
+  assert.deepEqual(a.observe(question,11000,off),[]);
+  assert.deepEqual(a.observe(question,12000,on),[]);
+});
 
 test('async question alerts once across windows while working and preserves a separate completion', t => {
   const f = fixture(t), a = f.create(), b = f.create();
@@ -135,14 +162,14 @@ test('initial unknown signals do not turn recovery into a historical input alert
 
 test('a completion during a slow read uses delivery time for freshness', t => {
   const f = fixture(t), a = f.create(); observe(a, chat('working'));
-  assert.equal(a.observe(chat('ready', { completedAt: 18000 }), 11000, true, true, 21000).length, 1);
+  assert.equal(a.observe(chat('ready', { completedAt: 18000 }), 11000, policy(), 21000).length, 1);
 });
 
 test('a newer window baseline cannot permanently consume a slower observer transition', t => {
   const f = fixture(t), a = f.create(), b = f.create(); observe(a, chat('working'));
   const finished = chat('ready', { completedAt: 16000 });
   assert.deepEqual(observe(b, finished, 17000), []);
-  assert.deepEqual(a.observe(finished, 15000, true, true, 18000), []);
+  assert.deepEqual(a.observe(finished, 15000, policy(), 18000), []);
   assert.equal(observe(a, finished, 20000).length, 1);
   assert.deepEqual(observe(b, finished, 21000), []);
 });

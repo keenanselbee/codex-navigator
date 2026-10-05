@@ -9,6 +9,26 @@ Use [Release preparation](marketplace-release.md) for the current procedure and
 once; packaging receipts remain the authority for archive and payload hashes.
 
 
+Notification policy release checks: 1.9.2
+------------------------------------------
+
+All 268 public tests and 24 commercial tests pass. Policy coverage includes all
+focus modes independently for each event and delivery channel, agreed defaults,
+legacy preference combinations, partial migration failures, explicit new choices,
+cross-window deduplication, suppressed-channel non-replay and per-channel delivery
+rechecks. Public-only export passes in `public-only-52QJ6X`, excludes private source
+and rejects a full build without it. Eight local documentation link targets and
+diff whitespace pass.
+
+Isolated VS Code 1.139.1 integration passes initial/restart and second-window checks
+in `integration-ZqQoCP`. Real user settings migrate from legacy switches, removing
+the old values only after replacements; clearing overrides restores the new
+defaults. Completion, blocking-input and async-question fixtures reach delivery.
+An initial fixture assertion read a stale configuration snapshot after clearing
+overrides; rereading the settings fixed the fixture. Native delivery is stubbed;
+macOS/Linux native acceptance remains outstanding. No background poll was added.
+
+
 Verified Desktop package: 1.9.1
 -------------------------------
 

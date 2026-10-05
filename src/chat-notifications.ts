@@ -3,9 +3,10 @@ import { mkdirSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 import { ActivitySnapshot } from './activity-events';
+import { notificationChannels, NotificationKind, NotificationPolicy } from './notification-settings';
 
 export interface NotificationChat { id: string; title: string; activity: ActivitySnapshot }
-export interface ChatAlert { title: string; message: string }
+export interface ChatAlert { title: string; message: string; kind: NotificationKind; sound: boolean; desktop: boolean }
 
 // Window focus is published on VS Code events. Chat detection uses only the
 // existing visible-sidebar refresh. SQLite claims prevent cross-window races.
@@ -46,17 +47,22 @@ export class ChatNotifications {
 
   reset(): void { this.previous.clear(); }
 
-  observe(chats: NotificationChat[], sampledAt: number, enabled: boolean, suppressWhenFocused: boolean, now = sampledAt): ChatAlert[] {
+  observe(chats: NotificationChat[], sampledAt: number, policy: NotificationPolicy, now = sampledAt): ChatAlert[] {
     if (this.closed) return [];
     const alerts: ChatAlert[] = [], next = new Map<string, ActivitySnapshot>();
     this.db.exec('BEGIN IMMEDIATE');
     try {
-      const quiet = !enabled || suppressWhenFocused && this.anyFocused();
+      const focused = this.anyFocused();
       for (const chat of chats.slice(0, 200)) {
         const current = chat.activity, previous = this.previous.get(chat.id);
         if (current.status === 'unknown') { if (previous) next.set(chat.id, previous); continue; }
         next.set(chat.id, current);
         const thread = this.namespace + '/' + chat.id;
+        const claim = (event: string, kind: NotificationKind, message: string) => {
+          const claimed = this.db.prepare('INSERT OR IGNORE INTO events VALUES (?, ?)').run(thread + '/' + event, sampledAt);
+          const channels = notificationChannels(policy, kind, focused);
+          if (claimed.changes && (channels.sound || channels.desktop)) alerts.push({ title: chat.title || 'Untitled chat', message, kind, ...channels });
+        };
         const sample = this.db.prepare('SELECT * FROM samples WHERE id = ?').get(thread);
         // A slower window must not roll another window's newer observation back.
         if (sample && Number(sample.time) > sampledAt) {
@@ -75,8 +81,7 @@ export class ChatNotifications {
         if (!previous) continue;
         const question = current.asyncQuestion;
         if (question && question.id !== previous.asyncQuestion?.id && question.askedAt >= now - 60000 && question.askedAt <= now + 5000) {
-          const claimed = this.db.prepare('INSERT OR IGNORE INTO events VALUES (?, ?)').run(thread + '/async-input/' + question.id, sampledAt);
-          if (claimed.changes && !quiet) alerts.push({ title: chat.title || 'Untitled chat', message: 'Codex has a question for you.' });
+          claim('async-input/' + question.id, 'input', 'Codex has a question for you.');
         }
         let event: string | undefined;
         if (current.status === 'ready' && current.completedAt && current.completedAt >= now - 60000
@@ -90,9 +95,8 @@ export class ChatNotifications {
           event = 'input/' + episode;
         }
         if (!event) continue;
-        const claimed = this.db.prepare('INSERT OR IGNORE INTO events VALUES (?, ?)').run(thread + '/' + event, sampledAt);
-        if (claimed.changes && !quiet) alerts.push({ title: chat.title || 'Untitled chat',
-          message: current.status === 'ready' ? 'Codex finished a response.' : current.detail?.includes('approval') ? 'Codex needs your approval.' : 'Codex needs your answer.' });
+        claim(event, current.status === 'ready' ? 'finished' : 'input',
+          current.status === 'ready' ? 'Codex finished a response.' : current.detail?.includes('approval') ? 'Codex needs your approval.' : 'Codex needs your answer.');
       }
       this.db.prepare('DELETE FROM events WHERE time < ?').run(sampledAt - 7 * 86400000);
       this.db.prepare('DELETE FROM samples WHERE time < ?').run(sampledAt - 7 * 86400000);

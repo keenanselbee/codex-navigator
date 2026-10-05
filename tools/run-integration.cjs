@@ -41,6 +41,7 @@ async function main() {
     'window.confirmBeforeClose': 'never', 'window.confirmSaveUntitledWorkspace': false,
     'window.restoreWindows': 'none', 'window.closeWhenEmpty': true,
     'telemetry.telemetryLevel': 'off', 'update.mode': 'none',
+    'codexNavigator.notificationSounds': false, 'codexNavigator.notificationsOnlyWhenUnfocused': false,
   }, null, 2));
   console.log(`Isolated integration profile: ${testRoot}`);
   for (const phase of [...(process.platform === 'win32' ? [] : ['storage']), 'initial', 'restart']) {

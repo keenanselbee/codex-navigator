@@ -253,15 +253,26 @@ This activity refresh is independent of optional repository-focus detection.
 
 ### Sounds and desktop notifications
 
-By default, a new completed response, an accepted asynchronous question prompt,
-or a detected blocking question/approval request produces a sound and desktop
-notification with the chat name. Async prompts can alert while Codex continues
-working; they do not change its activity indicator to waiting. In Extension
-Settings, turn Notification Sounds and Desktop Notifications on or off separately.
-Notifications Only When Unfocused keeps both quiet while any local VS Code window
-running Navigator in the same VS Code profile has focus, even if that window is
-showing a different chat. Turning it off allows alerts while working in VS Code.
-Use **Codex Navigator: Test Notification** to preview both, including while focused.
+Extension Settings has four independent notification rules:
+
+| Setting | Default |
+|---|---|
+| Response Finished Sound | Always |
+| Question Sound | Always |
+| Response Finished Notification | Only when VS Code is unfocused |
+| Question Notification | Always |
+
+Each offers Off, Always, Only when VS Code is focused, or Only when VS Code is
+unfocused. Focus means any local VS Code window running Navigator in the same
+VS Code profile has focus, even if it shows a different chat. Individual chat
+focus is not detected. Desktop notifications include the chat name.
+
+Question rules cover blocking input, approval requests and accepted async prompts.
+Async prompts can alert while Codex continues working; they do not change its
+activity indicator to waiting. Existing explicitly configured notification switches
+migrate to equivalent rules; untouched settings receive the defaults above.
+Use **Codex Navigator: Test Notification** to preview sound and desktop delivery
+regardless of these rules, including while focused or when a rule is Off.
 
 Detection uses the existing approximately five-second refresh while Navigator is
 visible. It adds no background polling when the view is hidden. Startup and reopening

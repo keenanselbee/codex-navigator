@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+1.9.2
+-----
+
+- Add independent sound and desktop notification rules for finished responses
+  and questions/approvals, each supporting Off, Always, focused or unfocused.
+- Default sounds and question notifications to Always; show completion desktop
+  notifications only while VS Code is unfocused. Migrate explicit old preferences
+  without changing their behaviour.
+- Preserve cross-window deduplication and skip suppressed events without adding
+  background polling. Refresh notification help and the extension listing.
+
 1.9.1
 -----
 

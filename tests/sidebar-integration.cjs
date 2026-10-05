@@ -191,6 +191,20 @@ exports.run = async function (context, fixtureVscode) {
       await companion.webview.postMessage({ type: 'fixture:probe' });
       return Promise.race([result, new Promise((_, reject) => setTimeout(() => reject(new Error('Probe timeout')), 2000))]);
     };
+    let notificationConfig = vscode.workspace.getConfiguration('codexNavigator');
+    if (process.env.REPO_COMPANION_TEST_PHASE === 'initial') {
+      assert.equal(notificationConfig.inspect('responseFinishedSound').globalValue, 'off', 'legacy sound preference migrates');
+      assert.equal(notificationConfig.inspect('questionSound').globalValue, 'off');
+      assert.equal(notificationConfig.inspect('responseFinishedNotification').globalValue, 'always', 'legacy focus preference migrates');
+      assert.equal(notificationConfig.inspect('questionNotification').globalValue, 'always');
+      assert.equal(notificationConfig.get('notificationSounds'), undefined, 'old switches removed after migration');
+      for (const key of ['responseFinishedSound','responseFinishedNotification','questionSound','questionNotification']) await notificationConfig.update(key,undefined,vscode.ConfigurationTarget.Global);
+      notificationConfig = vscode.workspace.getConfiguration('codexNavigator');
+    }
+    assert.equal(notificationConfig.get('responseFinishedSound'),'always');
+    assert.equal(notificationConfig.get('responseFinishedNotification'),'whenUnfocused');
+    assert.equal(notificationConfig.get('questionSound'),'always');
+    assert.equal(notificationConfig.get('questionNotification'),'always');
     const { AccountStore } = require('../dist/account-store');
     const accountTestHome = path.join(root, 'synthetic-account-storage-home');
     const accountStore = new AccountStore(companionContext.globalStorageUri.fsPath, accountTestHome, companionContext.secrets);
@@ -466,7 +480,6 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:click',selector:'.goal'});
     await until(async () => (await probe()).goalStatus==='active'&&(await probe()).spinners===1,'resuming restores goal animation');
     await companionContext.globalState.update('activityHooks.enabled',true);
-    await vscode.workspace.getConfiguration('codexNavigator').update('notificationsOnlyWhenUnfocused', false, vscode.ConfigurationTarget.Global);
     const { recordEvent } = require('../tools/chat-activity.cjs');
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-a',hook_event_name:'UserPromptSubmit'});
     await until(async () => (await probe()).spinners===1,'hook record starts spinner via watcher');
@@ -486,6 +499,7 @@ exports.run = async function (context, fixtureVscode) {
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-a',hook_event_name:'Stop'});
     await until(async () => (await probe()).spinners===2&&(await probe()).readyDots===1,'active goal keeps spinning after turn completion');
     await until(() => notificationRequests.some(request => request.message === 'Codex finished a response.'), 'completion reaches alert delivery');
+    assert.equal(notificationRequests.find(request => request.kind === 'finished').sound, true, 'default completion sound is enabled in either focus state');
     const completionAlerts = notificationRequests.length;
     await companionProvider.refresh();
     assert.equal(notificationRequests.length, completionAlerts, 'repeated completion refresh never delivers twice');
@@ -503,6 +517,7 @@ exports.run = async function (context, fixtureVscode) {
     fs.appendFileSync(activityTranscript, activityLine('response_item', { type: 'function_call', name: 'request_user_input', call_id: 'fixture-question-1' }));
     await companionProvider.refresh();
     await until(() => notificationRequests.some(request => request.message === 'Codex needs your answer.'), 'blocking question reaches alert delivery');
+    assert.equal(notificationRequests.find(request => request.kind === 'input').desktop, true, 'default question desktop notification is enabled in either focus state');
     const inputAlerts = notificationRequests.length;
     await companionProvider.refresh();
     assert.equal(notificationRequests.length, inputAlerts, 'repeated waiting refresh never delivers twice');
@@ -526,7 +541,6 @@ exports.run = async function (context, fixtureVscode) {
     } finally { RuntimeActivity.prototype.read = readRuntime; }
     fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'turn_aborted', turn_id: 'fixture-async-question' }));
     await companionProvider.refresh();
-    await vscode.workspace.getConfiguration('codexNavigator').update('notificationsOnlyWhenUnfocused', undefined, vscode.ConfigurationTarget.Global);
     await recordEvent(process.env.CODEX_HOME,{session_id:id(12),turn_id:'fixture-compaction',hook_event_name:'UserPromptSubmit'});
     fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'task_started',turn_id:'fixture-compaction'}));
     await companionProvider.refresh();
@@ -795,6 +809,7 @@ exports.run = async function (context, fixtureVscode) {
       scope: 'Real isolated VS Code; fixture URI handler and synthetic hook events. Native-menu context data and command dispatch exercised with synthetic mouse/keyboard events; picker choices supplied by fixture. Native overlay appearance is not inspected. No authenticated Codex conversation.' };
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
     result.verified.push('completion, blocking input and acknowledged async questions reach notification delivery once');
+    result.verified.push('legacy notification preferences migrate and clearing overrides restores four new policy defaults');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));
   } catch (error) {
     fs.writeFileSync(path.join(root, 'failure.txt'), error.stack || String(error)); throw error;

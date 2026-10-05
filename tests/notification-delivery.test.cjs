@@ -122,3 +122,17 @@ test('macOS passes notification text as arguments and plays the installed WAV', 
   assert.deepEqual(calls[0].args.slice(-3), ['--', 'Chat "quoted"', 'Ready']);
   assert.deepEqual(calls[1].args, [files.installed]);
 });
+
+test('delivery rechecks sound and desktop eligibility independently', async t => {
+  const files=fixture(); t.after(() => fs.rmSync(files.root,{recursive:true,force:true}));
+  for (const allowed of ['sound','desktop']) {
+    const calls=[];
+    const delivery=new NotificationDelivery({...files,platform:'linux',report:()=>{},run:async file=>{calls.push(file);return true;}});
+    await delivery.deliver({title:'Chat',message:'Ready',sound:true,desktop:true,canDeliver:channel=>channel===allowed});
+    assert.deepEqual(calls,allowed==='sound'?['paplay']:['notify-send']);
+  }
+  let desktop=true; const calls=[];
+  const delivery=new NotificationDelivery({...files,platform:'linux',report:()=>{},run:async file=>{calls.push(file);desktop=false;return true;}});
+  await delivery.deliver({title:'Chat',message:'Ready',sound:true,desktop:true,canDeliver:channel=>channel==='sound'||desktop});
+  assert.deepEqual(calls,['notify-send','paplay'],'returning focus does not cancel an always-enabled sound');
+});

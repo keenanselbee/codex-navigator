@@ -1,9 +1,10 @@
 import * as path from 'node:path';
 import { accessSync, readdirSync } from 'node:fs';
 import { execFile } from 'node:child_process';
+import type { NotificationChannel } from './notification-settings';
 
 type Platform = 'win32' | 'darwin' | 'linux';
-export type NotificationRequest = { title: string; message: string; sound: boolean; desktop: boolean; canDeliver?: () => boolean };
+export type NotificationRequest = { title: string; message: string; sound: boolean; desktop: boolean; canDeliver?: (channel: NotificationChannel) => boolean };
 export type NotificationCommand = (file: string, args: string[], env?: NodeJS.ProcessEnv) => Promise<boolean>;
 
 export interface NotificationDeliveryOptions {
@@ -125,20 +126,19 @@ export class NotificationDelivery {
   }
 
   async deliver(request: NotificationRequest): Promise<void> {
-    const canDeliver = () => request.canDeliver?.() !== false;
-    if (!canDeliver()) return;
+    const canDeliver = (channel: NotificationChannel) => request[channel] && request.canDeliver?.(channel) !== false;
     const title = cleanText(request.title, 200) || 'Codex Navigator';
     const message = cleanText(request.message, 500) || 'Chat update';
-    if (request.desktop) {
+    if (canDeliver('desktop')) {
       let shown = false;
       if (this.platform === 'win32') shown = await this.powershell(WINDOWS_TOAST, {
         CODEX_NAVIGATOR_TITLE: title, CODEX_NAVIGATOR_MESSAGE: message,
       });
       else if (this.platform === 'darwin') shown = await this.tryRun('osascript', ['-e', MAC_TOAST, '--', title, message]);
       else if (this.platform === 'linux') shown = await this.tryRun('notify-send', ['--app-name=Codex Navigator', '--hint=boolean:suppress-sound:true', '--', title, message]);
-      if (!shown && canDeliver()) this.options.report('Codex Navigator could not show a desktop notification. Check that system notifications are available.');
+      if (!shown && canDeliver('desktop')) this.options.report('Codex Navigator could not show a desktop notification. Check that system notifications are available.');
     }
-    if (request.sound && canDeliver() && !await this.playSound(canDeliver) && canDeliver()) {
+    if (canDeliver('sound') && !await this.playSound(() => canDeliver('sound')) && canDeliver('sound')) {
       this.options.report('Codex Navigator could not play a notification sound. Check the system audio output.');
     }
   }

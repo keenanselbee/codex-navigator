@@ -4,6 +4,7 @@ import { ChatProfiles } from './chat-profiles';
 import { chatPins } from './chat-pins';
 import { ChatNotifications } from './chat-notifications';
 import { NotificationDelivery } from './notification-delivery';
+import { migrateNotificationSettings, notificationSettings, notificationChannels } from './notification-settings';
 import * as vscode from 'vscode';
 import { codexBinary } from './platform';
 import { migrateHighlightSettings } from './highlight-settings';
@@ -48,6 +49,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(license);
   await license.check();
   const output = vscode.window.createOutputChannel('Codex Navigator');
+  try { await migrateNotificationSettings(vscode.workspace.getConfiguration('codexNavigator')); }
+  catch { output.appendLine('Notification settings could not be migrated; existing preferences remain in use.'); }
   try { await migrateHighlightSettings(vscode.workspace); }
   catch { output.appendLine('Highlight settings could not be migrated. Existing preferences remain available; check whether your settings file is writable.'); }
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 15);
@@ -260,14 +263,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
       const candidates = rows.filter(row => row.alertActivity);
       const alerts = notifications.observe(candidates.map(row => ({ id: row.id, title: row.title, activity: row.alertActivity! })),
-        candidates[0]?.activitySampledAt || Date.now(), settings.get('notificationSounds', true) || settings.get('desktopNotifications', true),
-        settings.get('notificationsOnlyWhenUnfocused', true), Date.now());
+        candidates[0]?.activitySampledAt || Date.now(), notificationSettings(settings), Date.now());
       const epoch = monitoringEpoch;
       for (const alert of alerts) notificationQueue = notificationQueue.then(async () => {
-        const config = vscode.workspace.getConfiguration('codexNavigator');
-        if (epoch !== monitoringEpoch || !sidebar.visible || !license.allowed() || config.get('notificationsOnlyWhenUnfocused', true) && notifications!.anyFocused()) return;
-        await notificationDelivery.deliver({ ...alert, sound: config.get('notificationSounds', true), desktop: config.get('desktopNotifications', true),
-          canDeliver: () => epoch === monitoringEpoch && sidebar.visible && license.allowed() && (!vscode.workspace.getConfiguration('codexNavigator').get('notificationsOnlyWhenUnfocused', true) || !notifications!.anyFocused()) });
+        await notificationDelivery.deliver({ ...alert,
+          canDeliver: channel => epoch === monitoringEpoch && sidebar.visible && license.allowed() && alert[channel]
+            && notificationChannels(notificationSettings(vscode.workspace.getConfiguration('codexNavigator')), alert.kind, notifications!.anyFocused())[channel] });
       }).catch(() => notificationReport('An alert could not be delivered.'));
     } catch { notificationReport('An activity alert could not be coordinated.'); }
   };
