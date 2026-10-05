@@ -1,12 +1,50 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.3**, adding Windows notification click-to-chat.
+Current verified Desktop release: **1.9.4**, adding notification volume with a 50% default.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.4
+-------------------------------
+
+Public build revision: `e31b8ec769ac1a01ad19f55f57e8f5eb8466aaca`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `4406a20542ea3768c0873965ce176fe166d6191f627df71729565e9df5865474`.
+
+All 74 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-3Sqp1K` under VS Code 1.139.1,
+checking 71 payload hashes, the production manifest and retained trial expiry.
+The disposable extension was removed; the normal installation was unchanged.
+Desktop and chat-output VSIX/receipt hashes match their source files. No Git push
+or Marketplace publication was performed. This evidence is excluded from the VSIX.
+
+Notification volume release checks: 1.9.4
+------------------------------------------
+
+All 277 public tests and 24 commercial tests pass. Coverage includes the 50%
+default, zero-volume desktop delivery, malformed values, sample gain for PCM and
+floating WAV formats, unchanged source files, fallback volume and temporary-copy
+cleanup on success and failure. Ten local documentation links and whitespace pass.
+Public-only export passes in `public-only-2X6S8i`, excludes private source and
+rejects the missing-private build. Subsequent packaged edits only correct help text.
+
+Isolated VS Code integration passes initial/restart and second-window checks in
+`integration-3bNJaW`. Completion uses the 50% default; changing the setting to 25%
+applies to the preview and next input alert without reload. Notification delivery
+is stubbed in this fixture. An earlier run hit the existing resize/keyboard-focus
+assertion; the unchanged retry and final run pass.
+
+Native Windows playback succeeds at 50% for installed Codex audio, the configured
+system sound and the bundled Balafon file. Each temporary copy is removed after
+playback. The installed sound's playback bytes match its source attenuated to
+half sample amplitude. Windows retains the original SoundPlayer backend; no mixer
+volume is changed. Native macOS/Linux volume acceptance remains outstanding;
+command arguments and Linux fallback samples are covered by automated tests.
 
 
 Verified Desktop package: 1.9.3
