@@ -1,12 +1,35 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.4**, adding notification volume with a 50% default.
+Current verified Desktop release: **1.9.5**, preserving fresh chat activity indicators.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.5
+-------------------------------
+
+Public build revision: `e0a8ce7051b70947ec8f7c29dfb683218815030f`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `ad967f83d5bd202e11c0df3b31bad27104b24522d376a04fe8a2d9a22a52c8fe`.
+
+All 279 public tests and 24 commercial tests pass. Two new regressions reproduce
+stale filesystem modification times and inconclusive transcript overrides; both
+fail before the fix and pass after it. Coverage retains explicit interruption,
+different-turn isolation and abandoned-activity expiry.
+
+Isolated VS Code 1.139.1 integration passes initial/restart and second-window
+checks in `integration-nxD70U`. All 74 archive entries match the production
+allowlist. Exact installation and reinstallation pass in
+`installed-acceptance-baZ9me`, verifying 71 payload hashes, the production
+manifest and retained trial expiry. Desktop VSIX and receipt hashes match their
+source files. The disposable extension was removed; the normal profile was
+unchanged. These fixtures do not exercise an authenticated Codex conversation
+or paid provider requests. Marketplace publication was not performed.
+This evidence is excluded from the VSIX.
 
 
 Verified Desktop package: 1.9.4
