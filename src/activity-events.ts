@@ -4,8 +4,9 @@ import { ChatActivity } from './chat-activity';
 export interface ActivitySnapshot {
   status: ChatActivity; workedAt: number; observedAt?: number; turnId?: string; completedAt?: number; detail?: string; inputId?: string;
   asyncQuestion?: { id: string; askedAt: number };
+  ended?: boolean;
 }
-interface TranscriptState extends ActivitySnapshot { pendingInput?: string; pendingQuestion?: { id: string; askedAt: number }; contextAt?: number; ended?: boolean }
+interface TranscriptState extends ActivitySnapshot { pendingInput?: string; pendingQuestion?: { id: string; askedAt: number }; contextAt?: number }
 const unknown = (): TranscriptState => ({ status: 'unknown', workedAt: 0 });
 
 // Only explicit lifecycle records are interpreted. Never classify prose or tool exit codes.
@@ -100,7 +101,9 @@ export class TranscriptActivity {
     } catch { return unknown(); }
   }
   private fresh(state: TranscriptState, modified: number, now: number): ActivitySnapshot {
-    if (['working','waiting'].includes(state.status) && now - modified > 15 * 60 * 1000) return { ...state, status: 'unknown', detail: 'Activity signal expired' };
+    // Open transcript files can retain an old mtime while Codex appends fresh events.
+    const latest = Math.max(modified, state.observedAt || 0);
+    if (['working','waiting'].includes(state.status) && now - latest > 15 * 60 * 1000) return { ...state, status: 'unknown', detail: 'Activity signal expired' };
     return state;
   }
 }
@@ -110,6 +113,9 @@ export function combineActivity(hook: ActivitySnapshot, transcript: ActivitySnap
   // so a definitive completion from the same turn is allowed to supply the ready dot.
   let result = transcript.observedAt && (transcript.observedAt >= (hook.observedAt || hook.workedAt)
     || transcript.turnId === hook.turnId && hook.status === 'idle' && transcript.status === 'ready') ? transcript : hook;
+  // Missing/expired evidence does not cancel a fresh start, but an explicit abort does.
+  if (result.status === 'unknown' && !transcript.ended && hook.status === 'working'
+      && hook.turnId && transcript.turnId === hook.turnId) result = hook;
   if (transcript.asyncQuestion && result.turnId === transcript.turnId) result = { ...result, asyncQuestion: transcript.asyncQuestion };
   if (result.status === 'ready' && (result.completedAt || 0) <= seenAt) result = { ...result, status: 'idle', detail: undefined };
   return result;

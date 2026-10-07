@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+1.9.5
+-----
+
+- Keep the working indicator visible when Codex appends fresh activity to a chat
+  file whose modification time has not caught up. Preserve a valid working hook
+  when the transcript status is inconclusive, while still respecting explicit
+  interruptions and expiring abandoned activity.
+
 1.9.4
 -----
 

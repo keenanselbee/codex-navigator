@@ -77,6 +77,37 @@ test('newer stop and interrupt hooks beat old work, but same-turn completion sup
  assert.equal(combineActivity(hook,resumed).status,'working');
 });
 
+test('fresh lifecycle records keep the spinner when the filesystem modification time lags', async () => {
+ const folder=await fs.mkdtemp(path.resolve('.codex-temp/activity-mtime-')),file=path.join(folder,'chat.jsonl');
+ const old=now-20*60000, reader=new TranscriptActivity();
+ const hook={status:'working',turnId:'a',observedAt:now,workedAt:now};
+ try {
+   await fs.writeFile(file,JSON.stringify(event('task_started','a',now))+'\n');
+   await fs.utimes(file,old/1000,old/1000);
+   assert.equal((await reader.read(file,now)).status,'working');
+   const recent=now+1000;
+   await fs.appendFile(file,JSON.stringify({timestamp:new Date(recent).toISOString(),type:'response_item',
+     payload:{type:'custom_tool_call',name:'exec',call_id:'tool'}})+'\n');
+   await fs.utimes(file,old/1000,old/1000);
+   for(const current of [reader,new TranscriptActivity()]) {
+     const snapshot=await current.read(file,recent);
+     assert.equal(snapshot.status,'working');
+     assert.equal(combineActivity(hook,snapshot).status,'working');
+     assert.equal((await current.read(file,recent+16*60000)).status,'unknown','abandoned work still expires');
+   }
+ } finally { await fs.rm(folder,{recursive:true,force:true}); }
+});
+
+test('inconclusive same-turn transcripts preserve a working hook but explicit interruption stops it', () => {
+ const hook={status:'working',turnId:'a',observedAt:now,workedAt:now};
+ const inconclusive={status:'unknown',turnId:'a',observedAt:now+1,workedAt:now+1};
+ assert.equal(combineActivity(hook,inconclusive).status,'working');
+ const interrupted=reduceActivity(initial,event('turn_aborted','a',now+1),now+1);
+ assert.equal(combineActivity(hook,interrupted).status,'unknown');
+ assert.equal(combineActivity(hook,{...inconclusive,turnId:'b'}).status,'unknown','do not carry work into a different turn');
+ assert.equal(combineActivity({...hook,status:'unknown'},inconclusive).status,'unknown','expired hooks stay expired');
+});
+
 test('context identifies a turn without starting it; fresh calls recover activity without reviving a terminal turn', () => {
  const record=(type,payload,time=now)=>({timestamp:new Date(time).toISOString(),type,payload});
  let state=reduceActivity(initial,record('turn_context',{turn_id:'a'}),now);
