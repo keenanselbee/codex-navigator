@@ -1,12 +1,42 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.7**, banked-reset confirmation and platform button ordering.
+Current verified Desktop release: **1.9.8**, compact banked-reset confirmation for short panels.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.8
+-------------------------------
+
+Public build revision: `b959bd74bf11cf0c01b89fb40260f2c173f12f53`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `bb3a68b0e5f69c3898ce3e79bc8302790ec2d88d08531f64cb1bd089b3b5db11`.
+
+All 293 public tests and 24 commercial tests pass. Isolated VS Code 1.139.1
+initial/restart and second-window integration passes in `integration-lTznuX`.
+The account confirmation checks assert that all three dates and both actions
+are fully visible without content scrolling at 704x120, 600x120, 704x182 and
+320x240. They also cover cancellation, duplicate submission and success.
+The account identity moves into the header and the extra expiry/count labels
+are absent. Expiry descriptions remain available to assistive technology.
+
+The first UI run exposed clipping because the narrow-layout media query used
+the viewport rather than the panel width. The corrected container query passes
+the full rerun. A pre-existing retry test recalculated expiry between reads;
+its fixed fixture timestamp now tests a stable credit across second boundaries.
+No account-redemption runtime behavior changed in this release.
+
+All 76 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-B3LuDi`, checking 73 payload hashes,
+the production manifest and retained trial expiry. Desktop VSIX and receipt
+hashes match their source files. The disposable extension was removed and the
+normal profile was unchanged. No Git push or Marketplace publication occurred.
+These checks use synthetic accounts; no live banked reset was consumed. Native
+macOS/Linux acceptance remains outstanding. This evidence is excluded from the VSIX.
 
 
 Verified Desktop package: 1.9.7
