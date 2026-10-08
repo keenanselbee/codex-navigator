@@ -1,12 +1,39 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.5**, preserving fresh chat activity indicators.
+Current verified Desktop release: **1.9.6**, cancelling pending alerts for answered questions.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.6
+-------------------------------
+
+Public build revision: `0c8ea4c009f0799a6f286f5c71339cb3a2443315`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `9ab4f1445157bd322e555610ff02ee5bca5c015b644f99cc6d9f5f45ef403d8d`.
+
+All 283 public tests and 24 commercial tests pass. Coverage includes structured
+reply parsing without retaining answer text, cross-window cancellation, stale
+samples, separate question IDs, blocking-input episodes, replies before the first
+poll and cancellation between popup and sound delivery. Completion alerts remain
+independent. Whitespace checks pass.
+
+Isolated VS Code 1.139.1 integration passes initial/restart and second-window
+checks in `integration-ay1TOr`, including reply cancellation through the runtime
+status overlay and suppression of prompts answered before refresh. Delivery is
+stubbed in that fixture; no authenticated conversation or paid provider request
+is exercised.
+
+All 74 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-swrAKl`, checking 71 payload hashes,
+the production manifest and retained trial expiry. Desktop VSIX and receipt hashes
+match their source files. The disposable extension was removed and the normal
+profile was unchanged. No Git push or Marketplace publication was performed.
+This evidence is excluded from the VSIX.
 
 
 Verified Desktop package: 1.9.5
