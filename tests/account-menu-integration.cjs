@@ -21,6 +21,11 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
   provider.accounts = { snapshot: () => state, refresh: async () => provider.publishAccounts(), act: async message => {
     calls.push(message);
     if (message.action === 'rename') second.name = message.label;
+    if (message.action === 'previewReset') {
+      state.reset = { accountId: message.id, token: 'confirmation-fixture', expiresAt: [1, 8, 24].map(days => Math.floor(Date.now() / 1000) + days * 86400) };
+      await provider.publishAccounts();
+    }
+    if (message.action === 'cancelReset') { delete state.reset; await provider.publishAccounts(); }
   } };
   try {
     const initial = await probe();
@@ -139,6 +144,32 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
     await until(() => calls.filter(call => call.action === 'rename').length === 3, 'narrow-pane keyboard rename works');
     assert.equal(calls.filter(call => call.action === 'rename')[2].label, 'Keyboard label');
     await provider.publishAccounts();
+    await send({ type: 'fixture:resetSize' });
+    await menu('switch:' + first.id); await click('reset:' + first.id);
+    await until(async () => (await probe()).resetCredits === 3, 'reset confirmation replaces accounts');
+    result = await probe();
+    assert.equal(result.rows, 0); assert.equal(result.resetDisabled, false);
+    assert.ok(result.text.includes('Will be used') && result.text.includes('Expires first'));
+    assert.deepEqual(result.resetButtons, process.platform === 'win32' ? ['Use banked reset', 'Cancel'] : ['Cancel', 'Use banked reset']);
+    for (const [width, height] of [[704, 182], [320, 240]]) {
+      await send({ type: 'fixture:size', width, height });
+      result = await probe(); assert.equal(result.horizontalOverflow, false, 'reset confirmation fits width ' + width);
+      assert.ok(result.pageRect.bottom <= height + 1);
+    }
+    await click('cancelReset');
+    await until(async () => (await probe()).rows === 2, 'Cancel returns to accounts');
+    assert.equal(calls.some(call => call.action === 'useReset'), false);
+    await menu('switch:' + first.id); await click('reset:' + first.id);
+    await until(async () => (await probe()).resetCredits === 3, 'reset confirmation reopens');
+    await click('useReset'); await click('useReset');
+    await until(() => calls.some(call => call.action === 'useReset'), 'confirmation delivered');
+    assert.equal(calls.filter(call => call.action === 'useReset').length, 1);
+    assert.equal(calls.find(call => call.action === 'useReset').token, 'confirmation-fixture');
+    state.busy = true; state.progress = 'Using banked reset...'; await provider.publishAccounts();
+    assert.equal((await probe()).resetDisabled, true);
+    delete state.reset; await provider.publishAccounts();
+    state.busy = false; delete state.progress; await provider.publishAccounts();
+    await until(async () => (await probe()).rows === 2, 'success returns to refreshed accounts');
     await send({ type: 'fixture:resetSize' });
     state.canSwitch = false; state.canAdd = false; await provider.publishAccounts();
     await menu('switch:' + second.id);

@@ -72,6 +72,7 @@ function createNavigatorColour(api) {
       page.innerHTML = `<div class="colour-heading"><button id="colour-back" aria-label="Back to chats">←</button><span id="colour-target"></span><button id="colour-custom" aria-expanded="false">Custom</button></div>
         <div class="colour-content"><div id="colour-palette"></div><div id="colour-custom-area" hidden><div id="colour-sv" tabindex="0" role="slider" aria-label="Saturation and brightness; use arrow keys" aria-valuemin="0" aria-valuemax="100"><span id="colour-cursor"></span></div><input id="colour-hue" type="range" min="0" max="359" aria-label="Hue"></div></div>
         <div class="colour-footer"><input id="colour-native" type="color" aria-label="System colour picker"><input id="colour-hex" type="text" maxlength="7" placeholder="#RRGGBB" aria-label="Hex colour" spellcheck="false"><span id="colour-preview" title="Colour preview">Label ★</span><button id="colour-reset"></button><button id="colour-none" hidden>No colour</button><button id="colour-cancel">Cancel</button><button id="colour-apply">Apply</button></div>`;
+      page.querySelector('.colour-footer').append(...navigatorActionOrder(byId('apply'), byId('cancel')));
       byId('target').textContent = options.title; byId('target').title = options.title;
       byId('reset').textContent = options.resetLabel; byId('reset').title = options.inherited ? 'Inherited: '+options.inherited : 'Clear the custom colour and use the default text colour.';
       swatches(byId('palette'), presets, 'Presets');

@@ -27,7 +27,8 @@ export function chooseColour(context: vscode.ExtensionContext, title: string, in
   const asset = (name: string) => panel.webview.asWebviewUri(vscode.Uri.joinPath(media, name)).toString();
   panel.webview.html = readFileSync(path.join(context.extensionPath, 'media', 'colour.html'), 'utf8')
     .replaceAll('{{csp}}', panel.webview.cspSource).replaceAll('{{nonce}}', randomBytes(24).toString('hex'))
-    .replace('{{style}}', asset('setup.css')).replace('{{script}}', asset('colour.js'));
+    .replace('{{style}}', asset('setup.css')).replace('{{actionOrderScript}}', asset('action-order.js'))
+    .replace('{{script}}', asset('colour.js'));
   return new Promise(resolve => {
     let finished = false;
     const receive = panel.webview.onDidReceiveMessage(message => {

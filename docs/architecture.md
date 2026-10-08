@@ -24,6 +24,21 @@ closing the page cancels optional reads. The home-scoped catalog retains only
 validated plan, quota windows, reset count and observation time. Unknown fields
 stay unavailable, and a past reset timestamp is not proof of replenished quota.
 
+Banked-reset confirmation reads the complete available-credit list from the
+fixed ChatGPT backend endpoint. account-resets.ts bounds and validates this
+response, sorts unexpired credits by expiry, and redeems only the host-owned
+selected ID. accounts.ts binds the preview to account generation and a random
+confirmation/request ID, rechecks eligibility under the shared account lease,
+and refreshes usage after success. An uncertain attempt keeps its request ID in
+memory for an explicit retry of that same credit; it is not retried automatically.
+Only dates and the confirmation token reach the panel. Credit IDs and server
+descriptions never enter the metadata cache. The active sign-in stays unchanged.
+
+Custom action/Cancel groups share action-order.js, using the webview's client
+platform for matching DOM and tab order. This remains correct for remote hosts:
+Windows places the action first; macOS/Linux place Cancel first. Native VS Code
+dialogs retain VS Code's own ordering.
+
 Identity and state
 ------------------
 

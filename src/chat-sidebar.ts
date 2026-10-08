@@ -142,7 +142,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     view.webview.html = readFileSync(path.join(this.context.extensionPath, 'media', 'chat-sidebar.html'), 'utf8')
       .replaceAll('{{csp}}', view.webview.cspSource).replaceAll('{{nonce}}', randomBytes(24).toString('hex'))
       .replace('{{style}}', asset('chat-sidebar.css')).replace('{{layout}}', asset('chat-layout.js')).replace('{{script}}', asset('chat-sidebar.js'))
-      .replace('{{colourScript}}', asset('sidebar-colour.js'))
+      .replace('{{actionOrderScript}}', asset('action-order.js')).replace('{{colourScript}}', asset('sidebar-colour.js'))
       .replace('{{accountStyle}}', asset('account-menu.css')).replace('{{accountScript}}', asset('account-menu.js'));
     this.subscriptions.push(view.webview.onDidReceiveMessage(message => {
       void this.receive(message).catch(error => view.webview.postMessage({ type: 'error', message: String(error.message ?? error) }));

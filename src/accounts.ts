@@ -6,6 +6,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { AccountStore, AccountSummary, parseAccountAuth } from './account-store';
 import { AccountCapability, accountCapability, readAccountFile, replaceAccountFile, authFingerprint, isolatedAccountLogin, prepareAccountCredentials } from './account-runtime';
 import { AccountUsage, readAccountUsage } from './account-usage';
+import { BankedReset, readBankedResets, consumeBankedReset, UncertainResetError } from './account-resets';
 
 export interface AccountOptions {
   home: string; binary?: string; cwd?: string; canUse: () => boolean;
@@ -17,6 +18,7 @@ export interface AccountMenuState extends AccountStatus {
     plan?: string; usage?: AccountUsage; usageProblem?: string }[];
   busy: boolean; canSwitch: boolean; canAdd: boolean; problem?: string; recovery: boolean;
   reloadNeeded: boolean; loginEmail?: string; usageRefreshing?: boolean; progress?: string;
+  reset?: { accountId: string; token: string; expiresAt: number[]; problem?: string };
 }
 
 /** Credentials stay in the extension host; the menu receives metadata only. */
@@ -32,6 +34,8 @@ export class Accounts implements vscode.Disposable {
   private usageAttempts = new Map<string, number>();
   private missingUsageAttempts = new Map<string, number>();
   private usageProblems = new Map<string, string>();
+  private reset?: { accountId: string; generation: number; token: string; credits: BankedReset[]; problem?: string };
+  private uncertainResets = new Map<string, { creditId: string; requestId: string }>();
   private busy = false;
   private acting = false;
   private progress = '';
@@ -86,6 +90,8 @@ export class Accounts implements vscode.Disposable {
     }; }), busy: this.busy || this.acting, canSwitch: usable, canAdd: usable && !!this.capability.isolatedLogin,
     ...(problem ? { problem } : {}), recovery: !!problem && !!this.store.state().pending,
     reloadNeeded: this.reloadNeeded, usageRefreshing: !!this.usageRefresh,
+    ...(this.reset ? { reset: { accountId: this.reset.accountId, token: this.reset.token,
+      expiresAt: this.reset.credits.map(credit => credit.expiresAt), ...(this.reset.problem ? { problem: this.reset.problem } : {}) } } : {}),
     ...(this.progress ? { progress: this.progress } : {}),
     ...(this.loginEmail ? { loginEmail: this.loginEmail } : {}) };
   }
@@ -211,7 +217,11 @@ export class Accounts implements vscode.Disposable {
   /** All webview actions are validated again against host-owned state. */
   async act(message: unknown): Promise<void> {
     if (!message || typeof message !== 'object' || this.disposed) return;
-    const { action, id, generation, label, force } = message as Record<string, unknown>;
+    const { action, id, generation, label, force, token } = message as Record<string, unknown>;
+    if (action === 'cancelReset') {
+      if (this.progress !== 'Using banked reset...') { this.reset = undefined; this.changed(); }
+      return;
+    }
     if (action === 'refreshUsage') { await this.refreshUsage(force === true); return; }
     if (action === 'retryUsage') { await this.refreshUsage(false, true); return; }
     if (action === 'cancelUsage') { await this.stopUsage(); return; }
@@ -222,10 +232,14 @@ export class Accounts implements vscode.Disposable {
       return;
     }
     if (action === 'refresh') { await this.refresh(); return; }
-    if (!['setup', 'forgetAll', 'forget', 'rename', 'remember', 'retryReload', 'restore', 'add', 'switch', 'reconnect'].includes(String(action))) return;
+    if (!['setup', 'forgetAll', 'forget', 'rename', 'remember', 'retryReload', 'restore', 'add', 'switch', 'reconnect', 'previewReset', 'useReset'].includes(String(action))) return;
     if (this.acting || this.busy) return;
+    if (action === 'previewReset' && typeof id === 'string' && Number.isSafeInteger(generation))
+      this.reset = { accountId: id, generation: generation as number, token: randomUUID(), credits: [] };
     this.acting = true; this.notice = '';
-    this.progress = action === 'add' || action === 'reconnect' ? 'Preparing sign-in...'
+    this.progress = action === 'previewReset' ? 'Checking banked resets...'
+      : action === 'useReset' ? 'Using banked reset...'
+      : action === 'add' || action === 'reconnect' ? 'Preparing sign-in...'
       : action === 'switch' ? 'Preparing account switch...'
       : action === 'rename' ? 'Saving account label...'
       : action === 'forget' || action === 'forgetAll' ? 'Removing saved sign-in...'
@@ -256,6 +270,11 @@ export class Accounts implements vscode.Disposable {
       }
       await this.refresh(true);
       if (!this.capability.supported) throw new AccountError(this.capability.message);
+      if (action === 'previewReset' || action === 'useReset') {
+        const current = this.store.list().find(item => item.id === id);
+        if (!current || current.generation !== generation) throw new AccountError('This saved sign-in changed. Choose it again from the refreshed menu.');
+        await this.bankedReset(current, action === 'useReset', token); return;
+      }
       if (action === 'remember') {
         const raw = await readAccountFile(this.options.home);
         if (!raw) throw new AccountError('Sign in through Codex first.');
@@ -273,6 +292,67 @@ export class Accounts implements vscode.Disposable {
       else await this.switchAccount(current);
     } catch (error) { this.notice = accountErrorMessage(error); }
     finally { this.acting = false; this.progress = ''; this.changed(); if (this.captureQueued && !this.reloadNeeded) void this.refresh(); }
+  }
+  private async bankedReset(account: AccountSummary, consume: boolean, token: unknown) {
+    if (!this.options.binary || !this.capability.isolatedLogin || this.reloadNeeded)
+      throw new AccountError('Banked resets are unavailable for this authentication configuration.');
+    const preview = this.reset;
+    if (!preview || preview.accountId !== account.id || preview.generation !== account.generation ||
+        consume && (token !== preview.token || !preview.credits.length || !!preview.problem))
+      throw new AccountError('Open Use banked reset again to review the available resets.');
+    this.changed();
+    const owner = randomUUID();
+    if (!this.store.acquireLease(owner, Date.now(), 60000))
+      throw new AccountError('Another account operation is in progress. Retry shortly.');
+    try {
+      const guard = () => {
+        if (!this.allowed() || !this.store.enabled || this.reset !== preview ||
+            this.store.list().find(item => item.id === account.id)?.generation !== account.generation ||
+            !this.store.acquireLease(owner, Date.now(), 60000))
+          throw new AccountError('The account or confirmation changed. Open Use banked reset again.');
+      };
+      guard();
+      const raw = await this.store.load(account.id);
+      if (!raw) throw new AccountError('Sign in to this account again to use a banked reset.');
+      const credits = await readBankedResets(raw);
+      guard();
+      const uncertain = this.uncertainResets.get(account.id);
+      if (uncertain && credits[0]?.id !== uncertain.creditId) {
+        if (!credits.some(credit => credit.id === uncertain.creditId)) this.uncertainResets.delete(account.id);
+        throw new AccountError('The previous reset attempt has changed. Go back and refresh usage before reviewing another reset.');
+      }
+      if (!consume) {
+        preview.credits = credits;
+        if (uncertain) preview.token = uncertain.requestId;
+        return;
+      }
+      const selected = preview.credits[0];
+      if (!credits.length || credits[0].id !== selected.id || credits[0].expiresAt !== selected.expiresAt)
+        throw new AccountError('The available resets changed. Go back and choose Use banked reset again.');
+      // The confirmation token doubles as a stable idempotency key. Never substitute another credit.
+      try { await consumeBankedReset(raw, selected, preview.token, !!uncertain); }
+      catch (error) {
+        if (error instanceof UncertainResetError)
+          this.uncertainResets.set(account.id, { creditId: selected.id, requestId: preview.token });
+        throw error;
+      }
+      this.uncertainResets.delete(account.id);
+      this.reset = undefined;
+      if (!this.allowed() || !this.store.enabled || this.disposed) return;
+      this.store.saveUsage(account.id, account.generation, { checkedAt: Date.now(), bankedResets: credits.length - 1 });
+      try {
+        const usage = await readAccountUsage(this.options.binary, path.join(this.context.globalStorageUri.fsPath, 'account-usage'), raw);
+        if (this.allowed() && this.store.enabled && !this.disposed) {
+          this.store.saveUsage(account.id, account.generation, usage);
+          this.usageProblems.delete(account.id);
+        }
+      } catch {
+        this.usageProblems.set(account.id, 'Reset used. Usage could not be updated; refresh usage to check the new limits.');
+      }
+    } catch (error) {
+      if (this.reset === preview) preview.problem = accountErrorMessage(error);
+      else throw error;
+    } finally { this.store.releaseLease(owner); }
   }
   private async confirmReload(): Promise<boolean> {
     const active = this.options.hasActiveWork?.();

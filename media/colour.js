@@ -1,5 +1,6 @@
 'use strict';
 const api = acquireVsCodeApi(), el = id => document.getElementById(id);
+el('apply').parentElement.append(...navigatorActionOrder(el('apply'), el('cancel')));
 const presets = [['Red', '#E45B65'], ['Orange', '#E58C42'], ['Yellow', '#C8AC36'], ['Green', '#4EA876'],
   ['Teal', '#35A7AE'], ['Blue', '#6B8AFD'], ['Purple', '#A37DE0'], ['Pink', '#D66BAD']];
 let colour = null, state, lastSwatch;

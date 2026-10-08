@@ -578,8 +578,23 @@ Each heading shows email and account plan, where known. Click a saved account
 to switch; the final Add Account tile starts Codex's browser sign-in and switches
 after completion. You can also sign in normally in Codex and let Navigator
 remember the changed credentials. Right-click an account to change its label,
-sign in again or forget it. Clear a custom label to show the email again.
+use a banked reset, sign in again or forget it. Clear a custom label to show the email again.
 Back returns to the chat list.
+
+Use banked reset replaces the accounts grid with a compact confirmation showing
+available resets and their local expiration dates. The earliest-expiring valid
+reset is marked Will be used. Back or Cancel returns to accounts. Confirming uses
+that exact reset and refreshes usage without switching accounts or reloading.
+The confirmation is checked again before redemption; a changed list requires
+another review. An uncertain result asks you to check usage before retrying;
+reopening the same available reset retains its request ID within that window.
+No resets are consumed automatically. Expired sign-ins, managed policies or an
+unavailable service can prevent redemption. Reconnect the account or check Codex
+when the panel reports a problem.
+
+Navigator's custom action/Cancel groups use the VS Code client platform order:
+action then Cancel on Windows, Cancel then action on macOS/Linux. This applies
+to account labels, reset confirmations and both colour pickers, including tab order.
 
 The second line shows last known remaining quota. Hover for full identity,
 plan, window/reset details, banked resets and the observation time. When provided,

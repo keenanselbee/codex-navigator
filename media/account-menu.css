@@ -28,6 +28,17 @@
 .account-rename[aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder); }
 .account-edit-actions { display: flex; align-items: center; gap: 3px; }
 .account-edit-actions button { padding: 1px 3px; }
+.account-reset-content { padding: 4px; }
+.account-reset-identity { margin: 2px 0 9px; font-weight: 600; overflow-wrap: anywhere; }
+.account-reset-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.account-reset-credit { display: flex; flex-direction: column; gap: 4px; padding: 8px; min-width: 0; border: 1px solid var(--vscode-widget-border, transparent); border-radius: 3px; font-size: 0.92em; overflow-wrap: anywhere; }
+.account-reset-credit .account-muted { margin: 0; }
+.account-reset-selected { border-color: var(--vscode-focusBorder); background: var(--vscode-list-inactiveSelectionBackground); }
+.account-reset-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 4px 4px; flex: none; }
+.account-reset-actions button { padding: 5px 9px; }
+#accountPage button.account-primary { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+#accountPage button.account-primary:hover { background: var(--vscode-button-hoverBackground); }
+@media (max-width: 519px) { .account-reset-list { grid-template-columns: 1fr; } }
 .account-context { position: absolute; z-index: 10; display: flex; flex-direction: column; min-width: 145px; max-width: calc(100vw - 10px); padding: 3px; border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border)); border-radius: 4px; background: var(--vscode-menu-background, var(--vscode-sideBar-background)); color: var(--vscode-menu-foreground, var(--vscode-foreground)); box-shadow: 0 4px 12px var(--vscode-widget-shadow, #0004); }
 .account-context button { text-align: left; padding: 4px 7px; }
 .account-context button:disabled { opacity: 0.55; cursor: default; }

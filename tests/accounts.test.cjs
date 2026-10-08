@@ -32,6 +32,9 @@ async function fixture(t, overrides = {}, options = {}) {
       : name === './account-usage' ? { ...require('../dist/account-usage'), readAccountUsage: overrides.readAccountUsage || (async () => {
         calls.usage++; return { checkedAt: Date.now(), plan: 'plus', primary: { usedPercent: 25, windowDurationMins: 300 }, bankedResets: 2 };
       }) }
+      : name === './account-resets' ? { ...require('../dist/account-resets'),
+        readBankedResets: overrides.readBankedResets || (async () => []),
+        consumeBankedReset: overrides.consumeBankedReset || (async () => { throw Error('Unexpected consumption'); }) }
       : name === './account-runtime' ? { ...runtime,
         accountCapability: async () => ({ supported: true, isolatedLogin: true, message: 'fixture' }),
         prepareAccountCredentials: async (_binary, _directory, raw) => { calls.preflight++; return raw; },
@@ -57,6 +60,89 @@ async function fixture(t, overrides = {}, options = {}) {
 function action(account, name = 'switch') { return { action: name, id: account.id, generation: account.generation }; }
 function reloads(f) { return f.commands.filter(([name]) => name === 'workbench.action.reloadWindow').length; }
 function gate() { let open; const promise = new Promise(resolve => { open = resolve; }); return { promise, open }; }
+
+test('banked reset confirmation exposes dates only and consumes the exact preview once', async t => {
+  const credit = { id: 'private-credit-id', expiresAt: Math.floor(Date.now() / 1000) + 86400 };
+  const hold = gate(), consumed = [];
+  const f = await fixture(t, {
+    readBankedResets: async () => [credit, { id: 'later-credit', expiresAt: credit.expiresAt + 86400 }],
+    consumeBankedReset: async (...args) => { consumed.push(args); await hold.promise; },
+  });
+  const raw = auth('first'); fs.writeFileSync(path.join(f.home, 'auth.json'), raw);
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  await f.controller.act(action(account, 'previewReset'));
+  const preview = f.controller.snapshot().reset;
+  assert.equal(preview.accountId, account.id);
+  assert.deepEqual(Array.from(preview.expiresAt), [credit.expiresAt, credit.expiresAt + 86400]);
+  assert.doesNotMatch(JSON.stringify(f.controller.snapshot()), /private-credit-id|later-credit|access_token|synthetic/);
+  const request = { ...action(account, 'useReset'), token: preview.token };
+  const first = f.controller.act(request);
+  while (!consumed.length) await new Promise(resolve => setTimeout(resolve, 5));
+  await f.controller.act(request); assert.equal(consumed.length, 1);
+  hold.open(); await first;
+  assert.equal(consumed[0][1].id, credit.id); assert.equal(consumed[0][2], preview.token);
+  assert.equal(f.controller.snapshot().reset, undefined); assert.equal(f.calls.usage, 1);
+  await f.controller.act(request); assert.equal(consumed.length, 1, 'spent confirmation cannot be replayed');
+  assert.equal(await runtime.readAccountFile(f.home), raw); assert.equal(reloads(f), 0);
+});
+
+test('stale, cancelled and forged reset confirmations never consume another credit', async t => {
+  let credits = [{ id: 'first-credit', expiresAt: Math.floor(Date.now() / 1000) + 100 }], consumed = 0;
+  const f = await fixture(t, { readBankedResets: async () => credits,
+    consumeBankedReset: async () => { consumed++; } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  await f.controller.act(action(account, 'previewReset'));
+  await f.controller.act({ ...action(account, 'useReset'), token: 'forged' });
+  assert.equal(consumed, 0);
+  const token = f.controller.snapshot().reset.token;
+  credits = [{ id: 'different-credit', expiresAt: credits[0].expiresAt + 100 }];
+  await f.controller.act({ ...action(account, 'useReset'), token });
+  assert.equal(consumed, 0); assert.match(f.controller.snapshot().reset.problem, /available resets changed/);
+  await f.controller.act({ action: 'cancelReset' });
+  await f.controller.act({ ...action(account, 'useReset'), token });
+  assert.equal(consumed, 0);
+});
+
+test('reset cancellation during a read and a cross-window lease prevent consumption', async t => {
+  const hold = gate(); let reads = 0, consumed = 0;
+  const f = await fixture(t, { readBankedResets: async () => {
+    reads++; await hold.promise; return [{ id: 'credit', expiresAt: Math.floor(Date.now() / 1000) + 100 }];
+  }, consumeBankedReset: async () => { consumed++; } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  const loading = f.controller.act(action(account, 'previewReset'));
+  while (!reads) await new Promise(resolve => setTimeout(resolve, 5));
+  await f.controller.act({ action: 'cancelReset' }); hold.open(); await loading;
+  assert.equal(f.controller.snapshot().reset, undefined);
+  assert.equal(f.controller.store.acquireLease('peer', Date.now(), 60000), true);
+  await f.controller.act(action(account, 'previewReset'));
+  assert.equal(reads, 1); assert.equal(consumed, 0);
+  f.controller.store.releaseLease('peer');
+});
+
+test('uncertain redemption cannot retry from the same confirmation and failed quota refresh does not undo success', async t => {
+  let fail = true, consumed = 0; const attempts = [];
+  const f = await fixture(t, { readBankedResets: async () => [{ id: 'credit', expiresAt: Math.floor(Date.now() / 1000) + 100 }],
+    consumeBankedReset: async (_raw, credit, token, retry) => {
+      consumed++; attempts.push({ credit, token, retry });
+      if (fail) throw new (require('../dist/account-resets').UncertainResetError)();
+    },
+    readAccountUsage: async () => { throw Error('offline'); } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  await f.controller.act(action(account, 'previewReset'));
+  const request = { ...action(account, 'useReset'), token: f.controller.snapshot().reset.token };
+  await f.controller.act(request); await f.controller.act(request);
+  assert.equal(consumed, 1);
+  fail = false; await f.controller.act(action(account, 'previewReset'));
+  assert.equal(f.controller.snapshot().reset.token, request.token, 'reopening keeps the same idempotency key');
+  await f.controller.act({ ...request, token: f.controller.snapshot().reset.token });
+  assert.equal(consumed, 2); assert.equal(f.controller.snapshot().reset, undefined);
+  assert.equal(attempts[1].retry, true); assert.equal(attempts[0].token, attempts[1].token);
+  assert.match(f.controller.snapshot().accounts[0].usageProblem, /Reset used/);
+  assert.equal(f.controller.snapshot().accounts[0].usage.primary, undefined);
+});
 
 test('only Windows applies the WSL preference and other account access guards remain enforced', async t => {
   for (const platform of ['win32', 'darwin', 'linux']) for (const wsl of [false, true]) {

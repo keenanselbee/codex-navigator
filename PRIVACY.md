@@ -130,13 +130,22 @@ temporary native Codex helper. It uses the saved access token in ephemeral
 storage, without passing a refresh token or altering the live sign-in. Only
 validated plan, quota percentages/windows, reset timestamps, banked-reset count,
 the earliest reported available-credit expiry and last-checked time are cached
-locally alongside the matching account. Credit IDs and descriptions are not retained. Reads
+locally alongside the matching account. Credit IDs and descriptions are not cached. Reads
 are sequential and bounded. Successful quota results are cached for five minutes.
 While Accounts is visible, missing usage retries after ten seconds, then with
 increasing delays up to five minutes. Closing the page stops those retries;
 closing it or starting a switch cancels unfinished reads. Forgetting an account
 also removes its cache.
 Unavailable responses keep the last known snapshot, identified by its timestamp.
+
+Choosing Use banked reset requests the selected account's available credits from
+OpenAI's ChatGPT service using its saved access token and workspace identifier.
+Confirming sends the selected credit ID and a random redemption request ID to
+that service, then refreshes usage. Credit IDs stay in extension-host memory;
+the panel receives expiration dates and an opaque confirmation token only.
+An uncertain attempt retains its credit/request IDs in memory for an explicit
+retry in that window. No refresh tokens, chat messages or repository content
+are sent by reset requests. No automatic redemption or token refresh is performed.
 
 Account capability checks start a private native Codex helper. Add Account
 starts Codex's browser login in a temporary isolated Codex home; authentication

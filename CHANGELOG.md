@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+1.9.7
+-----
+
+- Add Use banked reset to the account menu. Review available expiry dates in a
+  compact confirmation, then use the earliest-expiring valid reset and refresh
+  usage. Guard stale confirmations, duplicate requests and uncertain outcomes.
+- Follow VS Code's action/Cancel order throughout account and colour editors:
+  action first on Windows, Cancel first on macOS/Linux, including keyboard order.
+
 1.9.6
 -----
 

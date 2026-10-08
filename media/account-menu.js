@@ -4,7 +4,7 @@ function createNavigatorAccounts(api, navigation) {
   const page = document.getElementById('accountPage');
   let state, stateAt = 0, previousFocus, contextAccountId, contextPosition, renamingAccountId, renameValue = '';
   let pendingAction = false, pendingProgress = '', criticalSignature = '';
-  let usageRetry;
+  let usageRetry, resetAccountId, resetSeen = false;
 
   function element(tag, className, value) {
     const node = document.createElement(tag);
@@ -22,15 +22,18 @@ function createNavigatorAccounts(api, navigation) {
     return node;
   }
 
-  function post(action, account, label, force) {
+  function post(action, account, label, force, token) {
     const message = { type: 'accountAction', action };
     if (account) { message.id = account.id; message.generation = account.generation; }
     if (label !== undefined) message.label = label;
     if (force !== undefined) message.force = force;
+    if (token !== undefined) message.token = token;
     api.postMessage(message);
-    if (!['refresh', 'refreshUsage', 'retryUsage', 'cancelUsage', 'copyEmail'].includes(action)) {
+    if (!['refresh', 'refreshUsage', 'retryUsage', 'cancelUsage', 'cancelReset', 'copyEmail'].includes(action)) {
       pendingAction = true;
-      pendingProgress = action === 'switch' ? 'Switching to ' + identity(account) + '...'
+      pendingProgress = action === 'previewReset' ? 'Checking banked resets...'
+        : action === 'useReset' ? 'Using banked reset...'
+        : action === 'switch' ? 'Switching to ' + identity(account) + '...'
         : action === 'add' || action === 'reconnect' ? 'Preparing sign-in...'
         : action === 'rename' ? 'Saving account label...'
         : action === 'cancelLogin' ? 'Cancelling sign-in...'
@@ -135,6 +138,9 @@ function createNavigatorAccounts(api, navigation) {
     clearInterval(usageRetry); usageRetry = undefined;
     contextAccountId = undefined;
     renamingAccountId = undefined;
+    resetAccountId = undefined;
+    resetSeen = false;
+    post('cancelReset');
     post('cancelUsage');
     navigation.onClose();
     if (restore) {
@@ -154,7 +160,7 @@ function createNavigatorAccounts(api, navigation) {
     if (!state || Date.now() - stateAt > 2000) post('refresh');
     post('refreshUsage');
     usageRetry = setInterval(() => {
-      if (page.hidden || document.hidden || pendingAction || state?.busy || state?.usageRefreshing
+      if (page.hidden || resetAccountId || document.hidden || pendingAction || state?.busy || state?.usageRefreshing
           || !state?.enabled || !state?.supported) return;
       if (state.accounts?.some(account => !account.usage?.primary && !account.usage?.secondary)) post('retryUsage');
     }, 10000);
@@ -184,7 +190,7 @@ function createNavigatorAccounts(api, navigation) {
     const bounds = page.getBoundingClientRect();
     contextAccountId = account.id;
     contextPosition = { left: Math.max(0, Math.min(x - bounds.left, bounds.width - 160)),
-      top: Math.max(0, Math.min(y - bounds.top, bounds.height - 105)) };
+      top: Math.max(0, Math.min(y - bounds.top, bounds.height - 135)) };
     render('label:' + account.id);
   }
 
@@ -240,13 +246,72 @@ function createNavigatorAccounts(api, navigation) {
     });
     label.append(input);
     const controls = element('span', 'account-edit-actions');
-    controls.append(button('Save', 'save:' + account.id, () => saveRename(account), busy || !state.canSwitch));
-    controls.append(button('Cancel', 'cancel:' + account.id, () => {
+    const save = button('Save', 'save:' + account.id, () => saveRename(account), busy || !state.canSwitch);
+    const cancel = button('Cancel', 'cancel:' + account.id, () => {
       renamingAccountId = undefined;
       render('switch:' + account.id);
-    }));
+    });
+    controls.append(...navigatorActionOrder(save, cancel));
     tile.append(label, controls);
     return tile;
+  }
+
+  function cancelReset() {
+    if (state?.progress === 'Using banked reset...' || pendingAction && pendingProgress === 'Using banked reset...') return;
+    const id = resetAccountId;
+    resetAccountId = undefined;
+    resetSeen = false;
+    post('cancelReset');
+    render('switch:' + id);
+  }
+
+  function renderReset(busy, currentFocus) {
+    const account = state?.accounts?.find(item => item.id === resetAccountId);
+    const reset = state?.reset?.accountId === resetAccountId ? state.reset : undefined;
+    const dates = Array.isArray(reset?.expiresAt) ? reset.expiresAt : [];
+    const consuming = state?.progress === 'Using banked reset...' || pendingAction && pendingProgress === 'Using banked reset...';
+    const header = element('div', 'account-header');
+    const back = button('Back', 'resetBack', cancelReset, consuming);
+    back.setAttribute('aria-label', 'Back to accounts');
+    const heading = element('strong', '', 'Use banked reset');
+    heading.id = 'accountPageTitle';
+    page.setAttribute('aria-labelledby', heading.id);
+    header.append(back, heading, element('span', 'account-muted', busy ? '' : dates.length + ' available'));
+    const content = element('div', 'account-content account-reset-content');
+    if (account) content.append(element('div', 'account-reset-identity', identity(account) + ' · ' + plan(account)));
+    if (busy) {
+      const progress = element('p', 'account-progress', state?.progress || pendingProgress);
+      progress.setAttribute('role', 'status'); content.append(progress);
+    }
+    const problem = reset?.problem || state?.problem;
+    if (problem) {
+      const error = element('p', 'account-problem', problem);
+      error.setAttribute('role', 'alert'); content.append(error);
+    }
+    const list = element('div', 'account-reset-list');
+    list.setAttribute('role', 'list');
+    list.setAttribute('aria-label', 'Available banked resets, earliest expiry first');
+    dates.forEach((expiresAt, index) => {
+      const item = element('div', 'account-reset-credit' + (index === 0 ? ' account-reset-selected' : ''));
+      item.setAttribute('role', 'listitem');
+      item.append(element('strong', '', index === 0 ? 'Will be used' : 'Available'));
+      item.append(element('span', 'account-muted', index === 0 ? 'Expires first' : 'Expires'));
+      const date = new Date(expiresAt * 1000);
+      item.append(element('span', '', date.toLocaleString(undefined, { month: 'short', day: 'numeric',
+        ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' })));
+      item.title = date.toLocaleString();
+      list.append(item);
+    });
+    content.append(list);
+    if (!busy && !problem && !dates.length) content.append(element('p', 'account-muted', 'No banked resets available.'));
+    const controls = element('div', 'account-reset-actions');
+    const use = button('Use banked reset', 'useReset', () => {
+      if (!busy && reset && account) post('useReset', account, undefined, undefined, reset.token);
+    }, busy || !account || !state?.canSwitch || !!problem || !dates.length || dates[0] * 1000 <= Date.now());
+    use.className = 'account-primary';
+    controls.append(...navigatorActionOrder(use, button('Cancel', 'cancelReset', cancelReset, consuming)));
+    page.append(header, content, controls);
+    focus(page.querySelector('[data-account-focus="' + (currentFocus || '') + '"]') ? currentFocus : 'resetBack');
   }
 
   function render(focusKey) {
@@ -259,6 +324,7 @@ function createNavigatorAccounts(api, navigation) {
     criticalSignature = nextCritical;
     page.setAttribute('aria-busy', String(busy));
     page.replaceChildren();
+    if (resetAccountId) { renderReset(busy, currentFocus); return; }
 
     const header = element('div', 'account-header');
     const back = button('Back', 'accountBack', () => close());
@@ -339,6 +405,12 @@ function createNavigatorAccounts(api, navigation) {
           menu.style.left = contextPosition.left + 'px';
           menu.style.top = contextPosition.top + 'px';
           menu.append(button('Change label', 'label:' + account.id, () => startRename(account), busy || !state.canSwitch));
+          menu.append(button('Use banked reset', 'reset:' + account.id, () => {
+            contextAccountId = undefined;
+            resetAccountId = account.id;
+            resetSeen = false;
+            post('previewReset', account);
+          }, busy || !state.canAdd || state.reloadNeeded));
           menu.append(button('Sign In Again', 'reconnect:' + account.id, () => {
             contextAccountId = undefined;
             post('reconnect', account);
@@ -386,6 +458,8 @@ function createNavigatorAccounts(api, navigation) {
       state = event.data.state;
       stateAt = Date.now();
       pendingAction = false;
+      if (state?.reset?.accountId === resetAccountId) resetSeen = true;
+      if (resetAccountId && resetSeen && !state?.reset && !state?.busy) { resetAccountId = undefined; resetSeen = false; }
       render();
     } else if (event.data?.type === 'accountsOpen') open();
   });
@@ -401,6 +475,7 @@ function createNavigatorAccounts(api, navigation) {
       event.preventDefault();
       event.stopImmediatePropagation();
       if (contextAccountId) { const id = contextAccountId; contextAccountId = undefined; render('switch:' + id); }
+      else if (resetAccountId) cancelReset();
       else if (renamingAccountId) { const id = renamingAccountId; renamingAccountId = undefined; render('switch:' + id); }
       else close();
       return;

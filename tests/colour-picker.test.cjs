@@ -42,9 +42,11 @@ test('eight presets, picker and hex stay synced; invalid input blocks apply and 
     addEventListener(name, fn) { this.events[name] = fn; }, setAttribute(name, value) { this.attributes[name] = value; },
     append(item) { this.children.push(item); }, focus() {} });
   const el = id => { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); };
+  el('apply').parentElement = { append() {} };
   let receive;
   vm.runInNewContext(fs.readFileSync(require.resolve('../media/colour.js'), 'utf8'), {
     acquireVsCodeApi: () => ({ postMessage: value => sent.push(value) }),
+    navigatorActionOrder: (action, cancel) => [action, cancel],
     document: { getElementById: el, createElement: node, addEventListener() {} },
     window: { addEventListener: (_event, fn) => { receive = fn; } },
   });
