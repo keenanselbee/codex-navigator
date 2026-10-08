@@ -22,6 +22,48 @@ const policy = (enabled = true, suppress = true) => {
 };
 const observe = (window, rows, time = 10000, enabled = true, suppress = true) => window.observe(rows, time, policy(enabled, suppress));
 
+test('answer cancels a queued async alert across windows without cancelling completion or a different question', t => {
+ const f=fixture(t), a=f.create(), b=f.create();
+ observe(a,chat('working')); observe(b,chat('working'));
+ const asyncQuestion={id:'q1',askedAt:11000};
+ const [alert]=observe(a,chat('working',{asyncQuestion}),12000);
+ assert.equal(a.canDeliver(alert),true);
+ observe(b,chat('unknown',{questionReplies:[{id:'q1',answeredAt:13000}]}),14000);
+ assert.equal(a.canDeliver(alert),false,'a different window can cancel even during an unknown activity gap');
+ observe(a,chat('working',{asyncQuestion}),12500);
+ assert.equal(a.canDeliver(alert),false,'a stale sample cannot resurrect the alert');
+ const [finished]=observe(a,chat('ready',{asyncQuestion,completedAt:15000}),16000);
+ assert.equal(finished.kind,'finished'); assert.equal(a.canDeliver(finished),true);
+ const [next]=observe(a,chat('working',{asyncQuestion:{id:'q2',askedAt:17000}}),18000);
+ assert.equal(a.canDeliver(next),true);
+ const other=f.create(false,3,'different-home');
+ other.recordAnswers('chat-a',[{id:'q2',answeredAt:18000}],18000);
+ assert.equal(a.canDeliver(next),true);
+});
+
+test('question answered before the first poll stays quiet and blocking replies cancel only their episode', t => {
+ const a=fixture(t).create(); observe(a,chat('working'));
+ assert.deepEqual(observe(a,chat('working',{asyncQuestion:{id:'q',askedAt:11000},questionReplies:[{id:'q',answeredAt:11500}]}),12000),[]);
+ const [blocking]=observe(a,chat('waiting',{inputId:'blocking'}),13000);
+ assert.equal(a.canDeliver(blocking),true);
+ observe(a,chat('working'),14000); assert.equal(a.canDeliver(blocking),false);
+ const [next]=observe(a,chat('waiting',{inputId:'next'}),15000);
+ assert.equal(a.canDeliver(blocking),false); assert.equal(a.canDeliver(next),true);
+});
+
+test('delivery skips answered popup and sound and rechecks the answer between channels', async t => {
+ const { NotificationDelivery }=require('../dist/notification-delivery');
+ const a=fixture(t).create(), calls=[]; observe(a,chat('working'));
+ const [alert]=observe(a,chat('working',{asyncQuestion:{id:'q',askedAt:11000}}),12000);
+ const delivery=new NotificationDelivery({extensionPath:path.join(__dirname,'..'),platform:'win32',report:()=>{},
+   run:async()=>{calls.push('popup');a.recordAnswers('chat-a',[{id:'q',answeredAt:13000}],13000);return true;}});
+ await delivery.deliver({...alert,canDeliver:()=>a.canDeliver(alert)});
+ assert.deepEqual(calls,['popup'],'answer after popup suppresses the pending sound');
+ calls.length=0;
+ await delivery.deliver({...alert,canDeliver:()=>a.canDeliver(alert)});
+ assert.deepEqual(calls,[],'answer before dispatch suppresses both channels');
+});
+
 test('event-specific channels use shared focus and never replay a suppressed channel', t => {
   const f = fixture(t), a = f.create(), b = f.create(true, 2);
   const rules = { finished: { sound: 'always', desktop: 'whenUnfocused' }, input: { sound: 'whenFocused', desktop: 'always' } };

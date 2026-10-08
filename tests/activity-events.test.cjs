@@ -4,6 +4,27 @@ const fs = require('node:fs/promises'), path = require('node:path');
 const { reduceActivity, TranscriptActivity, combineActivity, ActivityDiagnostics } = require('../dist/activity-events');
 const now = Date.now(), initial = { status: 'unknown', workedAt: 0 };
 const event = (type, id = 'a', time = now) => ({ timestamp: new Date(time).toISOString(), type: 'event_msg', payload: { type, turn_id: id } });
+
+test('structured async replies retain only matching IDs and times across completion and new turns', () => {
+ const text='<send_user_message_question_reply>\n'+JSON.stringify([{questionItemId:JSON.stringify(['request_user_input_async','q',0]),answer:'private answer'}])+'\n</send_user_message_question_reply>';
+ for(const record of [
+   {type:'event_msg',payload:{type:'user_message',message:text}},
+   {type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text}]}}
+ ]) {
+   let state=reduceActivity(initial,event('task_complete'),now);
+   state=reduceActivity(state,{...record,timestamp:new Date(now+1).toISOString()},now+1);
+   assert.equal(state.status,'ready','answer does not change completion');
+   assert.deepEqual(state.questionReplies,[{id:'q',answeredAt:now+1}]);
+   assert.equal(JSON.stringify(state).includes('private answer'),false);
+   state=reduceActivity(state,event('task_started','b',now+2),now+2);
+   state=reduceActivity(state,{type:'turn_context',payload:{turn_id:'c'},timestamp:new Date(now+3).toISOString()},now+3);
+   assert.deepEqual(combineActivity({status:'working',turnId:'c',workedAt:now+4},state).questionReplies,[{id:'q',answeredAt:now+1}]);
+ }
+ for(const bad of ['ordinary answer',text.replace('request_user_input_async','unknown'),text.replace('questionItemId','other'),text.replace('[{','{'), 'quoted '+text]) {
+   assert.equal(reduceActivity(initial,{timestamp:new Date(now).toISOString(),type:'event_msg',payload:{type:'user_message',message:bad}},now).questionReplies,undefined);
+ }
+ assert.equal(reduceActivity(initial,{timestamp:new Date(now).toISOString(),type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'input_text',text}]}},now).questionReplies,undefined);
+});
 test('explicit lifecycle completes older chats and ignores stale other-turn completions', () => {
  let s = reduceActivity(initial, event('task_started'), now);
  assert.equal(s.status,'working');

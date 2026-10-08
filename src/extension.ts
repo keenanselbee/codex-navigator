@@ -222,6 +222,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const live = runtime.get(item.id);
         if (live) activity = { ...live, turnId: live.turnId || activity.turnId,
           asyncQuestion: !live.turnId || live.turnId === activity.turnId ? activity.asyncQuestion : undefined,
+          questionReplies: activity.questionReplies,
           inputId: live.status === 'waiting' && activity.status === 'waiting' ? activity.inputId : undefined,
           workedAt: Math.max(activity.workedAt, live.workedAt) };
         if (items.length < 200) activityDiagnostics.record(item.id, hook, transcript, live, activity);
@@ -266,8 +267,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         candidates[0]?.activitySampledAt || Date.now(), notificationSettings(settings), Date.now());
       const epoch = monitoringEpoch;
       for (const alert of alerts) notificationQueue = notificationQueue.then(async () => {
+        if (alert.questionId) {
+          const filename = await sessions.fileFor(alert.chatId);
+          if (filename) notifications!.recordAnswers(alert.chatId, (await transcriptActivity.read(filename)).questionReplies);
+        }
         await notificationDelivery.deliver({ ...alert, volume: vscode.workspace.getConfiguration('codexNavigator').get<number>('notificationVolume', 50),
           canDeliver: channel => epoch === monitoringEpoch && sidebar.visible && license.allowed() && alert[channel]
+            && notifications!.canDeliver(alert)
             && notificationChannels(notificationSettings(vscode.workspace.getConfiguration('codexNavigator')), alert.kind, notifications!.anyFocused())[channel] });
       }).catch(() => notificationReport('An alert could not be delivered.'));
     } catch { notificationReport('An activity alert could not be coordinated.'); }

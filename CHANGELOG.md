@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.9.6
+-----
+
+- Suppress pending question notifications and sounds once Navigator detects your
+  answer, including replies observed in another window or before the next refresh.
+  Keep completion alerts separate and leave already displayed notifications alone.
+
 1.9.5
 -----
 

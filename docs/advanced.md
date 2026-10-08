@@ -271,6 +271,10 @@ Question rules cover blocking input, approval requests and accepted async prompt
 Async prompts can alert while Codex continues working; they do not change its
 activity indicator to waiting. Existing explicitly configured notification switches
 migrate to equivalent rules; untouched settings receive the defaults above.
+Once Navigator detects your answer, it cancels that question's pending popup and
+sound across windows. It checks for async replies again before queued delivery.
+Already displayed notifications remain in the OS history; completion alerts keep
+their own rules. Detection uses Codex's structured reply records, not free-form text.
 Use **Codex Navigator: Test Notification** to preview sound and desktop delivery
 regardless of these rules, including while focused or when a rule is Off.
 **Notification Volume** controls every sound and preview from 0 to 100%, defaulting

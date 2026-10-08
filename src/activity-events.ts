@@ -4,6 +4,7 @@ import { ChatActivity } from './chat-activity';
 export interface ActivitySnapshot {
   status: ChatActivity; workedAt: number; observedAt?: number; turnId?: string; completedAt?: number; detail?: string; inputId?: string;
   asyncQuestion?: { id: string; askedAt: number };
+  questionReplies?: { id: string; answeredAt: number }[];
   ended?: boolean;
 }
 interface TranscriptState extends ActivitySnapshot { pendingInput?: string; pendingQuestion?: { id: string; askedAt: number }; contextAt?: number }
@@ -15,14 +16,40 @@ export function reduceActivity(state: TranscriptState, record: any, now: number)
   if (!Number.isFinite(time) || time > now + 5000 || time < Math.max(state.observedAt || 0, state.contextAt || 0)) return state;
   const p = record.payload;
   if (!p || typeof p !== 'object') return state;
+  // Codex's structured reply envelope identifies the original async tool call.
+  // Keep only IDs/times, never question text or answers, including replies after completion.
+  const texts = record.type === 'event_msg' && p.type === 'user_message' ? [p.message]
+    : record.type === 'response_item' && p.type === 'message' && p.role === 'user' && Array.isArray(p.content)
+      ? p.content.filter((item: any) => item.type === 'input_text').map((item: any) => item.text) : [];
+  for (const text of texts) {
+    if (typeof text !== 'string' || text.length > 65536) continue;
+    const match = /^\s*<send_user_message_question_reply>\s*([\s\S]*?)\s*<\/send_user_message_question_reply>\s*$/.exec(text);
+    if (!match) continue;
+    try {
+      const replies = JSON.parse(match[1]);
+      if (!Array.isArray(replies)) continue;
+      for (const reply of replies.slice(0, 32)) {
+        if (typeof reply?.questionItemId !== 'string' || typeof reply.answer !== 'string') continue;
+        let identity;
+        try { identity = JSON.parse(reply.questionItemId); } catch { continue; }
+        if (!Array.isArray(identity) || identity.length !== 3 || identity[0] !== 'request_user_input_async'
+            || typeof identity[1] !== 'string' || !identity[1].length || identity[1].length > 200
+            || !Number.isSafeInteger(identity[2]) || identity[2] < 0) continue;
+        const questionReplies = (state.questionReplies || []).filter(item => item.id !== identity[1]);
+        questionReplies.push({ id: identity[1], answeredAt: time });
+        state = { ...state, questionReplies: questionReplies.slice(-32) };
+      }
+    } catch { /* Ordinary or malformed user text is not a reply signal. */ }
+  }
   // Compaction can push task_started outside the bounded tail. Context identifies
   // the turn, but neither context nor compaction alone proves it is still working.
   if (record.type === 'turn_context' && typeof p.turn_id === 'string' && p.turn_id.length > 0) {
-    return { ...(state.turnId === p.turn_id ? state : unknown()), turnId: p.turn_id, contextAt: time };
+    return { ...(state.turnId === p.turn_id ? state : unknown()), questionReplies: state.questionReplies, turnId: p.turn_id, contextAt: time };
   }
   if (record.type === 'event_msg') {
     if (p.type === 'task_started' && typeof p.turn_id === 'string') {
-      return { status: 'working', turnId: p.turn_id, observedAt: time, workedAt: time, detail: 'Working (local activity)' };
+      return { status: 'working', turnId: p.turn_id, questionReplies: state.questionReplies,
+        observedAt: time, workedAt: time, detail: 'Working (local activity)' };
     }
     // These are live item lifecycle events, not the compacted history body.
     // They retain the turn ID even when task_started/context fell outside the tail.
@@ -36,6 +63,7 @@ export function reduceActivity(state: TranscriptState, record: any, now: number)
         && (!state.turnId || state.turnId === p.turn_id)) {
       return { status: p.type === 'task_complete' ? 'ready' : 'unknown', turnId: p.turn_id,
         asyncQuestion: p.type === 'task_complete' ? state.asyncQuestion : undefined,
+        questionReplies: state.questionReplies,
         observedAt: time, workedAt: time, ended: true, completedAt: p.type === 'task_complete' ? time : undefined,
         detail: p.type === 'task_complete' ? 'Turn finished since last viewed' : 'Turn interrupted' };
     }
@@ -117,6 +145,7 @@ export function combineActivity(hook: ActivitySnapshot, transcript: ActivitySnap
   if (result.status === 'unknown' && !transcript.ended && hook.status === 'working'
       && hook.turnId && transcript.turnId === hook.turnId) result = hook;
   if (transcript.asyncQuestion && result.turnId === transcript.turnId) result = { ...result, asyncQuestion: transcript.asyncQuestion };
+  if (transcript.questionReplies) result = { ...result, questionReplies: transcript.questionReplies };
   if (result.status === 'ready' && (result.completedAt || 0) <= seenAt) result = { ...result, status: 'idle', detail: undefined };
   return result;
 }

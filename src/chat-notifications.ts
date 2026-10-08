@@ -6,7 +6,7 @@ import { ActivitySnapshot } from './activity-events';
 import { notificationChannels, NotificationKind, NotificationPolicy } from './notification-settings';
 
 export interface NotificationChat { id: string; title: string; activity: ActivitySnapshot }
-export interface ChatAlert { chatId: string; title: string; message: string; kind: NotificationKind; sound: boolean; desktop: boolean }
+export interface ChatAlert { chatId: string; title: string; message: string; kind: NotificationKind; sound: boolean; desktop: boolean; questionId?: string; inputEpisode?: number }
 
 // Window focus is published on VS Code events. Chat detection uses only the
 // existing visible-sidebar refresh. SQLite claims prevent cross-window races.
@@ -26,7 +26,8 @@ export class ChatNotifications {
     this.db.exec(`PRAGMA busy_timeout=3000;
       CREATE TABLE IF NOT EXISTS windows (id TEXT PRIMARY KEY, pid INTEGER NOT NULL, focused INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, time INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS samples (id TEXT PRIMARY KEY, status TEXT NOT NULL, episode INTEGER NOT NULL, time INTEGER NOT NULL, input_id TEXT);`);
+      CREATE TABLE IF NOT EXISTS samples (id TEXT PRIMARY KEY, status TEXT NOT NULL, episode INTEGER NOT NULL, time INTEGER NOT NULL, input_id TEXT);
+      CREATE TABLE IF NOT EXISTS question_answers (id TEXT PRIMARY KEY, time INTEGER NOT NULL);`);
     this.setFocused(focused);
   }
 
@@ -47,6 +48,24 @@ export class ChatNotifications {
 
   reset(): void { this.previous.clear(); }
 
+  recordAnswers(chatId: string, replies: ActivitySnapshot['questionReplies'], now = Date.now()): void {
+    if (this.closed) return;
+    for (const reply of replies || []) {
+      if (reply.answeredAt < now - 7 * 86400000 || reply.answeredAt > now + 5000) continue;
+      this.db.prepare('INSERT OR IGNORE INTO question_answers VALUES (?, ?)')
+        .run(this.namespace + '/' + chatId + '/' + reply.id, reply.answeredAt);
+    }
+  }
+
+  canDeliver(alert: ChatAlert): boolean {
+    if (this.closed) return false;
+    if (alert.kind !== 'input') return true;
+    const thread = this.namespace + '/' + alert.chatId;
+    if (alert.questionId) return !this.db.prepare('SELECT 1 FROM question_answers WHERE id = ?').get(thread + '/' + alert.questionId);
+    const sample = this.db.prepare('SELECT status, episode FROM samples WHERE id = ?').get(thread);
+    return sample?.status === 'waiting' && Number(sample.episode) === alert.inputEpisode;
+  }
+
   observe(chats: NotificationChat[], sampledAt: number, policy: NotificationPolicy, now = sampledAt): ChatAlert[] {
     if (this.closed) return [];
     const alerts: ChatAlert[] = [], next = new Map<string, ActivitySnapshot>();
@@ -55,13 +74,15 @@ export class ChatNotifications {
       const focused = this.anyFocused();
       for (const chat of chats.slice(0, 200)) {
         const current = chat.activity, previous = this.previous.get(chat.id);
+        this.recordAnswers(chat.id, current.questionReplies, now);
         if (current.status === 'unknown') { if (previous) next.set(chat.id, previous); continue; }
         next.set(chat.id, current);
         const thread = this.namespace + '/' + chat.id;
-        const claim = (event: string, kind: NotificationKind, message: string) => {
+        const claim = (event: string, kind: NotificationKind, message: string, identity: Pick<ChatAlert, 'questionId' | 'inputEpisode'> = {}) => {
           const claimed = this.db.prepare('INSERT OR IGNORE INTO events VALUES (?, ?)').run(thread + '/' + event, sampledAt);
           const channels = notificationChannels(policy, kind, focused);
-          if (claimed.changes && (channels.sound || channels.desktop)) alerts.push({ chatId: chat.id, title: chat.title || 'Untitled chat', message, kind, ...channels });
+          const alert = { chatId: chat.id, title: chat.title || 'Untitled chat', message, kind, ...channels, ...identity };
+          if (claimed.changes && (channels.sound || channels.desktop) && this.canDeliver(alert)) alerts.push(alert);
         };
         const sample = this.db.prepare('SELECT * FROM samples WHERE id = ?').get(thread);
         // A slower window must not roll another window's newer observation back.
@@ -81,7 +102,7 @@ export class ChatNotifications {
         if (!previous) continue;
         const question = current.asyncQuestion;
         if (question && question.id !== previous.asyncQuestion?.id && question.askedAt >= now - 60000 && question.askedAt <= now + 5000) {
-          claim('async-input/' + question.id, 'input', 'Codex has a question for you.');
+          claim('async-input/' + question.id, 'input', 'Codex has a question for you.', { questionId: question.id });
         }
         let event: string | undefined;
         if (current.status === 'ready' && current.completedAt && current.completedAt >= now - 60000
@@ -96,10 +117,12 @@ export class ChatNotifications {
         }
         if (!event) continue;
         claim(event, current.status === 'ready' ? 'finished' : 'input',
-          current.status === 'ready' ? 'Codex finished a response.' : current.detail?.includes('approval') ? 'Codex needs your approval.' : 'Codex needs your answer.');
+          current.status === 'ready' ? 'Codex finished a response.' : current.detail?.includes('approval') ? 'Codex needs your approval.' : 'Codex needs your answer.',
+          current.status === 'waiting' ? { inputEpisode: episode } : {});
       }
       this.db.prepare('DELETE FROM events WHERE time < ?').run(sampledAt - 7 * 86400000);
       this.db.prepare('DELETE FROM samples WHERE time < ?').run(sampledAt - 7 * 86400000);
+      this.db.prepare('DELETE FROM question_answers WHERE time < ?').run(sampledAt - 7 * 86400000);
       this.db.exec('COMMIT');
       this.previous = next;
       return alerts;

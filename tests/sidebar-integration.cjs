@@ -553,6 +553,21 @@ exports.run = async function (context, fixtureVscode) {
       const asyncAlerts = notificationRequests.length;
       await companionProvider.refresh();
       assert.equal(notificationRequests.length, asyncAlerts, 'async question alerts once while work continues');
+      const queuedQuestion=notificationRequests.find(request=>request.questionId==='async-q1');
+      assert.ok(queuedQuestion.canDeliver('sound'),'unanswered question remains deliverable');
+      const replyText=call=>'<send_user_message_question_reply>\n'+JSON.stringify([{
+        questionItemId:JSON.stringify(['request_user_input_async',call,0]),answer:'Fixture answer'
+      }])+'\n</send_user_message_question_reply>';
+      fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'user_message',message:replyText('async-q1')}));
+      await companionProvider.refresh();
+      assert.equal(queuedQuestion.canDeliver('sound'),false,'answer cancels queued sound through live runtime overlay');
+      assert.equal(queuedQuestion.canDeliver('desktop'),false,'answer cancels queued popup');
+      fs.appendFileSync(activityTranscript,
+        activityLine('response_item',{type:'function_call',name:'request_user_input_async',call_id:'async-q2'})
+        +activityLine('response_item',{type:'function_call_output',call_id:'async-q2',output:'{"accepted":true}'})
+        +activityLine('event_msg',{type:'user_message',message:replyText('async-q2')}));
+      await companionProvider.refresh();
+      assert.equal(notificationRequests.length,asyncAlerts,'answer before refresh suppresses question notification');
     } finally { RuntimeActivity.prototype.read = readRuntime; }
     fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'turn_aborted', turn_id: 'fixture-async-question' }));
     await companionProvider.refresh();
@@ -824,6 +839,7 @@ exports.run = async function (context, fixtureVscode) {
       scope: 'Real isolated VS Code; fixture URI handler and synthetic hook events. Native-menu context data and command dispatch exercised with synthetic mouse/keyboard events; picker choices supplied by fixture. Native overlay appearance is not inspected. No authenticated Codex conversation.' };
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
     result.verified.push('completion, blocking input and acknowledged async questions reach notification delivery once');
+    result.verified.push('structured replies cancel pending question channels through runtime overlay; answered-before-refresh prompts stay quiet');
     result.verified.push('legacy notification preferences migrate and clearing overrides restores four new policy defaults');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));
   } catch (error) {
