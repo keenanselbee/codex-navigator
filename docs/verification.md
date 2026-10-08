@@ -1,12 +1,48 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.6**, cancelling pending alerts for answered questions.
+Current verified Desktop release: **1.9.7**, banked-reset confirmation and platform button ordering.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 1.9.7
+-------------------------------
+
+Public build revision: `bf494515e27164a48c5ab68859b7ad8915226c0e`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `ea2ebbe77358fd556ff9251dc72e93541fb0ffba64387717f32c47bda724d86b`.
+
+All 293 public tests and 24 commercial tests pass. The public-only snapshot
+`public-only-pqQTWn` passes and rejects a full build without the private checkout.
+Coverage includes REST credit parsing, expiry sorting, bounded responses, pinned
+endpoint/account headers, stale and forged confirmations, cancellation, account
+leases, duplicate submissions and stable request IDs after uncertain outcomes.
+No credentials or credit IDs enter the account panel or persisted usage cache.
+
+Isolated VS Code 1.139.1 integration passes initial/restart and second-window
+checks in `integration-8kIeC3`. The real webview exercises reset confirmation,
+Cancel, duplicate clicks, success, Windows button order, and 704x182/320x240 panel
+sizes. macOS/Linux button ordering is tested with simulated browser platforms;
+native acceptance remains outstanding. An earlier run passed the initial UI
+checks but timed out on unrelated cross-window licence expiry propagation; the
+complete rerun passed without changing licensing code.
+
+All 76 archive entries match the production allowlist. Exact installation and
+reinstallation pass in `installed-acceptance-DH1ees`, checking 73 payload hashes,
+the production manifest and retained trial expiry. Desktop VSIX and receipt
+hashes match their source files. The disposable extension was removed and the
+normal profile was unchanged. No Git push or Marketplace publication occurred.
+
+The direct reset contract was inspected in installed Codex 26.1002.51308:
+GET/POST use `/wham/rate-limit-reset-credits` and its `/consume` endpoint;
+REST expiry/count fields are snake case. Authenticated live redemption is not
+claimed: all automated requests used synthetic fixtures and no real reset was
+consumed. Uncertain-attempt IDs survive only within the current Navigator window.
+This evidence is excluded from the VSIX.
 
 
 Verified Desktop package: 1.9.6
