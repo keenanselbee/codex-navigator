@@ -77,6 +77,12 @@ exports.run = async function (context, fixtureVscode) {
               resetButtons:[...menu.querySelectorAll('.account-reset-actions button')].map(n=>n.textContent),
               resetDisabled:menu.querySelector('[data-account-focus="useReset"]')?.disabled,
               resetCredits:menu.querySelectorAll('.account-reset-credit').length,
+              resetDatesVisible:!!content&&[...menu.querySelectorAll('.account-reset-credit time')].every(n=>{
+                const r=n.getBoundingClientRect(); return r.top>=content.top&&r.bottom<=content.bottom&&r.left>=content.left&&r.right<=content.right;
+              }),
+              resetActionsVisible:[...menu.querySelectorAll('.account-reset-actions button')].every(n=>{
+                const r=n.getBoundingClientRect(); return r.top>=bounds.top&&r.bottom<=bounds.bottom&&r.left>=bounds.left&&r.right<=bounds.right;
+              }),
               contextFits:!context||(context.left>=bounds.left&&context.right<=bounds.right+1&&context.top>=bounds.top&&context.bottom<=bounds.bottom+1),
               addVisible:!!add&&!!content&&add.bottom>content.top&&add.top<content.bottom,
               criticalVisible:!!critical&&!!content&&critical.bottom>content.top&&critical.top<content.bottom,

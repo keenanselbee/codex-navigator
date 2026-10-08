@@ -270,15 +270,19 @@ function createNavigatorAccounts(api, navigation) {
     const reset = state?.reset?.accountId === resetAccountId ? state.reset : undefined;
     const dates = Array.isArray(reset?.expiresAt) ? reset.expiresAt : [];
     const consuming = state?.progress === 'Using banked reset...' || pendingAction && pendingProgress === 'Using banked reset...';
-    const header = element('div', 'account-header');
+    const header = element('div', 'account-header account-reset-header');
     const back = button('Back', 'resetBack', cancelReset, consuming);
     back.setAttribute('aria-label', 'Back to accounts');
     const heading = element('strong', '', 'Use banked reset');
     heading.id = 'accountPageTitle';
     page.setAttribute('aria-labelledby', heading.id);
-    header.append(back, heading, element('span', 'account-muted', busy ? '' : dates.length + ' available'));
+    header.append(back, heading);
+    if (account) {
+      const accountName = element('span', 'account-reset-identity', identity(account) + ' · ' + plan(account));
+      accountName.title = accountName.textContent;
+      header.append(accountName);
+    }
     const content = element('div', 'account-content account-reset-content');
-    if (account) content.append(element('div', 'account-reset-identity', identity(account) + ' · ' + plan(account)));
     if (busy) {
       const progress = element('p', 'account-progress', state?.progress || pendingProgress);
       progress.setAttribute('role', 'status'); content.append(progress);
@@ -295,11 +299,13 @@ function createNavigatorAccounts(api, navigation) {
       const item = element('div', 'account-reset-credit' + (index === 0 ? ' account-reset-selected' : ''));
       item.setAttribute('role', 'listitem');
       item.append(element('strong', '', index === 0 ? 'Will be used' : 'Available'));
-      item.append(element('span', 'account-muted', index === 0 ? 'Expires first' : 'Expires'));
       const date = new Date(expiresAt * 1000);
-      item.append(element('span', '', date.toLocaleString(undefined, { month: 'short', day: 'numeric',
-        ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' })));
-      item.title = date.toLocaleString();
+      const expiry = element('time', '', date.toLocaleString(undefined, { month: 'short', day: 'numeric',
+        ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' }));
+      expiry.dateTime = date.toISOString();
+      expiry.setAttribute('aria-label', 'Expires ' + date.toLocaleString());
+      item.append(expiry);
+      item.title = 'Expires ' + date.toLocaleString();
       list.append(item);
     });
     content.append(list);

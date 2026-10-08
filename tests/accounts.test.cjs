@@ -123,7 +123,8 @@ test('reset cancellation during a read and a cross-window lease prevent consumpt
 
 test('uncertain redemption cannot retry from the same confirmation and failed quota refresh does not undo success', async t => {
   let fail = true, consumed = 0; const attempts = [];
-  const f = await fixture(t, { readBankedResets: async () => [{ id: 'credit', expiresAt: Math.floor(Date.now() / 1000) + 100 }],
+  const expiresAt = Math.floor(Date.now() / 1000) + 100;
+  const f = await fixture(t, { readBankedResets: async () => [{ id: 'credit', expiresAt }],
     consumeBankedReset: async (_raw, credit, token, retry) => {
       consumed++; attempts.push({ credit, token, retry });
       if (fail) throw new (require('../dist/account-resets').UncertainResetError)();

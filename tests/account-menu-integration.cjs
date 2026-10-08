@@ -149,12 +149,16 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
     await until(async () => (await probe()).resetCredits === 3, 'reset confirmation replaces accounts');
     result = await probe();
     assert.equal(result.rows, 0); assert.equal(result.resetDisabled, false);
-    assert.ok(result.text.includes('Will be used') && result.text.includes('Expires first'));
+    assert.ok(result.text.includes('Will be used') && result.text.includes(first.email));
+    assert.ok(!result.text.includes('Expires first') && !result.text.includes('3 available') && !result.text.includes('Expiration dates'));
     assert.deepEqual(result.resetButtons, process.platform === 'win32' ? ['Use banked reset', 'Cancel'] : ['Cancel', 'Use banked reset']);
-    for (const [width, height] of [[704, 182], [320, 240]]) {
+    for (const [width, height] of [[704, 120], [600, 120], [704, 182], [320, 240]]) {
       await send({ type: 'fixture:size', width, height });
       result = await probe(); assert.equal(result.horizontalOverflow, false, 'reset confirmation fits width ' + width);
       assert.ok(result.pageRect.bottom <= height + 1);
+      assert.equal(result.resetDatesVisible, true, width + 'x' + height + ' shows every reset date without scrolling');
+      assert.equal(result.resetActionsVisible, true, width + 'x' + height + ' keeps confirmation actions visible');
+      assert.ok(result.gridScrollHeight <= result.gridClientHeight + 1, width + 'x' + height + ' needs no reset content scrolling');
     }
     await click('cancelReset');
     await until(async () => (await probe()).rows === 2, 'Cancel returns to accounts');

@@ -582,7 +582,9 @@ use a banked reset, sign in again or forget it. Clear a custom label to show the
 Back returns to the chat list.
 
 Use banked reset replaces the accounts grid with a compact confirmation showing
-available resets and their local expiration dates. The earliest-expiring valid
+available resets and their local expiration dates in compact two-line cards.
+The account appears in the header, keeping dates and confirmation buttons visible
+in short panels without extra expiry/count labels. The earliest-expiring valid
 reset is marked Will be used. Back or Cancel returns to accounts. Confirming uses
 that exact reset and refreshes usage without switching accounts or reloading.
 The confirmation is checked again before redemption; a changed list requires

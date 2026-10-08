@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+1.9.8
+-----
+
+- Keep banked-reset dates readable in short panels: move the account into the
+  header, use compact two-line reset cards, and remove the extra expiry/count
+  labels. Keep confirmation buttons visible and preserve platform button order.
+
 1.9.7
 -----
 
