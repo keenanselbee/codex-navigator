@@ -1,12 +1,37 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.0**, reset eligibility/recovery safeguards and updated Pro labels.
+Current verified Desktop release: **2.0.1**, clearing recovered post-reset usage warnings.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.1
+-------------------------------
+
+Public build revision: `ee7a7860cd94a8e6a23217e89d27a47e4401e078`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `6b2904a819816cef211f1e5d205309d9f4a08d575139a5eb2dad49a50fe74683`.
+
+All 40 account-controller tests and 24 commercial tests pass after production
+compilation. The new regression verifies that a successful quota refresh clears
+the reset warning for the same account while retaining the confirmed success
+message. Failed refreshes, another account's quota and plan-only responses do
+not clear it; no additional reset is redeemed. The full public suite was not
+rerun for this focused controller change. Whitespace and release metadata pass.
+
+Isolated VS Code 1.139.1 initial/restart and second-window integration passes in
+`integration-839fAe`. Exact production archive installation and reinstallation
+pass in `installed-acceptance-tWXicE`, checking 73 payload hashes, the manifest
+and retained trial expiry. All 76 archive entries match the production allowlist.
+Desktop VSIX and receipt hashes match their source files. The disposable extension
+was removed; the normal profile was unchanged. These are synthetic fixtures:
+no live reset or paid provider request was made. No Git push or Marketplace
+publication occurred. Native macOS/Linux acceptance remains outstanding.
+This evidence is excluded from the immutable VSIX.
 
 
 Verified Desktop package: 2.0.0
