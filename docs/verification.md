@@ -1,7 +1,7 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.9**, listing copy for banked-reset tracking and use.
+Current verified Desktop release: **2.0.0**, reset eligibility/recovery safeguards and updated Pro labels.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
@@ -9,8 +9,12 @@ Use [Release preparation](marketplace-release.md) for the current procedure and
 once; packaging receipts remain the authority for archive and payload hashes.
 
 
-Release checks: 2.0.0
----------------------
+Verified Desktop package: 2.0.0
+-------------------------------
+
+Public build revision: `448be0b79232f78e8c2585f031622198c6f45b60`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `fbdd809f2e749c38318c761bc199891fa9203cf0927c2799762dda1943714c20`.
 
 All 299 public tests and 24 commercial tests pass after production compilation.
 The strict reset threshold is covered for both core windows, including exactly
@@ -32,7 +36,14 @@ The initial layout runs found clipping in short panels; height container queries
 and placing the consequence warning beside the confirmation action corrected it.
 The complete rerun passed. Release metadata and whitespace
 checks pass. These fixtures use synthetic accounts; no live reset was consumed.
-Exact-package installation and Desktop delivery remain pending.
+All 76 archive entries match the production allowlist. Exact installation and
+reinstallation pass in VS Code 1.139.1 in `installed-acceptance-AHtSqh`, checking
+73 payload hashes, the production manifest and retained trial expiry. Desktop
+VSIX and receipt hashes match their source files. The disposable extension was
+removed and the normal profile was unchanged. The fixture makes no paid provider
+requests. No Git push or Marketplace publication occurred. Native macOS/Linux
+acceptance remains outstanding. This evidence is excluded from the VSIX and
+does not change the recorded public build revision or immutable archive.
 
 
 Verified Desktop package: 1.9.9
