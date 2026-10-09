@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+2.0.1
+-----
+
+- Clear the post-reset usage warning once that account's quota refresh succeeds,
+  while keeping the reset success message. Refreshes for other accounts or plan
+  metadata alone do not dismiss the warning.
+
 2.0.0
 -----
 

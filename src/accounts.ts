@@ -35,7 +35,7 @@ export class Accounts implements vscode.Disposable {
   private missingUsageAttempts = new Map<string, number>();
   private usageProblems = new Map<string, string>();
   private reset?: { accountId: string; generation: number; token: string; credits: BankedReset[]; retry?: boolean; usage?: AccountUsage; problem?: string };
-  private resetResult = '';
+  private resetResult?: { accountId: string; message: string; usagePending: boolean };
   private busy = false;
   private acting = false;
   private progress = '';
@@ -90,7 +90,8 @@ export class Accounts implements vscode.Disposable {
     }; }), busy: this.busy || this.acting, canSwitch: usable, canAdd: usable && !!this.capability.isolatedLogin,
     ...(problem ? { problem } : {}), recovery: !!problem && !!this.store.state().pending,
     reloadNeeded: this.reloadNeeded, usageRefreshing: !!this.usageRefresh,
-    ...(this.resetResult ? { resetResult: this.resetResult } : {}),
+    ...(this.resetResult ? { resetResult: this.resetResult.message
+      + (this.resetResult.usagePending ? ' Usage could not be updated; refresh usage.' : '') } : {}),
     ...(this.reset ? { reset: { accountId: this.reset.accountId, token: this.reset.token,
       eligibility: resetEligibility(this.reset.usage), usage: this.reset.usage, retry: this.reset.retry,
       expiresAt: this.reset.credits.map(credit => credit.expiresAt), ...(this.reset.problem ? { problem: this.reset.problem } : {}) } } : {}),
@@ -128,7 +129,10 @@ export class Accounts implements vscode.Disposable {
             if (result.primary || result.secondary || result.bankedResets !== undefined)
               this.store.saveUsage(account.id, account.generation, result);
             this.store.savePlan(account.id, account.generation, result.plan);
-            if (result.primary || result.secondary) this.missingUsageAttempts.delete(account.id);
+            if (result.primary || result.secondary) {
+              this.missingUsageAttempts.delete(account.id);
+              if (this.resetResult?.accountId === account.id) this.resetResult.usagePending = false;
+            }
             this.usageProblems.delete(account.id);
           }
         } catch {
@@ -237,7 +241,7 @@ export class Accounts implements vscode.Disposable {
     if (!['setup', 'forgetAll', 'forget', 'rename', 'remember', 'retryReload', 'restore', 'add', 'switch', 'reconnect', 'previewReset', 'useReset'].includes(String(action))) return;
     if (this.acting || this.busy) return;
     if (action === 'previewReset' && typeof id === 'string' && Number.isSafeInteger(generation)) {
-      this.resetResult = '';
+      this.resetResult = undefined;
       this.reset = { accountId: id, generation: generation as number, token: randomUUID(), credits: [] };
     }
     this.acting = true; this.notice = '';
@@ -369,7 +373,8 @@ export class Accounts implements vscode.Disposable {
         }
       }
       confirmed = true;
-      this.resetResult = 'Reset used for ' + (account.email || account.label || 'this account') + '.';
+      this.resetResult = { accountId: account.id,
+        message: 'Reset used for ' + (account.email || account.label || 'this account') + '.', usagePending: false };
       this.reset = undefined;
       // Once OpenAI confirms success, local persistence/refresh failures cannot undo it.
       try { this.store.saveResetAttempt(account.id, { ...attempt, status: 'used' }); } catch { /* Keep the original pending key. */ }
@@ -382,7 +387,7 @@ export class Accounts implements vscode.Disposable {
         }
       } catch {
         this.usageProblems.set(account.id, 'Reset used. Usage could not be updated; refresh usage to check the new limits.');
-        this.resetResult += ' Usage could not be updated; refresh usage.';
+        this.resetResult.usagePending = true;
       }
       try { this.store.clearResetAttempt(account.id); } catch { /* A retained attempt still prevents a new redemption. */ }
     } catch (error) {

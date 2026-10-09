@@ -148,6 +148,35 @@ test('uncertain redemption cannot retry from the same confirmation and failed qu
   assert.equal(f.controller.snapshot().accounts[0].usage?.primary, undefined);
 });
 
+test('refresh clears a reset warning only after quota for that account recovers and preserves success', async t => {
+  let now = Date.now(), consumed = 0, recovery = 'offline';
+  const f = await fixture(t, {
+    readBankedResets: async () => [{ id: 'credit', expiresAt: Math.floor(now / 1000) + 86400 }],
+    consumeBankedReset: async () => { consumed++; },
+    readAccountUsage: async (_binary, _directory, raw) => {
+      const target = raw === auth('first');
+      if (target && consumed && recovery === 'offline') throw Error('offline');
+      if (target && consumed && recovery === 'plan-only') return { checkedAt: now, plan: 'plus' };
+      return { checkedAt: now, primary: { usedPercent: consumed ? 0 : 96, windowDurationMins: 300 } };
+    },
+  }, { clock: { now: () => now } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  const other = await f.controller.store.capture(auth('second'), true);
+  await f.controller.act(action(account, 'previewReset'));
+  await f.controller.act({ ...action(account, 'useReset'), token: f.controller.snapshot().reset.token });
+  assert.match(f.controller.snapshot().resetResult, /Reset used.*Usage could not be updated/);
+  await f.controller.refreshUsage(true);
+  assert.equal(f.controller.store.usage(other.id).primary.usedPercent, 0);
+  assert.match(f.controller.snapshot().resetResult, /Usage could not be updated/, 'another account cannot clear this warning');
+  now += 15001; recovery = 'plan-only'; await f.controller.refreshUsage(true);
+  assert.match(f.controller.snapshot().resetResult, /Usage could not be updated/, 'plan metadata is not recovered quota');
+  now += 15001; recovery = 'quota'; await f.controller.refreshUsage(true);
+  assert.equal(f.controller.snapshot().resetResult, 'Reset used for first@example.invalid.');
+  assert.equal(f.controller.store.usage(account.id).primary.usedPercent, 0);
+  assert.equal(consumed, 1, 'refreshing does not redeem another reset');
+});
+
 test('uncertain redemption survives restart and retries only the original credit after quota replenishes', async t => {
   const attempts = [];
   const original = { id: 'original', expiresAt: Math.floor(Date.now() / 1000) + 100 };
