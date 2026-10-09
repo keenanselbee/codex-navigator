@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 2.0.1
+Product: Codex Navigator 2.0.2
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see [licence terms](../LICENSE.md).
 

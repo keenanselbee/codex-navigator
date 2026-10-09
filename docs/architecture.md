@@ -125,6 +125,48 @@ replacing bounded JSON. It ignores invalid/stale IDs and delayed other-turn even
 Diagnostics rotate at a bounded size and exclude message contents. Status collection
 fails open and must never interrupt the user's turn.
 
+The collector maps UserPromptSubmit to working, matching Stop/Interrupt to idle,
+and SessionEnd to unknown, returning empty JSON without model context or a
+continuation. Codex gives each invocation a one-second timeout. Transcript reads
+are bounded to 1 MiB; larger updates reset uncertain activity rather than carrying
+work across unread records. Explicit reasoning, tool and compaction item events
+can recover working status without an earlier turn-context record. Completed or
+interrupted turns and pending input are not revived by later same-turn items.
+
+Rotated transcripts retain the conversation ID before the optional rollout ID
+suffix. The reader chooses the newest filename timestamp, verifies session identity,
+and refreshes cached paths on file creation/removal or after 30 seconds. Activity
+refresh is independent of optional repository-focus detection.
+
+
+Chat layout and notifications
+-----------------------------
+
+The recency reader uses persisted VS Code threads from `thread/list` with
+`sortKey: recency_at`, descending, across bounded pages. Opening a saved chat uses
+`vscode://openai.chatgpt/local/<chat-id>`, an existing handler rather than a stable
+public API guarantee. Pin snapshots are stored under `pinnedChats.v1`.
+
+At default text size, heights below 180px use compact layout, 180-339px use columns,
+and 340px or more use a list. A 12px boundary buffer prevents resize flicker; larger
+fonts scale the thresholds. Complete rows fit the rendered frame and share spare
+height up to 1.5 times their natural height. Sparse lists can retain blank space.
+
+Notifications use the existing approximately five-second visible-view refresh.
+Startup establishes a quiet baseline; shared-profile windows coordinate delivery
+and cancel pending questions after structured replies. Output diagnostics record
+changed activity for up to 200 chats, with thread/turn IDs, statuses and observation
+times. Runtime failures use short classifications and numeric codes, excluding
+raw stderr, paths and conversation contents.
+
+Native delivery uses Windows notification APIs through PowerShell, macOS
+`osascript`, or Linux `notify-send`. Audio prefers the installed Codex
+`codex-notification.wav`, then the system sound, then bundled Balafon. Playback
+uses Windows SoundPlayer, macOS `afplay`, or Linux `paplay`/`aplay`; Linux theme
+sounds use `canberra-gtk-play`. Windows and the ALSA fallback may create an
+attenuated temporary WAV, removed after playback. Native macOS/Linux acceptance
+remains outstanding.
+
 Setup webview
 -------------
 

@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+2.0.2
+-----
+
+- Reorganise customer help around setup, chats, activity, accounts, instructions
+  and licensing. Remove obsolete migration notes and repeated explanations,
+  retain existing help links, and move implementation detail to the architecture guide.
+
 2.0.1
 -----
 
