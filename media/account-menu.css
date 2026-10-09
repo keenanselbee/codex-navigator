@@ -1,4 +1,4 @@
-#accountPage { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; container-type: inline-size; }
+#accountPage { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; container-type: size; }
 .account-header { display: flex; align-items: center; gap: 6px; flex: none; min-height: 29px; }
 .account-header strong { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .account-header button:last-child { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
@@ -29,6 +29,8 @@
 .account-edit-actions { display: flex; align-items: center; gap: 3px; }
 .account-edit-actions button { padding: 1px 3px; }
 .account-reset-content { padding: 4px; }
+.account-reset-usage { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--vscode-descriptionForeground); font-size: 0.92em; font-variant-numeric: tabular-nums; }
+.account-reset-usage button { padding: 0 3px; flex: none; }
 .account-reset-header strong { flex: 0 0 auto; }
 .account-reset-identity { margin-left: auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--vscode-descriptionForeground); }
 .account-reset-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -36,10 +38,12 @@
 .account-reset-credit:not(.account-reset-selected) strong { color: var(--vscode-descriptionForeground); font-weight: normal; }
 .account-reset-credit time { font-variant-numeric: tabular-nums; }
 .account-reset-selected { border-color: var(--vscode-focusBorder); background: var(--vscode-list-inactiveSelectionBackground); }
-.account-reset-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 4px; flex: none; }
+.account-reset-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 8px; padding: 4px; flex: none; }
+.account-reset-note { flex: 1 1 240px; color: var(--vscode-descriptionForeground); font-size: 0.92em; }
 .account-reset-actions button { padding: 4px 9px; }
 #accountPage button.account-primary { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
 #accountPage button.account-primary:hover { background: var(--vscode-button-hoverBackground); }
+#accountPage button.account-primary:disabled { color: var(--vscode-disabledForeground); background: var(--vscode-button-secondaryBackground); opacity: 1; cursor: default; }
 @container (max-width: 519px) {
   .account-reset-header { flex-wrap: wrap; padding-bottom: 4px; }
   .account-reset-identity { flex-basis: 100%; margin-left: 4px; }
@@ -59,4 +63,11 @@
 .account-progress::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 6px; border: 1px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: accountWorking 0.9s linear infinite; }
 @keyframes accountWorking { to { transform: rotate(360deg); } }
 @media (max-height: 150px) { .account-header { min-height: 24px; } }
+@container (max-height: 150px) {
+  .account-reset-header { min-height: 24px; }
+  .account-reset-content { padding: 0 4px; }
+  .account-reset-credit { min-height: 37px; padding-top: 2px; padding-bottom: 2px; gap: 0; }
+  .account-reset-actions { padding-top: 2px; padding-bottom: 2px; }
+  .account-reset-actions button { padding-top: 2px; padding-bottom: 2px; }
+}
 @media (prefers-reduced-motion: reduce) { .account-progress::before { animation: none; } }

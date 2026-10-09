@@ -55,16 +55,16 @@ function createNavigatorAccounts(api, navigation) {
   function plan(account) {
     const value = typeof account.plan === 'string' ? account.plan.trim() : '';
     const labels = { free: 'Free', free_workspace: 'Free', guest: 'Free', go: 'Go', plus: 'Plus',
-      pro: 'Pro 20x', prolite: 'Pro 5x', team: 'Business', business: 'Business',
+      pro: 'Pro 200', prolite: 'Pro 100', promax: 'Pro 500', team: 'Business', business: 'Business',
       self_serve_business_prolite: 'Business', self_serve_business_usage_based: 'Business',
       edu: 'Edu', enterprise: 'Enterprise', enterprise_cbp_automation: 'Enterprise',
       enterprise_cbp_usage_based: 'Enterprise', ent26: 'Enterprise' };
     return Object.hasOwn(labels, value.toLowerCase()) ? labels[value.toLowerCase()] : value || 'ChatGPT';
   }
 
-  function remaining(window) {
+  function remaining(window, precise = false) {
     return window && Number.isFinite(window.usedPercent) && window.usedPercent >= 0 && window.usedPercent <= 100
-      ? Math.round(100 - window.usedPercent) + '% left' : 'unavailable';
+      ? (precise && window.usedPercent > 90 && window.usedPercent <= 90.5 ? '<10' : Math.round(100 - window.usedPercent)) + '% left' : 'unavailable';
   }
 
   function shortWindow(window, fallback = 'Short') {
@@ -86,14 +86,14 @@ function createNavigatorAccounts(api, navigation) {
     return when(value * 1000);
   }
 
-  function usageSubtitle(account) {
+  function usageSubtitle(account, precise = false) {
     const usage = account.usage;
     const windows = [[usage?.primary, 'Short'], [usage?.secondary, 'Other window']];
     const available = windows.filter(([window]) => window && Number.isFinite(window.usedPercent)
       && window.usedPercent >= 0 && window.usedPercent <= 100);
     if (!available.length) return 'Usage unavailable';
     return available.map(([window, fallback]) => shortWindow(window, fallback).toLowerCase()
-      + ' ' + remaining(window)).join(' · ');
+      + ' ' + remaining(window, precise)).join(' · ');
   }
 
   function bankedExpiry(usage) {
@@ -269,6 +269,9 @@ function createNavigatorAccounts(api, navigation) {
     const account = state?.accounts?.find(item => item.id === resetAccountId);
     const reset = state?.reset?.accountId === resetAccountId ? state.reset : undefined;
     const dates = Array.isArray(reset?.expiresAt) ? reset.expiresAt : [];
+    const eligible = reset?.eligibility === 'eligible';
+    const retry = reset?.retry === true;
+    const unknown = !reset || reset.eligibility === 'unknown';
     const consuming = state?.progress === 'Using banked reset...' || pendingAction && pendingProgress === 'Using banked reset...';
     const header = element('div', 'account-header account-reset-header');
     const back = button('Back', 'resetBack', cancelReset, consuming);
@@ -278,7 +281,10 @@ function createNavigatorAccounts(api, navigation) {
     page.setAttribute('aria-labelledby', heading.id);
     header.append(back, heading);
     if (account) {
-      const accountName = element('span', 'account-reset-identity', identity(account) + ' · ' + plan(account));
+      const sameIdentity = state.accounts.filter(item => (item.email || identity(item)) === (account.email || identity(account)));
+      const detail = sameIdentity.length > 1 ? ' · ' + (account.workspace || account.id.slice(0, 8))
+        + (sameIdentity.some(item => item.id !== account.id && item.workspace === account.workspace) ? ' · ' + account.id.slice(0, 8) : '') : '';
+      const accountName = element('span', 'account-reset-identity', (account.email || identity(account)) + ' · ' + plan(account) + detail);
       accountName.title = accountName.textContent;
       header.append(accountName);
     }
@@ -292,13 +298,19 @@ function createNavigatorAccounts(api, navigation) {
       const error = element('p', 'account-problem', problem);
       error.setAttribute('role', 'alert'); content.append(error);
     }
+    const usage = element('div', 'account-reset-usage');
+    usage.append(element('span', '', usageSubtitle({ usage: reset?.usage }, true)));
+    usage.append(button('Refresh usage', 'refreshReset', () => {
+      if (!busy && account) post('previewReset', account);
+    }, busy || !account));
+    content.append(usage);
     const list = element('div', 'account-reset-list');
     list.setAttribute('role', 'list');
     list.setAttribute('aria-label', 'Available banked resets, earliest expiry first');
     dates.forEach((expiresAt, index) => {
-      const item = element('div', 'account-reset-credit' + (index === 0 ? ' account-reset-selected' : ''));
+      const item = element('div', 'account-reset-credit' + (index === 0 && eligible && !retry ? ' account-reset-selected' : ''));
       item.setAttribute('role', 'listitem');
-      item.append(element('strong', '', index === 0 ? 'Will be used' : 'Available'));
+      item.append(element('strong', '', index === 0 ? eligible && !retry ? 'Will be used' : 'Next to expire' : 'Available'));
       const date = new Date(expiresAt * 1000);
       const expiry = element('time', '', date.toLocaleString(undefined, { month: 'short', day: 'numeric',
         ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}), hour: 'numeric', minute: '2-digit' }));
@@ -309,11 +321,16 @@ function createNavigatorAccounts(api, navigation) {
       list.append(item);
     });
     content.append(list);
-    if (!busy && !problem && !dates.length) content.append(element('p', 'account-muted', 'No banked resets available.'));
+    if (!busy && !problem && !dates.length && !retry) content.append(element('p', 'account-muted', 'No banked resets available.'));
     const controls = element('div', 'account-reset-actions');
-    const use = button('Use banked reset', 'useReset', () => {
-      if (!busy && reset && account) post('useReset', account, undefined, undefined, reset.token);
-    }, busy || !account || !state?.canSwitch || !!problem || !dates.length || dates[0] * 1000 <= Date.now());
+    const note = element('span', 'account-reset-note', retry ? 'Retries the same reset; never selects another.' : eligible ? 'Resets 5-hour + weekly limits; moves weekly reset date.'
+      : unknown ? 'Refresh usage to check eligibility.' : 'Requires less than 10% left in either window.');
+    note.id = 'account-reset-eligibility'; note.setAttribute('role', 'status');
+    controls.append(note);
+    const use = button(retry ? 'Retry previous reset' : eligible ? 'Use banked reset' : 'Reset unavailable', 'useReset', () => {
+      if (!busy && (eligible || retry) && reset && account) post('useReset', account, undefined, undefined, reset.token);
+    }, busy || !account || !state?.canSwitch || !retry && (!eligible || !!problem || !dates.length || dates[0] * 1000 <= Date.now()));
+    use.setAttribute('aria-describedby', note.id);
     use.className = 'account-primary';
     controls.append(...navigatorActionOrder(use, button('Cancel', 'cancelReset', cancelReset, consuming)));
     page.append(header, content, controls);
@@ -347,6 +364,10 @@ function createNavigatorAccounts(api, navigation) {
     page.append(header);
 
     const content = element('div', 'account-content');
+    if (state?.resetResult) {
+      const result = element('p', 'account-detail', state.resetResult);
+      result.setAttribute('role', 'status'); content.append(result);
+    }
     if (!state) content.append(element('p', 'account-muted', 'Loading accounts...'));
     else {
       if ((!state.enabled || !state.supported || state.problem)

@@ -38,6 +38,10 @@ export interface PendingSwitch {
   createdAt: number;
 }
 
+export interface ResetAttempt {
+  creditId: string; expiresAt: number; requestId: string; status: 'pending' | 'used';
+}
+
 interface AccountRow {
   id: string;
   user_id: string;
@@ -144,6 +148,7 @@ export class AccountStore {
           INSERT OR IGNORE INTO credential_keys (secret_key, account_id) SELECT secret_key, id FROM accounts;
           CREATE TABLE IF NOT EXISTS exclusions (id TEXT PRIMARY KEY);
           CREATE TABLE IF NOT EXISTS account_usage (account_id TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS reset_attempts (account_id TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS lease (id INTEGER PRIMARY KEY CHECK (id = 1), owner TEXT NOT NULL, expires INTEGER NOT NULL);
           CREATE TABLE IF NOT EXISTS pending (id INTEGER PRIMARY KEY CHECK (id = 1), account_id TEXT NOT NULL,
             fingerprint TEXT NOT NULL, created_at INTEGER NOT NULL);`);
@@ -186,6 +191,36 @@ export class AccountStore {
       this.db.prepare(`INSERT INTO account_usage (account_id, snapshot) VALUES (?, ?)
         ON CONFLICT(account_id) DO UPDATE SET snapshot = excluded.snapshot`).run(id, JSON.stringify(usage));
     });
+  }
+
+  clearUsage(id: string): void {
+    this.transaction(() => this.db.prepare('DELETE FROM account_usage WHERE account_id = ?').run(id));
+  }
+
+  resetAttempt(id: string): ResetAttempt | undefined {
+    const row = this.db.prepare('SELECT snapshot FROM reset_attempts WHERE account_id = ?').get(id);
+    if (!row) return;
+    try {
+      const value = JSON.parse(String(row.snapshot));
+      if (!value || typeof value.creditId !== 'string' || !value.creditId || value.creditId.length > 512 ||
+          /[\x00-\x1f\x7f]/.test(value.creditId) || !identifier(value.requestId) ||
+          !Number.isFinite(value.expiresAt) || value.expiresAt <= 0 || value.expiresAt > 32503680000 ||
+          !['pending', 'used'].includes(value.status)) throw new Error();
+      return { creditId: value.creditId, expiresAt: value.expiresAt, requestId: value.requestId, status: value.status };
+    } catch { throw new AccountError('The previous reset record could not be read. Check this account in Codex before trying another reset.'); }
+  }
+
+  saveResetAttempt(id: string, value: ResetAttempt): void {
+    this.transaction(() => {
+      if (!this.enabled || !this.db.prepare('SELECT id FROM accounts WHERE id = ?').get(id))
+        throw new AccountError('This saved account is no longer available.');
+      this.db.prepare('INSERT INTO reset_attempts (account_id, snapshot) VALUES (?, ?) ON CONFLICT(account_id) DO UPDATE SET snapshot = excluded.snapshot')
+        .run(id, JSON.stringify(value));
+    });
+  }
+
+  clearResetAttempt(id: string): void {
+    this.transaction(() => this.db.prepare('DELETE FROM reset_attempts WHERE account_id = ?').run(id));
   }
 
   savePlan(id: string, generation: number, value: unknown): void {
@@ -366,6 +401,7 @@ export class AccountStore {
       if (!row || keys.some(key => key.secret_key === row.secret_key)) {
         this.db.prepare('DELETE FROM accounts WHERE id = ?').run(id);
         this.db.prepare('DELETE FROM account_usage WHERE account_id = ?').run(id);
+        this.db.prepare('DELETE FROM reset_attempts WHERE account_id = ?').run(id);
         this.db.prepare('DELETE FROM pending WHERE account_id = ?').run(id);
       }
     });

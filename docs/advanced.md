@@ -585,11 +585,24 @@ Use banked reset replaces the accounts grid with a compact confirmation showing
 available resets and their local expiration dates in compact two-line cards.
 The account appears in the header, keeping dates and confirmation buttons visible
 in short panels without extra expiry/count labels. The earliest-expiring valid
-reset is marked Will be used. Back or Cancel returns to accounts. Confirming uses
+reset is marked Will be used when eligible, or Next to expire otherwise.
+Navigator requires less than 10% remaining in either the five-hour or weekly
+Codex usage window; exactly 10% is unavailable. Reset dates remain visible while
+the action reads Reset unavailable. Refresh usage checks this account again.
+Missing, failed, expired-window or stale usage cannot authorize a reset. Usage
+is read when opening the confirmation and again before redemption. OpenAI can
+still decline a request based on its own eligibility rules.
+Back or Cancel returns to accounts. Confirming uses
 that exact reset and refreshes usage without switching accounts or reloading.
 The confirmation is checked again before redemption; a changed list requires
-another review. An uncertain result asks you to check usage before retrying;
-reopening the same available reset retains its request ID within that window.
+another review. A full reset refreshes both limits and moves the weekly reset
+date; the confirmation explains this before spending. It shows the account email
+and distinguishes shared-email accounts by workspace or account identifier.
+An uncertain result asks you to refresh the confirmation. Retry previous reset
+reuses the original credit and request ID, including after restarting VS Code.
+It can resolve that attempt even after quota replenishes or the credit disappears
+from the available list; it never selects another credit. Confirmed success stays
+visible even if the subsequent local cache update or usage refresh fails.
 No resets are consumed automatically. Expired sign-ins, managed policies or an
 unavailable service can prevent redemption. Reconnect the account or check Codex
 when the panel reports a problem.
@@ -614,7 +627,9 @@ switching remains usable. Managed authentication policies can prevent usage read
 
 Plan metadata is also retained from remembered sign-ins, so a failed usage read
 does not erase a known plan. Navigator follows Codex's plan labels, including
-Pro 5x for `prolite` and Pro 20x for `pro`; it does not infer a subscription from quota.
+Pro 100 for `prolite`, Pro 200 for `pro` and Pro 500 for `promax`; it does not
+infer a subscription from quota. These are tier names, not usage multipliers or
+a localized billing-price quote.
 New plan codes display directly until Navigator recognises them.
 The compact label mapping can change in extension
 updates; account metadata is retained even when its code is not recognised.

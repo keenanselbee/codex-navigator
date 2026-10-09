@@ -1,5 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
+const { resetEligibility } = require('../dist/account-usage');
 
 // Exercises Navigator's actual webview and toolbar command with metadata-only fixtures.
 exports.run = async ({ vscode, companion, provider, probe, until }) => {
@@ -22,7 +23,8 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
     calls.push(message);
     if (message.action === 'rename') second.name = message.label;
     if (message.action === 'previewReset') {
-      state.reset = { accountId: message.id, token: 'confirmation-fixture', expiresAt: [1, 8, 24].map(days => Math.floor(Date.now() / 1000) + days * 86400) };
+      state.reset = { accountId: message.id, token: 'confirmation-fixture', usage: first.usage,
+        eligibility: resetEligibility(first.usage), expiresAt: [1, 8, 24].map(days => Math.floor(Date.now() / 1000) + days * 86400) };
       await provider.publishAccounts();
     }
     if (message.action === 'cancelReset') { delete state.reset; await provider.publishAccounts(); }
@@ -43,7 +45,7 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
     assert.ok(result.text.includes('<script>Work</script>'), 'metadata remains literal text');
     assert.ok(result.text.includes('first@example.invalid'), 'email is the default title');
     assert.ok(result.text.includes('Plus'), 'Plus stays distinct from Pro');
-    assert.ok(result.text.includes('Pro 5x') && !result.text.includes('prolite'), 'Codex prolite displays as Pro 5x');
+    assert.ok(result.text.includes('Pro 100') && !result.text.includes('prolite'), 'Codex prolite displays as Pro 100');
     assert.ok(!result.text.includes('Account management') && !result.text.includes('Remember Current')
       && !result.text.includes('Forget All'), 'removed account management actions are not relocated');
     assert.ok(result.text.includes('5h 75% left · week 60% left'));
@@ -71,7 +73,9 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
     await until(() => calls.some(call => call.action === 'retryUsage'), 'visible Accounts retries missing usage after ten seconds');
 
     second.plan = 'pro'; await provider.publishAccounts();
-    assert.ok((await probe()).text.includes('Pro 20x'), 'Pro 20x stays distinct from Pro 5x');
+    assert.ok((await probe()).text.includes('Pro 200'), 'Pro 200 stays distinct from Pro 100');
+    second.plan = 'promax'; await provider.publishAccounts();
+    assert.ok((await probe()).text.includes('Pro 500'), 'Codex promax displays as Pro 500');
     second.plan = 'future_plan'; await provider.publishAccounts();
     assert.ok((await probe()).text.includes('future_plan'), 'new plan identifiers display directly without guessing a tier');
     second.plan = 'prolite'; await provider.publishAccounts();
@@ -148,8 +152,42 @@ exports.run = async ({ vscode, companion, provider, probe, until }) => {
     await menu('switch:' + first.id); await click('reset:' + first.id);
     await until(async () => (await probe()).resetCredits === 3, 'reset confirmation replaces accounts');
     result = await probe();
+    assert.equal(result.resetDisabled, true);
+    assert.ok(result.text.includes('Reset unavailable') && result.text.includes('Next to expire'));
+    assert.ok(result.text.includes('Requires less than 10% left in either window.'));
+    await click('useReset');
+    assert.equal(calls.some(call => call.action === 'useReset'), false, 'disabled action cannot submit');
+    first.usage.primary.usedPercent = 90;
+    await click('refreshReset');
+    await until(async () => (await probe()).text.includes('10% left'), 'fresh usage at boundary');
+    assert.equal((await probe()).resetDisabled, true, '10% remaining is unavailable');
+    first.usage.secondary.usedPercent = 90.01;
+    await click('refreshReset');
+    await until(async () => (await probe()).resetDisabled === false, 'weekly window unlocks reset');
+    assert.ok((await probe()).text.includes('<10% left'), 'eligible fractional usage is not rounded to the blocked boundary');
+    const knownUsage = first.usage;
+    first.usage = undefined; await click('refreshReset');
+    await until(async () => (await probe()).text.includes('Refresh usage to check eligibility.'), 'unknown quota asks for refresh');
+    assert.equal((await probe()).resetCredits, 3);
+    assert.equal((await probe()).resetDisabled, true);
+    first.usage = knownUsage;
+    first.usage.primary.usedPercent = 96; first.usage.secondary.usedPercent = 40;
+    await click('refreshReset');
+    await until(async () => (await probe()).resetDisabled === false, 'five-hour window unlocks reset');
+    result = await probe();
     assert.equal(result.rows, 0); assert.equal(result.resetDisabled, false);
     assert.ok(result.text.includes('Will be used') && result.text.includes(first.email));
+    assert.ok(result.text.includes('Resets 5-hour + weekly limits; moves weekly reset date.'));
+    const secondEmail = second.email;
+    second.email = first.email; await provider.publishAccounts();
+    assert.ok((await probe()).text.includes(first.workspace), 'same-email confirmation distinguishes workspace');
+    second.email = secondEmail;
+    state.reset.retry = true; state.reset.eligibility = 'unavailable'; state.reset.expiresAt = [];
+    await provider.publishAccounts();
+    assert.equal((await probe()).resetDisabled, false, 'pending reset can be resolved after replenishment with no remaining credits');
+    assert.ok((await probe()).text.includes('Retry previous reset'));
+    await click('refreshReset');
+    await until(async () => (await probe()).resetCredits === 3, 'restore normal confirmation');
     assert.ok(!result.text.includes('Expires first') && !result.text.includes('3 available') && !result.text.includes('Expiration dates'));
     assert.deepEqual(result.resetButtons, process.platform === 'win32' ? ['Use banked reset', 'Cancel'] : ['Cancel', 'Use banked reset']);
     for (const [width, height] of [[704, 120], [600, 120], [704, 182], [320, 240]]) {

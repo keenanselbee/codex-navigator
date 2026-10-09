@@ -1,12 +1,60 @@
 Verification
 ============
 
-Current verified Desktop release: **1.9.8**, compact banked-reset confirmation for short panels.
+Current verified Desktop release: **1.9.9**, listing copy for banked-reset tracking and use.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Release checks: 2.0.0
+---------------------
+
+All 299 public tests and 24 commercial tests pass after production compilation.
+The strict reset threshold is covered for both core windows, including exactly
+10% remaining, fractional usage, missing/invalid metadata, stale observations
+and elapsed reset times. Controller checks reject forged eligibility and quota
+changes between preview and redemption; a failed fresh read cannot fall back to
+cached eligibility. Reset dates remain visible when usage is unavailable.
+Recovery tests cover a durable original request across restart, replenished quota,
+an absent original credit, expired-credit reconciliation, journal failures before
+spending, definitive rejection cleanup and confirmed success despite cache or
+journal write failures. Account forgetting removes the recovery record.
+
+Isolated VS Code 1.139.1 initial/restart and second-window integration passes in
+`integration-LSPhTP`. The real webview checks disabled actions, refresh, both
+eligible windows, unknown usage, fractional labels, cancellation and duplicate
+submission, recovery actions, same-email workspace identity and Pro 100/200/500
+labels. Dates and actions fit at 704x120, 600x120, 704x182 and 320x240.
+The initial layout runs found clipping in short panels; height container queries
+and placing the consequence warning beside the confirmation action corrected it.
+The complete rerun passed. Release metadata and whitespace
+checks pass. These fixtures use synthetic accounts; no live reset was consumed.
+Exact-package installation and Desktop delivery remain pending.
+
+
+Verified Desktop package: 1.9.9
+-------------------------------
+
+Public build revision: `9ddb1d62ee35882afefeb8be2e39a1f8c4afb9b2`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `4669d22bc5c7373525fb9e0ebbe90df8791468f415189338a27873dd18761843`.
+
+Documentation-only release. Production compilation, release metadata and
+whitespace checks pass; all nine README URLs return HTTP 200. All 71 unchanged
+payload files match the verified 1.9.8 archive. The only archive differences are
+the README, changelog, package version and VSIX manifest. Prior runtime test
+evidence is reused; the unit and full integration suites were not rerun.
+
+All 76 archive entries match the production allowlist. Exact installation and
+reinstallation pass in VS Code 1.139.1 in `installed-acceptance-LzfWub`, checking
+73 payload hashes, the production manifest and retained trial expiry. Desktop
+VSIX and receipt hashes match their source files. The disposable extension was
+removed and the normal profile was unchanged. The fixture makes no paid provider
+requests. No Git push or Marketplace publication occurred. Native macOS/Linux
+acceptance remains outstanding. This evidence is excluded from the VSIX.
 
 
 Verified Desktop package: 1.9.8

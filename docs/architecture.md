@@ -29,10 +29,21 @@ fixed ChatGPT backend endpoint. account-resets.ts bounds and validates this
 response, sorts unexpired credits by expiry, and redeems only the host-owned
 selected ID. accounts.ts binds the preview to account generation and a random
 confirmation/request ID, rechecks eligibility under the shared account lease,
-and refreshes usage after success. An uncertain attempt keeps its request ID in
-memory for an explicit retry of that same credit; it is not retried automatically.
-Only dates and the confirmation token reach the panel. Credit IDs and server
-descriptions never enter the metadata cache. The active sign-in stays unchanged.
+and refreshes usage after success. The preview and every new redemption read fresh
+core usage through the isolated helper. A five-hour or weekly window must have
+strictly less than 10% remaining. The host rejects missing usage, snapshots at
+least five minutes old and windows whose reset time has passed; the webview
+receives eligibility and sanitized usage along with dates. A refresh action
+reopens the preview without spending a credit. Before POST, the host persists the
+exact credit, expiry, request ID and pending status in a separate reset_attempts
+table. Restart recovery reuses that record for an explicit retry, even when fresh
+quota is no longer eligible or the available list omits the original credit.
+It never substitutes a new credit and is not retried automatically. Confirmed
+success is preserved across local cache, journal or follow-up read failures.
+Used records can reconcile without another POST; confirmed outcomes remove the
+journal, while uncertain records remain until resolved or the account is forgotten.
+Credit IDs and server descriptions never enter the webview or usage cache.
+The active sign-in stays unchanged.
 
 Custom action/Cancel groups share action-order.js, using the webview's client
 platform for matching DOM and tab order. This remains correct for remote hosts:

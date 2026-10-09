@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+2.0.0
+-----
+
+- Keep banked resets and expiry dates visible while requiring less than 10%
+  remaining in either the five-hour or weekly window to use one. Refresh usage
+  in the confirmation and recheck it before redemption; unavailable usage cannot
+  authorize a reset. Show a disabled Reset unavailable action until eligible.
+- Clarify when OpenAI declines a reset because no usage window is eligible.
+- Explain that a reset affects both limits and moves the weekly reset date;
+  distinguish accounts sharing an email in the confirmation.
+- Retain uncertain reset attempts across restarts and retry only the same credit.
+  Preserve confirmed success when local storage or the usage refresh fails.
+- Update Pro labels to Pro 100, Pro 200 and Pro 500 using reported plan codes.
+- Version rollover from 1.9.9; no configuration migration is required.
+
 1.9.9
 -----
 

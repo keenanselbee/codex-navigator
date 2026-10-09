@@ -44,6 +44,17 @@ function fixture(t) {
   return { open, secrets, values, calls, directory };
 }
 
+test('reset journal is shared across stores, retained while disabled, and removed when forgotten', async t => {
+  const f = fixture(t), store = f.open();
+  await store.enable(); const account = await store.capture(auth(), true);
+  const attempt = { creditId: 'credit', expiresAt: 2000000000, requestId: 'same-request', status: 'pending' };
+  store.saveResetAttempt(account.id, attempt);
+  const peer = f.open();
+  assert.deepEqual(peer.resetAttempt(account.id), attempt);
+  await store.disable(); assert.deepEqual(peer.resetAttempt(account.id), attempt);
+  await store.forget(account.id); assert.equal(peer.resetAttempt(account.id), undefined);
+});
+
 test('legacy account migrations exclude other writers and preserve saved metadata', t => {
   const { directory, secrets, open } = fixture(t);
   const { DatabaseSync } = require('node:sqlite');

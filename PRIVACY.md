@@ -141,10 +141,13 @@ Unavailable responses keep the last known snapshot, identified by its timestamp.
 Choosing Use banked reset requests the selected account's available credits from
 OpenAI's ChatGPT service using its saved access token and workspace identifier.
 Confirming sends the selected credit ID and a random redemption request ID to
-that service, then refreshes usage. Credit IDs stay in extension-host memory;
-the panel receives expiration dates and an opaque confirmation token only.
-An uncertain attempt retains its credit/request IDs in memory for an explicit
-retry in that window. No refresh tokens, chat messages or repository content
+that service, then refreshes usage. Before sending, Navigator records the credit
+ID, expiry, request ID and pending/used status in the local account database.
+This host-only recovery record survives restarts so an explicit retry reuses the
+same credit and request ID. It is removed after a confirmed outcome or when the
+account is forgotten; turning off remembering retains it with the saved account.
+The panel receives expiration dates, an opaque confirmation token and retry state,
+never credit IDs. No refresh tokens, chat messages or repository content
 are sent by reset requests. No automatic redemption or token refresh is performed.
 
 Account capability checks start a private native Codex helper. Add Account

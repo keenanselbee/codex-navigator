@@ -30,7 +30,7 @@ async function fixture(t, overrides = {}, options = {}) {
     exports, process: options.platform ? { ...process, platform: options.platform } : process, Date: options.clock || Date, setInterval: () => 1, clearInterval() {}, setTimeout, clearTimeout, AbortController,
     require: name => name === 'vscode' ? vscode : name === './account-store' ? require('../dist/account-store')
       : name === './account-usage' ? { ...require('../dist/account-usage'), readAccountUsage: overrides.readAccountUsage || (async () => {
-        calls.usage++; return { checkedAt: Date.now(), plan: 'plus', primary: { usedPercent: 25, windowDurationMins: 300 }, bankedResets: 2 };
+        calls.usage++; return { checkedAt: Date.now(), plan: 'plus', primary: { usedPercent: overrides.readBankedResets ? 96 : 25, windowDurationMins: 300 }, bankedResets: 2 };
       }) }
       : name === './account-resets' ? { ...require('../dist/account-resets'),
         readBankedResets: overrides.readBankedResets || (async () => []),
@@ -81,7 +81,7 @@ test('banked reset confirmation exposes dates only and consumes the exact previe
   await f.controller.act(request); assert.equal(consumed.length, 1);
   hold.open(); await first;
   assert.equal(consumed[0][1].id, credit.id); assert.equal(consumed[0][2], preview.token);
-  assert.equal(f.controller.snapshot().reset, undefined); assert.equal(f.calls.usage, 1);
+  assert.equal(f.controller.snapshot().reset, undefined); assert.equal(f.calls.usage, 3);
   await f.controller.act(request); assert.equal(consumed.length, 1, 'spent confirmation cannot be replayed');
   assert.equal(await runtime.readAccountFile(f.home), raw); assert.equal(reloads(f), 0);
 });
@@ -129,7 +129,10 @@ test('uncertain redemption cannot retry from the same confirmation and failed qu
       consumed++; attempts.push({ credit, token, retry });
       if (fail) throw new (require('../dist/account-resets').UncertainResetError)();
     },
-    readAccountUsage: async () => { throw Error('offline'); } });
+    readAccountUsage: async () => {
+      if (consumed === 2) throw Error('offline');
+      return { checkedAt: Date.now(), primary: { usedPercent: 96, windowDurationMins: 300 } };
+    } });
   fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
   await f.controller.enable(); const account = f.controller.store.list()[0];
   await f.controller.act(action(account, 'previewReset'));
@@ -142,7 +145,119 @@ test('uncertain redemption cannot retry from the same confirmation and failed qu
   assert.equal(consumed, 2); assert.equal(f.controller.snapshot().reset, undefined);
   assert.equal(attempts[1].retry, true); assert.equal(attempts[0].token, attempts[1].token);
   assert.match(f.controller.snapshot().accounts[0].usageProblem, /Reset used/);
-  assert.equal(f.controller.snapshot().accounts[0].usage.primary, undefined);
+  assert.equal(f.controller.snapshot().accounts[0].usage?.primary, undefined);
+});
+
+test('uncertain redemption survives restart and retries only the original credit after quota replenishes', async t => {
+  const attempts = [];
+  const original = { id: 'original', expiresAt: Math.floor(Date.now() / 1000) + 100 };
+  const f = await fixture(t, {
+    readBankedResets: async () => attempts.length ? [{ id: 'next', expiresAt: original.expiresAt + 100 }] : [original],
+    readAccountUsage: async () => ({ checkedAt: Date.now(), primary: { usedPercent: attempts.length ? 0 : 96, windowDurationMins: 300 } }),
+    consumeBankedReset: async (_raw, credit, token, retry) => {
+      attempts.push({ credit, token, retry });
+      if (attempts.length === 1) throw new (require('../dist/account-resets').UncertainResetError)();
+    },
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  await f.controller.act(action(account, 'previewReset'));
+  const token = f.controller.snapshot().reset.token;
+  await f.controller.act({ ...action(account, 'useReset'), token });
+  assert.equal(f.controller.store.resetAttempt(account.id).creditId, 'original');
+  await f.controller.dispose();
+  const restarted = new f.Accounts(f.context, { home: f.home, binary: 'synthetic', canUse: () => true, beforeReload() {} });
+  try {
+    await restarted.refresh();
+    await restarted.act(action(account, 'previewReset'));
+    assert.equal(restarted.snapshot().reset.retry, true);
+    assert.equal(restarted.snapshot().reset.eligibility, 'unavailable');
+    assert.equal(restarted.snapshot().reset.token, token);
+    await restarted.act({ ...action(account, 'useReset'), token });
+    assert.equal(attempts.length, 2);
+    assert.equal(attempts[1].credit.id, 'original');
+    assert.equal(attempts[1].token, token); assert.equal(attempts[1].retry, true);
+    assert.match(restarted.snapshot().resetResult, /Reset used/);
+    assert.equal(restarted.store.resetAttempt(account.id), undefined);
+  } finally { await restarted.dispose(); }
+});
+
+test('journal failure prevents spending and cache failure after confirmed redemption preserves success', async t => {
+  let consumed = 0;
+  const f = await fixture(t, {
+    readBankedResets: async () => [{ id: 'credit', expiresAt: Math.floor(Date.now() / 1000) + 100 }],
+    consumeBankedReset: async () => { consumed++; },
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  const store = f.controller.store, save = store.saveResetAttempt.bind(store), cache = store.saveUsage.bind(store);
+  await f.controller.act(action(account, 'previewReset'));
+  store.saveResetAttempt = () => { throw Error('PRIVATE disk failure'); };
+  await f.controller.act({ ...action(account, 'useReset'), token: f.controller.snapshot().reset.token });
+  assert.equal(consumed, 0);
+  store.saveResetAttempt = (id, value) => { if (value.status === 'used') throw Error('PRIVATE write failure'); save(id, value); };
+  store.saveUsage = (...args) => { if (consumed) throw Error('PRIVATE cache failure'); cache(...args); };
+  await f.controller.act(action(account, 'previewReset'));
+  await f.controller.act({ ...action(account, 'useReset'), token: f.controller.snapshot().reset.token });
+  assert.equal(consumed, 1, JSON.stringify(f.controller.snapshot()));
+  assert.equal(f.controller.snapshot().problem, undefined);
+  assert.equal(f.controller.snapshot().reset, undefined);
+  assert.match(f.controller.snapshot().resetResult, /Reset used.*Usage could not be updated/);
+  assert.doesNotMatch(JSON.stringify(f.controller.snapshot()), /PRIVATE/);
+});
+
+test('definitive rejection clears the journal while a known used journal never posts again', async t => {
+  let consumed = 0;
+  const credit = { id: 'credit', expiresAt: Math.floor(Date.now() / 1000) + 100 };
+  const f = await fixture(t, { readBankedResets: async () => [credit], consumeBankedReset: async () => {
+    consumed++; throw new (require('../dist/account-resets').ResetRejectedError)('No eligible window.');
+  } });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  await f.controller.act(action(account, 'previewReset'));
+  const token = f.controller.snapshot().reset.token;
+  await f.controller.act({ ...action(account, 'useReset'), token });
+  assert.equal(f.controller.store.resetAttempt(account.id), undefined);
+  f.controller.store.saveResetAttempt(account.id, { creditId: credit.id, expiresAt: credit.expiresAt, requestId: token, status: 'used' });
+  await f.controller.act(action(account, 'previewReset'));
+  assert.equal(consumed, 1);
+  assert.equal(f.controller.snapshot().reset, undefined);
+  assert.match(f.controller.snapshot().resetResult, /Reset used/);
+});
+
+test('reset preview keeps dates visible and fresh host usage gates every redemption', async t => {
+  let used = 90, offline = false, consumed = 0, reads = 0;
+  const expiresAt = Math.floor(Date.now() / 1000) + 86400;
+  const f = await fixture(t, {
+    readBankedResets: async () => [{ id: 'credit', expiresAt }],
+    readAccountUsage: async () => {
+      reads++;
+      if (offline) throw Error('offline');
+      return { checkedAt: Date.now(), secondary: { usedPercent: used, windowDurationMins: 10080 } };
+    },
+    consumeBankedReset: async () => { consumed++; },
+  });
+  fs.writeFileSync(path.join(f.home, 'auth.json'), auth('first'));
+  await f.controller.enable(); const account = f.controller.store.list()[0];
+  const preview = () => f.controller.act(action(account, 'previewReset'));
+  const consume = () => f.controller.act({ ...action(account, 'useReset'), token: f.controller.snapshot().reset.token, eligibility: 'eligible' });
+  await preview();
+  assert.equal(f.controller.snapshot().reset.eligibility, 'unavailable', 'exactly 10% left is blocked');
+  assert.deepEqual(Array.from(f.controller.snapshot().reset.expiresAt), [expiresAt]);
+  await consume(); assert.equal(consumed, 0, 'forged eligibility cannot bypass host');
+  used = 96; await preview();
+  assert.equal(f.controller.snapshot().reset.eligibility, 'eligible');
+  used = 0; await consume();
+  assert.equal(consumed, 0, 'quota changed after preview');
+  assert.equal(f.controller.snapshot().reset.eligibility, 'unavailable');
+  used = 96; await preview(); offline = true;
+  await consume(); assert.equal(consumed, 0, 'cached eligible usage never authorizes a failed fresh check');
+  assert.equal(f.controller.snapshot().reset.eligibility, 'unknown');
+  assert.equal(f.controller.snapshot().reset.usage, undefined);
+  await preview();
+  assert.equal(f.controller.snapshot().reset.expiresAt.length, 1, 'offline usage does not hide available resets');
+  offline = false; await preview(); await consume();
+  assert.equal(consumed, 1); assert.ok(reads >= 9);
 });
 
 test('only Windows applies the WSL preference and other account access guards remain enforced', async t => {

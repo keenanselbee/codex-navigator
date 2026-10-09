@@ -63,7 +63,7 @@ test('expired credits, rejected codes and transport errors never produce success
   await assert.rejects(() => expired.consumeBankedReset(raw, { id: 'credit', expiresAt: 1 }, 'uuid'), /expired/);
   assert.equal(calls, 0);
   for (const [code, message] of [['already_redeemed', /already used/], ['no_credit', /no longer available/],
-    ['nothing_to_reset', /does not need/], ['new_code', /could not be confirmed/]]) {
+    ['nothing_to_reset', /OpenAI reports.*no eligible/], ['new_code', /could not be confirmed/]]) {
     const api = client(async () => new Response(JSON.stringify({ code })));
     await assert.rejects(() => api.consumeBankedReset(raw, { id: 'credit', expiresAt: future }, 'uuid'), message);
   }
@@ -72,7 +72,7 @@ test('expired credits, rejected codes and transport errors never produce success
     error => /could not be confirmed/.test(error.message) && !/secret diagnostic/.test(error.message));
   assert.equal(calls, 1);
   const retry = client(async () => new Response(JSON.stringify({ code: 'already_redeemed' })));
-  await retry.consumeBankedReset(raw, { id: 'credit', expiresAt: future }, 'same-uuid', true);
+  await retry.consumeBankedReset(raw, { id: 'credit', expiresAt: 1 }, 'same-uuid', true);
   for (const response of [new Response('private error', { status: 401 }), new Response('private error', { status: 403 }),
     new Response('invalid JSON'), new Response('a'.repeat(1024 * 1024 + 1))]) {
     const api = client(async () => response);

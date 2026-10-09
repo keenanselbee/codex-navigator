@@ -5,8 +5,8 @@ import { watch, FSWatcher } from 'node:fs';
 import { randomUUID, createHash } from 'node:crypto';
 import { AccountStore, AccountSummary, parseAccountAuth } from './account-store';
 import { AccountCapability, accountCapability, readAccountFile, replaceAccountFile, authFingerprint, isolatedAccountLogin, prepareAccountCredentials } from './account-runtime';
-import { AccountUsage, readAccountUsage } from './account-usage';
-import { BankedReset, readBankedResets, consumeBankedReset, UncertainResetError } from './account-resets';
+import { AccountUsage, readAccountUsage, resetEligibility, ResetEligibility } from './account-usage';
+import { BankedReset, readBankedResets, consumeBankedReset, ResetRejectedError } from './account-resets';
 
 export interface AccountOptions {
   home: string; binary?: string; cwd?: string; canUse: () => boolean;
@@ -17,8 +17,8 @@ export interface AccountMenuState extends AccountStatus {
   accounts: { id: string; generation: number; name: string; email?: string; workspace: string; selected: boolean;
     plan?: string; usage?: AccountUsage; usageProblem?: string }[];
   busy: boolean; canSwitch: boolean; canAdd: boolean; problem?: string; recovery: boolean;
-  reloadNeeded: boolean; loginEmail?: string; usageRefreshing?: boolean; progress?: string;
-  reset?: { accountId: string; token: string; expiresAt: number[]; problem?: string };
+  reloadNeeded: boolean; loginEmail?: string; usageRefreshing?: boolean; progress?: string; resetResult?: string;
+  reset?: { accountId: string; token: string; expiresAt: number[]; eligibility: ResetEligibility; retry?: boolean; usage?: AccountUsage; problem?: string };
 }
 
 /** Credentials stay in the extension host; the menu receives metadata only. */
@@ -34,8 +34,8 @@ export class Accounts implements vscode.Disposable {
   private usageAttempts = new Map<string, number>();
   private missingUsageAttempts = new Map<string, number>();
   private usageProblems = new Map<string, string>();
-  private reset?: { accountId: string; generation: number; token: string; credits: BankedReset[]; problem?: string };
-  private uncertainResets = new Map<string, { creditId: string; requestId: string }>();
+  private reset?: { accountId: string; generation: number; token: string; credits: BankedReset[]; retry?: boolean; usage?: AccountUsage; problem?: string };
+  private resetResult = '';
   private busy = false;
   private acting = false;
   private progress = '';
@@ -90,7 +90,9 @@ export class Accounts implements vscode.Disposable {
     }; }), busy: this.busy || this.acting, canSwitch: usable, canAdd: usable && !!this.capability.isolatedLogin,
     ...(problem ? { problem } : {}), recovery: !!problem && !!this.store.state().pending,
     reloadNeeded: this.reloadNeeded, usageRefreshing: !!this.usageRefresh,
+    ...(this.resetResult ? { resetResult: this.resetResult } : {}),
     ...(this.reset ? { reset: { accountId: this.reset.accountId, token: this.reset.token,
+      eligibility: resetEligibility(this.reset.usage), usage: this.reset.usage, retry: this.reset.retry,
       expiresAt: this.reset.credits.map(credit => credit.expiresAt), ...(this.reset.problem ? { problem: this.reset.problem } : {}) } } : {}),
     ...(this.progress ? { progress: this.progress } : {}),
     ...(this.loginEmail ? { loginEmail: this.loginEmail } : {}) };
@@ -234,8 +236,10 @@ export class Accounts implements vscode.Disposable {
     if (action === 'refresh') { await this.refresh(); return; }
     if (!['setup', 'forgetAll', 'forget', 'rename', 'remember', 'retryReload', 'restore', 'add', 'switch', 'reconnect', 'previewReset', 'useReset'].includes(String(action))) return;
     if (this.acting || this.busy) return;
-    if (action === 'previewReset' && typeof id === 'string' && Number.isSafeInteger(generation))
+    if (action === 'previewReset' && typeof id === 'string' && Number.isSafeInteger(generation)) {
+      this.resetResult = '';
       this.reset = { accountId: id, generation: generation as number, token: randomUUID(), credits: [] };
+    }
     this.acting = true; this.notice = '';
     this.progress = action === 'previewReset' ? 'Checking banked resets...'
       : action === 'useReset' ? 'Using banked reset...'
@@ -298,12 +302,13 @@ export class Accounts implements vscode.Disposable {
       throw new AccountError('Banked resets are unavailable for this authentication configuration.');
     const preview = this.reset;
     if (!preview || preview.accountId !== account.id || preview.generation !== account.generation ||
-        consume && (token !== preview.token || !preview.credits.length || !!preview.problem))
+        consume && (token !== preview.token || !preview.retry && (!preview.credits.length || !!preview.problem)))
       throw new AccountError('Open Use banked reset again to review the available resets.');
     this.changed();
     const owner = randomUUID();
     if (!this.store.acquireLease(owner, Date.now(), 60000))
       throw new AccountError('Another account operation is in progress. Retry shortly.');
+    let confirmed = false;
     try {
       const guard = () => {
         if (!this.allowed() || !this.store.enabled || this.reset !== preview ||
@@ -314,33 +319,62 @@ export class Accounts implements vscode.Disposable {
       guard();
       const raw = await this.store.load(account.id);
       if (!raw) throw new AccountError('Sign in to this account again to use a banked reset.');
-      const credits = await readBankedResets(raw);
-      guard();
-      const uncertain = this.uncertainResets.get(account.id);
-      if (uncertain && credits[0]?.id !== uncertain.creditId) {
-        if (!credits.some(credit => credit.id === uncertain.creditId)) this.uncertainResets.delete(account.id);
-        throw new AccountError('The previous reset attempt has changed. Go back and refresh usage before reviewing another reset.');
+      let attempt = this.store.resetAttempt(account.id);
+      if (consume && (attempt?.status === 'pending'
+          ? !preview.retry || preview.token !== attempt.requestId : !!preview.retry))
+        throw new AccountError('The previous reset attempt changed. Refresh this confirmation before continuing.');
+      let credits: BankedReset[] = [];
+      if (attempt?.status !== 'used') {
+        try { credits = await readBankedResets(raw); }
+        catch (error) { if (!attempt) throw error; }
+        guard();
       }
       if (!consume) {
         preview.credits = credits;
-        if (uncertain) preview.token = uncertain.requestId;
-        return;
+        preview.retry = attempt?.status === 'pending';
+        if (attempt) preview.token = attempt.requestId;
       }
-      const selected = preview.credits[0];
-      if (!credits.length || credits[0].id !== selected.id || credits[0].expiresAt !== selected.expiresAt)
-        throw new AccountError('The available resets changed. Go back and choose Use banked reset again.');
-      // The confirmation token doubles as a stable idempotency key. Never substitute another credit.
-      try { await consumeBankedReset(raw, selected, preview.token, !!uncertain); }
-      catch (error) {
-        if (error instanceof UncertainResetError)
-          this.uncertainResets.set(account.id, { creditId: selected.id, requestId: preview.token });
-        throw error;
-      }
-      this.uncertainResets.delete(account.id);
-      this.reset = undefined;
-      if (!this.allowed() || !this.store.enabled || this.disposed) return;
-      this.store.saveUsage(account.id, account.generation, { checkedAt: Date.now(), bankedResets: credits.length - 1 });
+      // Never authorize spending from the cached account tile or webview state.
+      preview.usage = undefined;
       try {
+        const usage = await readAccountUsage(this.options.binary, path.join(this.context.globalStorageUri.fsPath, 'account-usage'), raw);
+        guard();
+        preview.usage = usage;
+        this.store.saveUsage(account.id, account.generation, usage);
+        this.usageProblems.delete(account.id);
+      } catch {
+        guard();
+        this.usageProblems.set(account.id, 'Usage could not be verified. Refresh usage before using a reset.');
+      }
+      if (attempt?.status !== 'used') {
+        if (!consume) return;
+        if (!attempt) {
+          if (resetEligibility(preview.usage) !== 'eligible') return;
+          const selected = preview.credits[0];
+          if (!credits.length || credits[0].id !== selected.id || credits[0].expiresAt !== selected.expiresAt)
+            throw new AccountError('The available resets changed. Go back and choose Use banked reset again.');
+          // Persist before sending: a crash or timeout must never select another credit.
+          attempt = { creditId: selected.id, expiresAt: selected.expiresAt, requestId: preview.token, status: 'pending' };
+          this.store.saveResetAttempt(account.id, attempt);
+        }
+        guard();
+        try {
+          await consumeBankedReset(raw, { id: attempt.creditId, expiresAt: attempt.expiresAt }, attempt.requestId, !!preview.retry);
+        } catch (error) {
+          if (error instanceof ResetRejectedError) {
+            this.store.clearResetAttempt(account.id);
+            preview.retry = false;
+          }
+          throw error;
+        }
+      }
+      confirmed = true;
+      this.resetResult = 'Reset used for ' + (account.email || account.label || 'this account') + '.';
+      this.reset = undefined;
+      // Once OpenAI confirms success, local persistence/refresh failures cannot undo it.
+      try { this.store.saveResetAttempt(account.id, { ...attempt, status: 'used' }); } catch { /* Keep the original pending key. */ }
+      try {
+        this.store.clearUsage(account.id);
         const usage = await readAccountUsage(this.options.binary, path.join(this.context.globalStorageUri.fsPath, 'account-usage'), raw);
         if (this.allowed() && this.store.enabled && !this.disposed) {
           this.store.saveUsage(account.id, account.generation, usage);
@@ -348,11 +382,15 @@ export class Accounts implements vscode.Disposable {
         }
       } catch {
         this.usageProblems.set(account.id, 'Reset used. Usage could not be updated; refresh usage to check the new limits.');
+        this.resetResult += ' Usage could not be updated; refresh usage.';
       }
+      try { this.store.clearResetAttempt(account.id); } catch { /* A retained attempt still prevents a new redemption. */ }
     } catch (error) {
       if (this.reset === preview) preview.problem = accountErrorMessage(error);
       else throw error;
-    } finally { this.store.releaseLease(owner); }
+    } finally {
+      try { this.store.releaseLease(owner); } catch (error) { if (!confirmed) throw error; }
+    }
   }
   private async confirmReload(): Promise<boolean> {
     const active = this.options.hasActiveWork?.();

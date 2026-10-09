@@ -1,10 +1,11 @@
 import { AccountError } from './account-errors';
 import { parseAccountAuth } from './account-store';
 
-/** Short-lived host-only records. Credit identifiers never enter the webview or cache. */
+/** Host-only records. Credit identifiers never enter the webview or usage cache. */
 export interface BankedReset { id: string; expiresAt: number }
+export class ResetRejectedError extends AccountError {}
 export class UncertainResetError extends AccountError {
-  constructor() { super('The reset result could not be confirmed. Go back and refresh usage before trying again.'); }
+  constructor() { super('The reset result could not be confirmed. Refresh this confirmation to retry the same reset.'); }
 }
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -70,12 +71,12 @@ export async function readBankedResets(rawAuth: string): Promise<BankedReset[]> 
 }
 
 export async function consumeBankedReset(rawAuth: string, credit: BankedReset, requestId: string, retryUncertain = false): Promise<void> {
-  if (credit.expiresAt * 1000 <= Date.now()) throw new AccountError('This reset expired. Go back and check available resets again.');
+  if (!retryUncertain && credit.expiresAt * 1000 <= Date.now()) throw new AccountError('This reset expired. Go back and check available resets again.');
   const response = await request(rawAuth, { credit_id: credit.id, redeem_request_id: requestId });
   if (object(response) && (response.code === 'reset' || retryUncertain && response.code === 'already_redeemed')) return;
   const code = object(response) ? response.code : undefined;
   if (!['already_redeemed', 'no_credit', 'nothing_to_reset'].includes(String(code))) throw new UncertainResetError();
-  throw new AccountError(code === 'already_redeemed' ? 'This reset was already used. Go back and refresh usage.'
+  throw new ResetRejectedError(code === 'already_redeemed' ? 'This reset was already used. Go back and refresh usage.'
     : code === 'no_credit' ? 'This reset is no longer available. Go back and check available resets again.'
-    : 'This account does not need a usage reset right now.');
+    : 'OpenAI reports that this account has no eligible usage limit to reset right now.');
 }

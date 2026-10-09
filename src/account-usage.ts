@@ -22,6 +22,19 @@ export interface AccountUsage {
   bankedResetExpiresAt?: number;
 }
 
+export type ResetEligibility = 'eligible' | 'unavailable' | 'unknown';
+
+/** Only fresh core five-hour/weekly windows can authorize spending a reset. */
+export function resetEligibility(usage?: AccountUsage, now = Date.now()): ResetEligibility {
+  if (!usage || !Number.isFinite(usage.checkedAt) || usage.checkedAt > now || now - usage.checkedAt >= 300000) return 'unknown';
+  const windows = [usage.primary, usage.secondary].filter(window => window &&
+    [300, 10080].includes(window.windowDurationMins) && Number.isFinite(window.usedPercent) &&
+    window.usedPercent >= 0 && window.usedPercent <= 100 &&
+    (window.resetsAt === undefined || window.resetsAt * 1000 > now));
+  if (!windows.length) return 'unknown';
+  return windows.some(window => window!.usedPercent > 90) ? 'eligible' : 'unavailable';
+}
+
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

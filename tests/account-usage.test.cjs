@@ -5,7 +5,21 @@ const path = require('node:path');
 const os = require('node:os');
 const vm = require('node:vm');
 const { EventEmitter } = require('node:events');
-const { parseAccountUsage, sanitizeAccountUsage } = require('../dist/account-usage');
+const { parseAccountUsage, sanitizeAccountUsage, resetEligibility } = require('../dist/account-usage');
+
+test('reset eligibility uses a strict threshold and only fresh core windows', () => {
+  const now = 1800000000000;
+  const window = (usedPercent, windowDurationMins = 300) => ({ usedPercent, windowDurationMins });
+  const usage = (primary, secondary) => ({ checkedAt: now, primary, secondary });
+  for (const used of [0, 89.9, 90]) assert.equal(resetEligibility(usage(window(used)), now), 'unavailable');
+  for (const used of [90.01, 96, 100]) {
+    assert.equal(resetEligibility(usage(window(used), window(0, 10080)), now), 'eligible');
+    assert.equal(resetEligibility(usage(window(0), window(used, 10080)), now), 'eligible');
+  }
+  for (const missing of [undefined, usage(), usage(window(96, 15)), usage(window(NaN)), usage(window(101)),
+    { ...usage(window(96)), checkedAt: now - 300000 }, { ...usage(window(96)), checkedAt: now + 1 },
+    usage({ ...window(96), resetsAt: now / 1000 })]) assert.equal(resetEligibility(missing, now), 'unknown');
+});
 
 function authFixture(plan) {
   return JSON.stringify({ auth_mode: 'chatgpt', tokens: {
