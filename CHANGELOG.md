@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+1.9.9
+-----
+
+- Clarify that banked resets and expiry dates can be tracked, and resets used,
+  directly from the accounts UI.
+
 1.9.8
 -----
 
