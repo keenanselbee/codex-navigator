@@ -7,7 +7,7 @@ const now = Date.now(), initial = { status: 'unknown', workedAt: 0 };
 const event = (type, id = 'a', time = now) => ({ timestamp: new Date(time).toISOString(), type: 'event_msg', payload: { type, turn_id: id } });
 
 test('structured async replies retain only matching IDs and times across completion and new turns', () => {
- const text='<send_user_message_question_reply>\n'+JSON.stringify([{questionItemId:JSON.stringify(['request_user_input_async','q',0]),answer:'private answer'}])+'\n</send_user_message_question_reply>';
+ const text='<send_user_message_question_reply>\n'+JSON.stringify([{questionItemId:JSON.stringify(['request_user_input_async','q',0]),question:'Private question',answer:'private answer'}])+'\n</send_user_message_question_reply>';
  for(const record of [
    {type:'event_msg',payload:{type:'user_message',message:text}},
    {type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text}]}}
@@ -271,7 +271,7 @@ test('question evidence survives reload and partial records, but unread history 
    await fs.writeFile(file,line('response_item',{type:'function_call',name:'request_user_input_async',call_id:'q',arguments:JSON.stringify({questions:[{title:'One'},{title:'Two'}]})})
      +line('response_item',{type:'function_call_output',call_id:'q',output:'{"accepted":true}'}));
    assert.equal(remaining(await reader.read(file,now)),2);
-   const text='<send_user_message_question_reply>'+JSON.stringify([{questionItemId:JSON.stringify(['request_user_input_async','q',0]),answer:'Private'}])+'</send_user_message_question_reply>';
+   const text='<send_user_message_question_reply>'+JSON.stringify([{questionItemId:JSON.stringify(['request_user_input_async','q',0]),question:'Private question',answer:'Private'}])+'</send_user_message_question_reply>';
    const answer=line('event_msg',{type:'user_message',message:text},now+1);
    await fs.appendFile(file,answer.slice(0,-2));
    assert.equal(remaining(await reader.read(file,now+1)),2,'incomplete answer is retried');

@@ -18,6 +18,36 @@ const reply = (entries, time = start + 2, source = 'event_msg') => source === 'e
   : item({ type: 'message', role: 'user', content: [{ type: 'input_text', text: replyText(entries) }] }, time);
 const apply = (state, record) => reduceQuestions(state, record, Date.parse(record.timestamp));
 
+test('structured replies require all three string fields without retaining content or rejecting extra fields', () => {
+  const initial = apply(apply(undefined, call('a')), ack('a'));
+  for (const source of ['event_msg', 'response_item']) {
+    for (const field of ['questionItemId', 'question', 'answer']) {
+      for (const value of [undefined, null, 1, {}, []]) {
+        const malformed = { ...answer('a', 0), [field]: value };
+        assert.equal(apply(initial, reply([malformed], start + 2, source)), initial);
+      }
+    }
+    const valid = { ...answer('a', 0, ''), question: '', extra: 'Private metadata' };
+    const resolved = apply(initial, reply([valid], start + 2, source));
+    assert.deepEqual(resolved.replies, [{ id: 'a', index: 0, answeredAt: start + 2 }]);
+    assert.deepEqual(unansweredQuestions(resolved, start + 2), []);
+    assert.equal(JSON.stringify(resolved).includes('Private'), false);
+  }
+});
+
+test('request progress reuses reply snapshots and new answers replace them without mutation', () => {
+  let state = apply(undefined, reply([answer('a', 0)], start));
+  const replies = state.replies;
+  Object.freeze(replies[0]); Object.freeze(replies);
+  state = apply(state, call('b', 1, start + 1));
+  state = apply(state, ack('b', '{"accepted":true}', start + 2));
+  assert.equal(state.replies, replies);
+  state = apply(state, reply([answer('b', 0)], start + 3));
+  assert.notEqual(state.replies, replies);
+  assert.equal(replies.length, 1);
+  assert.equal(state.replies.length, 2);
+});
+
 test('accepted requests retain only IDs and times; partial indexed replies leave other questions pending', () => {
   for (const name of ['request_user_input_async', 'functions.request_user_input_async']) {
     let state = apply(undefined, call('a', 3, start, name));

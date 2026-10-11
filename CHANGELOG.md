@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+2.0.4
+-----
+
+- Require complete structured replies before clearing unanswered questions.
+- Avoid repeated database writes for unchanged answers while preserving retries
+  after failed transactions and cancellation across windows.
+
 2.0.3
 -----
 

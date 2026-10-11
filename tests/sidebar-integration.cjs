@@ -574,7 +574,7 @@ exports.run = async function (context, fixtureVscode) {
       const queuedQuestion=notificationRequests.find(request=>request.questionId==='async-q1');
       assert.ok(queuedQuestion.canDeliver('sound'),'unanswered question remains deliverable');
       const replyText=(call,index=0)=>'<send_user_message_question_reply>\n'+JSON.stringify([{
-        questionItemId:JSON.stringify(['request_user_input_async',call,index]),answer:'Fixture answer'
+        questionItemId:JSON.stringify(['request_user_input_async',call,index]),question:'Fixture question',answer:'Fixture answer'
       }])+'\n</send_user_message_question_reply>';
       fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'user_message',message:replyText('async-q1')}));
       await companionProvider.refresh();

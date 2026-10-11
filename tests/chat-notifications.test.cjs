@@ -29,6 +29,108 @@ const policy = (enabled = true, suppress = true) => {
 };
 const observe = (window, rows, time = 10000, enabled = true, suppress = true) => window.observe(rows, time, policy(enabled, suppress));
 
+const repliesSnapshot = (...entries) => Object.freeze(entries.map(entry => Object.freeze(entry)));
+const answerAlert = (chatId = 'chat-a', index = 0) => ({ kind: 'input', chatId, questionId: 'q', questionIndices: [index] });
+function countAnswerWrites(window) {
+  const run = window.answerInsert.run.bind(window.answerInsert);
+  let count = 0;
+  window.answerInsert.run = (...args) => { count++; return run(...args); };
+  return () => count;
+}
+function writeSnapshot(window, via, replies, time = 10000, chatId = 'chat-a') {
+  if (via === 'delivery') window.recordAnswers(chatId, replies, time);
+  else window.observe([{ id: chatId, title: 'Test', activity: {
+    status: 'working', workedAt: 0, questions: { requests: [], replies, observedAt: time },
+  } }], time, policy());
+}
+
+test('unchanged full reply snapshots perform no repeat inserts in refresh or delivery', t => {
+  const a = fixture(t).create(), writes = countAnswerWrites(a);
+  const replies = repliesSnapshot(...Array.from({ length: 1024 }, (_, n) => ({ id: 'q' + n, index: 0, answeredAt: 9000 })));
+  writeSnapshot(a, 'refresh', replies);
+  assert.equal(writes(), 1024);
+  writeSnapshot(a, 'refresh', replies, 11000);
+  writeSnapshot(a, 'delivery', replies, 12000);
+  assert.equal(writes(), 1024);
+  const changed = repliesSnapshot(...replies.slice(1), { id: 'new', index: 0, answeredAt: 12000 });
+  writeSnapshot(a, 'delivery', changed, 13000);
+  writeSnapshot(a, 'refresh', changed, 14000);
+  assert.equal(writes(), 2048, 'changed snapshots are committed once across both paths');
+});
+
+for (const via of ['refresh', 'delivery']) {
+  for (const failure of ['insert', 'commit']) {
+    test(`${via} retries the identical snapshot after ${failure} failure rolls back answers`, t => {
+      const a = fixture(t).create();
+      const replies = repliesSnapshot({ id: 'q', index: 0, answeredAt: 9000 }, { id: 'q', index: 1, answeredAt: 9000 });
+      const target = failure === 'insert' ? a.answerInsert : a.db;
+      const method = failure === 'insert' ? 'run' : 'exec';
+      const original = target[method].bind(target);
+      let inserts = 0, failed = false;
+      target[method] = (...args) => {
+        const fail = failure === 'insert' ? ++inserts === 2 : args[0] === 'COMMIT';
+        if (!failed && fail) { failed = true; throw Error('Injected transaction failure'); }
+        return original(...args);
+      };
+      assert.throws(() => writeSnapshot(a, via, replies), /Injected transaction failure/);
+      assert.equal(a.canDeliver(answerAlert()), true, 'the first insert was rolled back');
+      assert.equal(a.canDeliver(answerAlert('chat-a', 1)), true);
+      writeSnapshot(a, via, replies);
+      assert.equal(a.canDeliver(answerAlert()), false, 'the identical snapshot was retried');
+      assert.equal(a.canDeliver(answerAlert('chat-a', 1)), false);
+    });
+  }
+}
+
+test('equal timestamps, late replies and shared arrays across chats do not hide partial answers', t => {
+  const a = fixture(t).create();
+  const first = repliesSnapshot({ id: 'q', index: 0, answeredAt: 9000 });
+  writeSnapshot(a, 'refresh', first);
+  assert.equal(a.canDeliver(answerAlert('chat-a', 1)), true);
+  const equal = repliesSnapshot(...first, { id: 'q', index: 1, answeredAt: 9000 });
+  writeSnapshot(a, 'delivery', equal);
+  const late = repliesSnapshot(...equal, { id: 'q', index: 2, answeredAt: 8000 });
+  writeSnapshot(a, 'refresh', late);
+  for (const index of [0, 1, 2]) assert.equal(a.canDeliver(answerAlert('chat-a', index)), false);
+  assert.equal(a.canDeliver(answerAlert('chat-b')), true);
+  writeSnapshot(a, 'delivery', late, 10000, 'chat-b');
+  assert.equal(a.canDeliver(answerAlert('chat-b')), false);
+});
+
+test('future replies are reconsidered when time catches up, in either transaction path', t => {
+  for (const via of ['refresh', 'delivery']) {
+    const a = fixture(t).create();
+    const replies = repliesSnapshot({ id: 'q', index: 0, answeredAt: 9000 }, { id: 'q', index: 1, answeredAt: 20000 });
+    writeSnapshot(a, via, replies);
+    assert.equal(a.canDeliver(answerAlert()), false);
+    assert.equal(a.canDeliver(answerAlert('chat-a', 1)), true);
+    writeSnapshot(a, via, replies, 15000);
+    assert.equal(a.canDeliver(answerAlert('chat-a', 1)), false);
+  }
+});
+
+test('answer cache stays bounded and reset, eviction and disposal preserve database authority', t => {
+  const f = fixture(t), a = f.create(), b = f.create(), writes = countAnswerWrites(a);
+  const replies = repliesSnapshot({ id: 'q', index: 0, answeredAt: 9000 });
+  for (let n = 0; n < 201; n++) writeSnapshot(a, 'delivery', replies, 10000, 'chat-' + n);
+  assert.equal(a.recordedReplies.size, 200);
+  assert.equal(writes(), 201);
+  writeSnapshot(a, 'delivery', replies, 10000, 'chat-200');
+  assert.equal(writes(), 201);
+  writeSnapshot(a, 'delivery', replies, 10000, 'chat-0');
+  assert.equal(writes(), 202, 'an evicted snapshot can be recorded again');
+  a.reset();
+  assert.equal(a.recordedReplies.size, 0);
+  assert.equal(b.canDeliver(answerAlert('chat-0')), false, 'reset does not erase shared answers');
+  writeSnapshot(a, 'delivery', replies, 10000, 'chat-0');
+  assert.equal(writes(), 203);
+  a.dispose();
+  assert.equal(a.recordedReplies.size, 0);
+  a.recordAnswers('chat-0', replies, 10000);
+  assert.equal(writes(), 203);
+  assert.equal(b.canDeliver(answerAlert('chat-0')), false);
+});
+
 test('answer cancels a queued async alert across windows without cancelling completion or a different question', t => {
  const f=fixture(t), a=f.create(), b=f.create();
  observe(a,chat('working')); observe(b,chat('working'));

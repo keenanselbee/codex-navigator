@@ -175,6 +175,15 @@ sidebar cache with older evidence. Queued delivery rechecks question evidence
 and shared indexed answers before showing each channel. Diagnostics retain only
 counts, identities, status and times.
 
+Reply records require string question, answer and indexed identity fields;
+question and answer contents are discarded. Notification persistence reuses one
+prepared insert and remembers immutable reply snapshots for at most 200 chats
+per window. Snapshots are remembered only after their transaction commits;
+failures and deferred future replies remain retryable. Refresh writes join the
+observation transaction, while pre-delivery writes own a short transaction.
+Reset and disposal clear this cache. Delivery always checks the shared database,
+so an answer committed by another window still cancels a queued alert.
+
 Native delivery uses Windows notification APIs through PowerShell, macOS
 `osascript`, or Linux `notify-send`. Audio prefers the installed Codex
 `codex-notification.wav`, then the system sound, then bundled Balafon. Playback

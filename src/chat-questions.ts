@@ -1,8 +1,8 @@
 // Async questions outlive tool calls and can be answered independently while work
 // continues. Store identities only; never retain prompt or answer contents.
 export interface AsyncQuestion { id: string; askedAt: number; count: number; accepted: boolean }
-export interface QuestionReply { id: string; index: number; answeredAt: number }
-export interface QuestionState { requests: AsyncQuestion[]; replies: QuestionReply[]; observedAt: number }
+export interface QuestionReply { readonly id: string; readonly index: number; readonly answeredAt: number }
+export interface QuestionState { requests: AsyncQuestion[]; replies: readonly QuestionReply[]; observedAt: number }
 export const questionLifetime = 15 * 60 * 1000;
 const maxQuestions = 32;
 
@@ -11,7 +11,7 @@ export function unansweredQuestions(state: QuestionState | undefined, now = Date
     && now - request.askedAt <= questionLifetime && pendingQuestionIndices(request, state?.replies).length > 0);
 }
 
-export function pendingQuestionIndices(request: AsyncQuestion, replies: QuestionReply[] = []): number[] {
+export function pendingQuestionIndices(request: AsyncQuestion, replies: readonly QuestionReply[] = []): number[] {
   const answered = new Set(replies.filter(reply => reply.id === request.id).map(reply => reply.index));
   return Array.from({ length: request.count }, (_, index) => index).filter(index => !answered.has(index));
 }
@@ -31,7 +31,8 @@ export function reduceQuestions(previous: QuestionState | undefined, record: any
       const replies = JSON.parse(match[1]);
       if (!Array.isArray(replies)) continue;
       for (const reply of replies.slice(0, maxQuestions)) {
-        if (typeof reply?.questionItemId !== 'string' || reply.questionItemId.length > 512 || typeof reply.answer !== 'string') continue;
+        if (typeof reply?.questionItemId !== 'string' || reply.questionItemId.length > 512
+          || typeof reply.question !== 'string' || typeof reply.answer !== 'string') continue;
         let identity;
         try { identity = JSON.parse(reply.questionItemId); } catch { continue; }
         if (!Array.isArray(identity) || identity.length !== 3 || identity[0] !== 'request_user_input_async'

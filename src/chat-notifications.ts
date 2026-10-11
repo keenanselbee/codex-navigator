@@ -1,5 +1,5 @@
 import { QuestionReply, unansweredQuestions, pendingQuestionIndices } from './chat-questions';
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync, StatementSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import * as path from 'node:path';
@@ -13,6 +13,8 @@ export interface ChatAlert { chatId: string; title: string; message: string; kin
 // existing visible-sidebar refresh. SQLite claims prevent cross-window races.
 export class ChatNotifications {
   private db: DatabaseSync;
+  private answerInsert: StatementSync;
+  private recordedReplies = new Map<string, readonly QuestionReply[]>();
   private windowId = randomUUID();
   private namespace: string;
   private previous = new Map<string, ActivitySnapshot>();
@@ -29,6 +31,7 @@ export class ChatNotifications {
       CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, time INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS samples (id TEXT PRIMARY KEY, status TEXT NOT NULL, episode INTEGER NOT NULL, time INTEGER NOT NULL, input_id TEXT);
       CREATE TABLE IF NOT EXISTS question_answers (id TEXT PRIMARY KEY, time INTEGER NOT NULL);`);
+    this.answerInsert = this.db.prepare('INSERT OR IGNORE INTO question_answers VALUES (?, ?)');
     this.setFocused(focused);
   }
 
@@ -47,14 +50,38 @@ export class ChatNotifications {
     return focused;
   }
 
-  reset(): void { this.previous.clear(); }
+  reset(): void { this.previous.clear(); this.recordedReplies.clear(); }
 
-  recordAnswers(chatId: string, replies: QuestionReply[] | undefined, now = Date.now()): void {
-    if (this.closed) return;
-    for (const reply of replies || []) {
-      if (reply.answeredAt < now - 7 * 86400000 || reply.answeredAt > now + 5000) continue;
-      this.db.prepare('INSERT OR IGNORE INTO question_answers VALUES (?, ?)')
-        .run(this.namespace + '/' + chatId + '/' + JSON.stringify([reply.id, reply.index]), reply.answeredAt);
+  recordAnswers(chatId: string, replies: readonly QuestionReply[] | undefined, now = Date.now()): void {
+    if (this.closed || !replies?.length || this.recordedReplies.get(chatId) === replies) return;
+    const recorded = new Map<string, readonly QuestionReply[]>();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.writeAnswers(chatId, replies, now, recorded);
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    this.rememberAnswers(recorded);
+  }
+
+  // The parser replaces reply arrays on change. Only remember snapshots after
+  // their owning transaction commits, so any failed batch remains retryable.
+  private writeAnswers(chatId: string, replies: readonly QuestionReply[] | undefined, now: number,
+    recorded: Map<string, readonly QuestionReply[]>): void {
+    if (!replies?.length || this.recordedReplies.get(chatId) === replies) return;
+    let deferred = false;
+    for (const reply of replies) {
+      if (reply.answeredAt > now + 5000) { deferred = true; continue; }
+      if (reply.answeredAt < now - 7 * 86400000) continue;
+      this.answerInsert.run(this.namespace + '/' + chatId + '/' + JSON.stringify([reply.id, reply.index]), reply.answeredAt);
+    }
+    if (!deferred) recorded.set(chatId, replies);
+  }
+
+  private rememberAnswers(recorded: Map<string, readonly QuestionReply[]>): void {
+    for (const [chatId, replies] of recorded) {
+      this.recordedReplies.delete(chatId);
+      this.recordedReplies.set(chatId, replies);
+      if (this.recordedReplies.size > 200) this.recordedReplies.delete(this.recordedReplies.keys().next().value!);
     }
   }
 
@@ -71,12 +98,13 @@ export class ChatNotifications {
   observe(chats: NotificationChat[], sampledAt: number, policy: NotificationPolicy, now = sampledAt): ChatAlert[] {
     if (this.closed) return [];
     const alerts: ChatAlert[] = [], next = new Map<string, ActivitySnapshot>();
+    const recorded = new Map<string, readonly QuestionReply[]>();
     this.db.exec('BEGIN IMMEDIATE');
     try {
       const focused = this.anyFocused();
       for (const chat of chats.slice(0, 200)) {
         const current = chat.activity, previous = this.previous.get(chat.id);
-        this.recordAnswers(chat.id, current.questions?.replies, now);
+        this.writeAnswers(chat.id, current.questions?.replies, now, recorded);
         if (current.status === 'unknown' && !unansweredQuestions(current.questions, now).length) {
           if (previous) next.set(chat.id, previous); continue;
         }
@@ -129,6 +157,7 @@ export class ChatNotifications {
       this.db.prepare('DELETE FROM samples WHERE time < ?').run(sampledAt - 7 * 86400000);
       this.db.prepare('DELETE FROM question_answers WHERE time < ?').run(sampledAt - 7 * 86400000);
       this.db.exec('COMMIT');
+      this.rememberAnswers(recorded);
       this.previous = next;
       return alerts;
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
@@ -137,6 +166,6 @@ export class ChatNotifications {
   dispose(): void {
     if (this.closed) return;
     this.db.prepare('DELETE FROM windows WHERE id = ?').run(this.windowId);
-    this.db.close(); this.closed = true; this.previous.clear();
+    this.db.close(); this.closed = true; this.reset();
   }
 }
