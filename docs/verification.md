@@ -1,12 +1,46 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.3**, adding unanswered-question indicators.
+Current verified Desktop release: **2.0.4**, hardening question reply persistence.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.4
+-------------------------------
+
+Public build revision: `0f4af31b7471f5b5b58fb8a0752e25f1408698c4`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `c205b2904167cc359d43c8b92e460eadcbe8693314853efffa6d544eae8f587a`.
+
+All 319 public tests and 24 commercial tests pass. New coverage checks complete
+structured reply fields, immutable snapshot reuse, no repeated answer inserts
+for unchanged 1,024-reply snapshots, equal timestamps, late and partial answers,
+chat isolation, future reply deferral and the 200-chat cache bound. Injected
+insert and pre-commit failures roll back answers and retry identical snapshots
+in both refresh and pre-delivery paths. Reset and disposal preserve shared
+database answers. Release metadata, dependency consistency, documentation links
+and whitespace checks pass.
+
+Isolated VS Code 1.139.1 initial/restart and second-window integration passes in
+`integration-JQGpbS`, including question indicators, partial replies and queued
+notification cancellation. The exact production VSIX passes installation and
+reinstallation in `installed-acceptance-bE7HN9`, checking 74 installed payload
+hashes, the manifest and retained trial expiry. All 77 archive entries match the
+production allowlist and recorded hashes. Desktop VSIX and receipt hashes match
+their source files. The disposable extension was removed; the normal profile
+was unchanged. No paid provider request, Git push or Marketplace publication
+occurred.
+
+These checks use synthetic question fixtures. The owner separately confirmed
+the live A/B question and answer test on 2.0.3 before this hardening change.
+Local dismissal remains unobservable and async indicators retain their absolute
+15-minute expiry. Native macOS/Linux acceptance remains outstanding.
+This evidence is excluded from the immutable VSIX and preserves its original
+build revisions and payload.
 
 
 Verified Desktop package: 2.0.3
