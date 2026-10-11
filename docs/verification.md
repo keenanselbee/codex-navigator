@@ -1,12 +1,53 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.1**, clearing recovered post-reset usage warnings.
+Current verified Desktop release: **2.0.3**, adding unanswered-question indicators.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.3
+-------------------------------
+
+Public build revision: `6f8260b98b84458075c3b917d282a4e6c7835260`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `e2bafbf9f04106ca35dc4590c2ebfe08550f90cdb082dba2652fa9ee0046cd1d`.
+
+All 309 public tests and 24 commercial tests pass. Coverage includes accepted
+async acknowledgements, indexed partial replies, multiple requests, malformed
+records, duplicate events, absolute expiry, reload reconstruction and unread
+history gaps. Serialized transcript reads prevent older reads from overwriting
+newer answers. Fresh questions can alert even when an interrupted turn reports
+unknown activity. Release metadata, dependency consistency, local documentation
+links and whitespace checks pass.
+
+Isolated VS Code 1.139.1 initial/restart and second-window integration passes in
+`integration-ujBQkw`. The real sidebar shows a stationary question mark over the
+working ring, stops the ring during a blocking question despite an active goal,
+retains remaining questions after a partial answer, clears after all answers,
+and keeps approval waits distinct. Opening a chat does not answer its questions.
+An initial fixture check failed because its expected separator was encoded as
+a question mark; correcting the test string produced the passing complete run.
+
+Static inspection of the installed Codex UI confirms indexed async question
+identities and structured replies. Local skip/dismiss state has no verified
+observer signal. Async evidence therefore expires 15 minutes after the request;
+it can remain after dismissal or disappear while still unanswered.
+This release does not claim authenticated end-to-end question acceptance or
+reliable detection of local dismissal. Native macOS/Linux acceptance remains
+outstanding.
+
+All 77 production archive entries match the allowlist and recorded hashes.
+The exact VSIX passes installation and reinstallation in
+`installed-acceptance-iZp1o0`, checking 74 installed payload hashes, the manifest,
+and retained trial expiry. Desktop VSIX and receipt hashes match their source
+files. The disposable extension was removed; the normal profile was unchanged.
+No paid provider request, Git push or Marketplace publication occurred.
+This evidence is excluded from the immutable VSIX and preserves its original
+build revisions and payload.
 
 
 Verified Desktop package: 2.0.1
