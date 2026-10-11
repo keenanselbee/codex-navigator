@@ -1,3 +1,4 @@
+import { QuestionReply, unansweredQuestions, pendingQuestionIndices } from './chat-questions';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
@@ -6,7 +7,7 @@ import { ActivitySnapshot } from './activity-events';
 import { notificationChannels, NotificationKind, NotificationPolicy } from './notification-settings';
 
 export interface NotificationChat { id: string; title: string; activity: ActivitySnapshot }
-export interface ChatAlert { chatId: string; title: string; message: string; kind: NotificationKind; sound: boolean; desktop: boolean; questionId?: string; inputEpisode?: number }
+export interface ChatAlert { chatId: string; title: string; message: string; kind: NotificationKind; sound: boolean; desktop: boolean; questionId?: string; questionIndices?: number[]; inputEpisode?: number }
 
 // Window focus is published on VS Code events. Chat detection uses only the
 // existing visible-sidebar refresh. SQLite claims prevent cross-window races.
@@ -48,12 +49,12 @@ export class ChatNotifications {
 
   reset(): void { this.previous.clear(); }
 
-  recordAnswers(chatId: string, replies: ActivitySnapshot['questionReplies'], now = Date.now()): void {
+  recordAnswers(chatId: string, replies: QuestionReply[] | undefined, now = Date.now()): void {
     if (this.closed) return;
     for (const reply of replies || []) {
       if (reply.answeredAt < now - 7 * 86400000 || reply.answeredAt > now + 5000) continue;
       this.db.prepare('INSERT OR IGNORE INTO question_answers VALUES (?, ?)')
-        .run(this.namespace + '/' + chatId + '/' + reply.id, reply.answeredAt);
+        .run(this.namespace + '/' + chatId + '/' + JSON.stringify([reply.id, reply.index]), reply.answeredAt);
     }
   }
 
@@ -61,7 +62,8 @@ export class ChatNotifications {
     if (this.closed) return false;
     if (alert.kind !== 'input') return true;
     const thread = this.namespace + '/' + alert.chatId;
-    if (alert.questionId) return !this.db.prepare('SELECT 1 FROM question_answers WHERE id = ?').get(thread + '/' + alert.questionId);
+    if (alert.questionId) return (alert.questionIndices || []).some(index =>
+      !this.db.prepare('SELECT 1 FROM question_answers WHERE id = ?').get(thread + '/' + JSON.stringify([alert.questionId, index])));
     const sample = this.db.prepare('SELECT status, episode FROM samples WHERE id = ?').get(thread);
     return sample?.status === 'waiting' && Number(sample.episode) === alert.inputEpisode;
   }
@@ -74,11 +76,13 @@ export class ChatNotifications {
       const focused = this.anyFocused();
       for (const chat of chats.slice(0, 200)) {
         const current = chat.activity, previous = this.previous.get(chat.id);
-        this.recordAnswers(chat.id, current.questionReplies, now);
-        if (current.status === 'unknown') { if (previous) next.set(chat.id, previous); continue; }
+        this.recordAnswers(chat.id, current.questions?.replies, now);
+        if (current.status === 'unknown' && !unansweredQuestions(current.questions, now).length) {
+          if (previous) next.set(chat.id, previous); continue;
+        }
         next.set(chat.id, current);
         const thread = this.namespace + '/' + chat.id;
-        const claim = (event: string, kind: NotificationKind, message: string, identity: Pick<ChatAlert, 'questionId' | 'inputEpisode'> = {}) => {
+        const claim = (event: string, kind: NotificationKind, message: string, identity: Pick<ChatAlert, 'questionId' | 'questionIndices' | 'inputEpisode'> = {}) => {
           const claimed = this.db.prepare('INSERT OR IGNORE INTO events VALUES (?, ?)').run(thread + '/' + event, sampledAt);
           const channels = notificationChannels(policy, kind, focused);
           const alert = { chatId: chat.id, title: chat.title || 'Untitled chat', message, kind, ...channels, ...identity };
@@ -96,13 +100,14 @@ export class ChatNotifications {
           || current.inputId && sample.input_id && current.inputId !== sample.input_id);
         const episode = Number(sample?.episode || 0) + (newRequest ? 1 : 0);
         const inputId = current.status === 'waiting' ? current.inputId || (sample?.status === 'waiting' ? String(sample.input_id || '') : '') : '';
-        this.db.prepare('INSERT OR REPLACE INTO samples VALUES (?, ?, ?, ?, ?)').run(thread, current.status, episode, sampledAt, inputId);
+        if (current.status !== 'unknown') this.db.prepare('INSERT OR REPLACE INTO samples VALUES (?, ?, ?, ?, ?)').run(thread, current.status, episode, sampledAt, inputId);
         // Unknown signals do not prove a new event. Reopening the view creates
         // a baseline, never a backlog of notifications from hidden activity.
         if (!previous) continue;
-        const question = current.asyncQuestion;
-        if (question && question.id !== previous.asyncQuestion?.id && question.askedAt >= now - 60000 && question.askedAt <= now + 5000) {
-          claim('async-input/' + question.id, 'input', 'Codex has a question for you.', { questionId: question.id });
+        for (const question of unansweredQuestions(current.questions, now)) {
+          if (previous.questions?.requests.some(request => request.id === question.id && request.accepted) || question.askedAt < now - 60000) continue;
+          claim('async-input/' + question.id, 'input', 'Codex has a question for you.',
+            { questionId: question.id, questionIndices: pendingQuestionIndices(question, current.questions?.replies) });
         }
         let event: string | undefined;
         if (current.status === 'ready' && current.completedAt && current.completedAt >= now - 60000

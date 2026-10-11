@@ -159,6 +159,22 @@ changed activity for up to 200 chats, with thread/turn IDs, statuses and observa
 times. Runtime failures use short classifications and numeric codes, excluding
 raw stderr, paths and conversation contents.
 
+Async question state is independent of turn activity. The bounded transcript
+reducer retains up to 32 requests of 32 questions each, plus 1,024 indexed reply
+identities. A matching accepted acknowledgement exposes a request; individual
+structured replies resolve only their own indices. Notification answer keys
+include that index; old request-only keys do not count as full answers. Sidebar
+and alert logic share the same pending-question calculation. An absolute
+15-minute lifetime starts at the call timestamp and is never renewed by polling
+or ordinary work. Completion, interruption and a new turn alone do not prove an
+async question was resolved. Local Codex skip/dismiss state is unavailable to the
+observer; this is bounded best-effort detection, not a pending-question API.
+Reload replays only the bounded transcript tail, and unread gaps discard state.
+Per-file reads are serialized so notification checks cannot overwrite a newer
+sidebar cache with older evidence. Queued delivery rechecks question evidence
+and shared indexed answers before showing each channel. Diagnostics retain only
+counts, identities, status and times.
+
 Native delivery uses Windows notification APIs through PowerShell, macOS
 `osascript`, or Linux `notify-send`. Audio prefers the installed Codex
 `codex-notification.wav`, then the system sound, then bundled Balafon. Playback

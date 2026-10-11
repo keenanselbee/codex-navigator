@@ -201,6 +201,21 @@ alone do not establish a completed task. A blue ready dot marks a completed turn
 since the chat was opened through Navigator; native Codex navigation is not
 tracked reliably.
 
+A question mark identifies a detected unanswered question. Its ring spins while
+Codex continues working and stops when Codex is waiting for your answer. Answering
+one question leaves the others visible; opening the chat does not clear them.
+Approval waits retain their separate yellow dot. The indicator works independently
+of sound and desktop-notification settings.
+
+Async question tracking is best effort: Navigator matches accepted structured
+requests to individual replies. Codex's local skip/dismiss action is not available
+to Navigator, so a dismissed question may remain indicated until 15 minutes after
+it was asked. At that point the indicator expires, even if the question remains
+unanswered. Ordinary progress does not extend this limit. Missing transcript
+history can also hide an unresolved question. Fresh live blocking-input status
+does not have this async expiry. Questions written only in chat text are not
+detected.
+
 An active goal shows a spinner even between turns. Pausing the goal removes that
 spinner only when the chat is not otherwise working. Goal controls use the runtime
 owning the chat; if unavailable, Navigator opens the chat for native control.

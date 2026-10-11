@@ -121,13 +121,25 @@ function render() {
       if (paused) symbol.setAttribute('fill', 'currentColor');
       svg.append(circle, symbol); control.append(svg); indicators.append(control);
     }
-    if (row.activity === 'working' || goal?.status === 'active') {
+    const waitingForAnswer = row.activity === 'waiting' && row.waitingFor === 'answer';
+    const questionCount = row.questionCount || 0;
+    const spinning = row.activity !== 'waiting' && (row.activity === 'working' || goal?.status === 'active');
+    if (questionCount || waitingForAnswer) {
+      const indicator = document.createElement('span'); indicator.className = 'question-indicator';
+      const questionText = waitingForAnswer ? 'Waiting for your answer'
+        : questionCount === 1 ? '1 unanswered question' : questionCount + ' unanswered questions';
+      const description = (spinning ? (row.activity === 'working' ? 'Working' : 'Goal running') + ' · ' : '') + questionText;
+      indicator.setAttribute('role', 'img'); indicator.setAttribute('aria-label', description); indicator.title = description;
+      const ring = document.createElement('span'); ring.className = spinning ? 'spinner' : 'question-ring'; ring.setAttribute('aria-hidden', 'true');
+      const mark = document.createElement('span'); mark.className = 'question-mark'; mark.textContent = '?'; mark.setAttribute('aria-hidden', 'true');
+      indicator.append(ring, mark); indicators.append(indicator);
+    } else if (spinning) {
       const spinner = document.createElement('span'); spinner.className = 'spinner';
       const spinnerText = row.activity === 'working' ? activityText : 'Goal running';
       spinner.setAttribute('role', 'img'); spinner.setAttribute('aria-label', spinnerText); spinner.title = spinnerText;
       indicators.append(spinner);
     }
-    if (['ready', 'waiting', 'error'].includes(row.activity)) {
+    if (['ready', 'waiting', 'error'].includes(row.activity) && !waitingForAnswer) {
       const dot = document.createElement('span'); dot.className = 'activity-dot ' + row.activity;
       dot.setAttribute('role', 'img'); dot.setAttribute('aria-label', activityText); dot.title = activityText; indicators.append(dot);
     }

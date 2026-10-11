@@ -1,3 +1,4 @@
+import { QuestionState, unansweredQuestions, pendingQuestionIndices } from './chat-questions';
 import { accountErrorMessage } from './account-errors';
 import { Accounts } from './accounts';
 import { ChatProfiles } from './chat-profiles';
@@ -221,8 +222,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         activity = combineActivity(hook, transcript);
         const live = runtime.get(item.id);
         if (live) activity = { ...live, turnId: live.turnId || activity.turnId,
-          asyncQuestion: !live.turnId || live.turnId === activity.turnId ? activity.asyncQuestion : undefined,
-          questionReplies: activity.questionReplies,
+          questions: activity.questions,
           inputId: live.status === 'waiting' && activity.status === 'waiting' ? activity.inputId : undefined,
           workedAt: Math.max(activity.workedAt, live.workedAt) };
         if (items.length < 200) activityDiagnostics.record(item.id, hook, transcript, live, activity);
@@ -230,7 +230,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const alreadySeen = activity?.status === 'ready' && (activity.completedAt || 0) <= (seen[item.id] || 0);
       items.push({ ...item, roots: scopeRoots(key), label: display.label, hasCustomLabel: !!customLabels[key], colour: colour.colour, starred: !!starredChats[key],
         alertActivity: activity, activitySampledAt: sampledAt,
-        activity: alreadySeen ? 'idle' as const : activity?.status, activityDetail: alreadySeen ? undefined : activity?.detail, completedAt: activity?.completedAt,
+        activity: alreadySeen ? 'idle' as const : activity?.status, activityDetail: alreadySeen ? undefined : activity?.detail,
+        questionCount: activity ? unansweredQuestions(activity.questions).reduce((count, request) => count + pendingQuestionIndices(request, activity.questions?.replies).length, 0) : 0,
+        waitingFor: activity?.waitingFor, completedAt: activity?.completedAt,
         tooltip: [item.title, display.tooltip, colour.detail].filter(Boolean).join('\n') });
     }
     return items;
@@ -267,12 +269,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         candidates[0]?.activitySampledAt || Date.now(), notificationSettings(settings), Date.now());
       const epoch = monitoringEpoch;
       for (const alert of alerts) notificationQueue = notificationQueue.then(async () => {
+        let questionState: QuestionState | undefined;
         if (alert.questionId) {
           const filename = await sessions.fileFor(alert.chatId);
-          if (filename) notifications!.recordAnswers(alert.chatId, (await transcriptActivity.read(filename)).questionReplies);
+          questionState = filename ? (await transcriptActivity.read(filename)).questions : undefined;
+          notifications!.recordAnswers(alert.chatId, questionState?.replies);
         }
         await notificationDelivery.deliver({ ...alert, volume: vscode.workspace.getConfiguration('codexNavigator').get<number>('notificationVolume', 50),
           canDeliver: channel => epoch === monitoringEpoch && sidebar.visible && license.allowed() && alert[channel]
+            && (!alert.questionId || unansweredQuestions(questionState).some(question => question.id === alert.questionId))
             && notifications!.canDeliver(alert)
             && notificationChannels(notificationSettings(vscode.workspace.getConfiguration('codexNavigator')), alert.kind, notifications!.anyFocused())[channel] });
       }).catch(() => notificationReport('An alert could not be delivered.'));

@@ -15,7 +15,14 @@ function fixture(t) {
   t.after(() => { windows.forEach(w => w.dispose()); fs.rmSync(directory, { recursive: true, force: true }); });
   return { create, dead };
 }
-const chat = (status, extra = {}) => [{ id: 'chat-a', title: 'Build Navigator', activity: { status, workedAt: 0, turnId: 'turn-a', ...extra } }];
+const chat = (status, extra = {}) => {
+  const { asyncQuestion, questionReplies, ...activity } = extra;
+  const questions = activity.questions || {
+    requests: asyncQuestion ? [{ ...asyncQuestion, count: 1, accepted: true }] : [],
+    replies: (questionReplies || []).map(reply => ({ index: 0, ...reply })), observedAt: 0,
+  };
+  return [{ id: 'chat-a', title: 'Build Navigator', activity: { status, workedAt: 0, turnId: 'turn-a', ...activity, questions } }];
+};
 const policy = (enabled = true, suppress = true) => {
   const mode = !enabled ? 'off' : suppress ? 'whenUnfocused' : 'always';
   return { finished: { sound: mode, desktop: mode }, input: { sound: mode, desktop: mode } };
@@ -37,7 +44,7 @@ test('answer cancels a queued async alert across windows without cancelling comp
  const [next]=observe(a,chat('working',{asyncQuestion:{id:'q2',askedAt:17000}}),18000);
  assert.equal(a.canDeliver(next),true);
  const other=f.create(false,3,'different-home');
- other.recordAnswers('chat-a',[{id:'q2',answeredAt:18000}],18000);
+ other.recordAnswers('chat-a',[{id:'q2',index:0,answeredAt:18000}],18000);
  assert.equal(a.canDeliver(next),true);
 });
 
@@ -56,7 +63,7 @@ test('delivery skips answered popup and sound and rechecks the answer between ch
  const a=fixture(t).create(), calls=[]; observe(a,chat('working'));
  const [alert]=observe(a,chat('working',{asyncQuestion:{id:'q',askedAt:11000}}),12000);
  const delivery=new NotificationDelivery({extensionPath:path.join(__dirname,'..'),platform:'win32',report:()=>{},
-   run:async()=>{calls.push('popup');a.recordAnswers('chat-a',[{id:'q',answeredAt:13000}],13000);return true;}});
+   run:async()=>{calls.push('popup');a.recordAnswers('chat-a',[{id:'q',index:0,answeredAt:13000}],13000);return true;}});
  await delivery.deliver({...alert,canDeliver:()=>a.canDeliver(alert)});
  assert.deepEqual(calls,['popup'],'answer after popup suppresses the pending sound');
  calls.length=0;
@@ -215,4 +222,28 @@ test('a newer window baseline cannot permanently consume a slower observer trans
   assert.deepEqual(a.observe(finished, 15000, policy(), 18000), []);
   assert.equal(observe(a, finished, 20000).length, 1);
   assert.deepEqual(observe(b, finished, 21000), []);
+});
+
+test('multiple requests alert independently and partial replies retain the remaining question across windows', t => {
+ const f=fixture(t), a=f.create(), b=f.create();
+ observe(a,chat('working')); observe(b,chat('working'));
+ const questions={requests:[{id:'q1',askedAt:11000,count:2,accepted:true},{id:'q2',askedAt:11000,count:1,accepted:true}],replies:[],observedAt:11000};
+ const alerts=observe(a,chat('working',{questions}),12000);
+ assert.deepEqual(alerts.map(alert=>alert.questionId),['q1','q2']);
+ observe(b,chat('working',{questions:{...questions,replies:[{id:'q1',index:0,answeredAt:13000}]}}),14000);
+ assert.equal(a.canDeliver(alerts[0]),true,'the second question is still outstanding');
+ observe(b,chat('working',{questions:{...questions,replies:[{id:'q1',index:1,answeredAt:15000}]}}),16000);
+ assert.equal(a.canDeliver(alerts[0]),false,'all replies are shared across windows');
+ assert.equal(a.canDeliver(alerts[1]),true,'another request remains outstanding');
+ observe(a,chat('working',{questions}),12500);
+ assert.equal(a.canDeliver(alerts[0]),false,'older state cannot undo resolution');
+});
+
+test('an accepted async question still alerts when the turn is interrupted before refresh', t => {
+ const a=fixture(t).create(); observe(a,chat('working'));
+ const prompt=chat('unknown',{asyncQuestion:{id:'q',askedAt:11000}});
+ assert.equal(observe(a,prompt,12000).length,1);
+ assert.deepEqual(observe(a,prompt,13000),[]);
+ const b=fixture(t).create();
+ assert.deepEqual(observe(b,prompt,12000),[],'reopening on an existing question is a quiet baseline');
 });

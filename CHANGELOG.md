@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+2.0.3
+-----
+
+- Overlay a stationary question mark on the activity ring for detected unanswered
+  questions. Keep the ring moving during work and stop it while waiting for an
+  answer, including chats with active goals.
+- Track multiple async requests and individual replies so partial answers leave
+  remaining questions visible and eligible for alerts. Opening a chat does not
+  clear its questions.
+- Bound async indicators to 15 minutes from the request. Codex's local dismissal
+  is not observable; missing history or expiry can hide unresolved questions.
+  Blocking waits use fresh runtime status when available.
+
 2.0.2
 -----
 

@@ -33,6 +33,10 @@ body[data-layout="list"] .label-row { display: flex; align-items: center; min-wi
 .star { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 22px; width: 22px; height: 18px; padding: 0; font-size: 20px; line-height: 1; color: var(--chat-colour, var(--vscode-foreground)); }
 .star > span { transform: translateY(-2px); pointer-events: none; }
 .spinner { flex: 0 0 10px; width: 10px; height: 10px; border: 1.5px solid transparent; border-top-color: currentColor; border-right-color: currentColor; border-bottom-color: currentColor; border-radius: 50%; animation: working 0.9s linear infinite; }
+.question-indicator { position: relative; flex: 0 0 14px; width: 14px; height: 14px; color: var(--vscode-notificationsWarningIcon-foreground, #e5c07b); }
+.question-indicator .spinner, .question-ring { position: absolute; inset: 0; width: 14px; height: 14px; }
+.question-ring { border: 1.5px solid currentColor; border-radius: 50%; }
+.question-mark { position: absolute; inset: 2px; display: flex; align-items: center; justify-content: center; font: bold 10px/1 var(--vscode-font-family); }
 .activity-dot { flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--vscode-notificationsInfoIcon-foreground, #60a5fa); margin: 0 2px; }
 .activity-dot.waiting { background: var(--vscode-notificationsWarningIcon-foreground, #e5c07b); }
 .activity-dot.error { background: var(--vscode-notificationsErrorIcon-foreground, #f48771); }

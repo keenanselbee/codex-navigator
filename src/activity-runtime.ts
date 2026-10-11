@@ -76,6 +76,7 @@ export class RuntimeActivity {
       if (status?.type === 'active') {
         const flags = status.activeFlags || [], waiting = flags.includes('waitingOnApproval') || flags.includes('waitingOnUserInput');
         result.set(thread.id, { status: waiting ? 'waiting' : 'working', workedAt: 0,
+          waitingFor: flags.includes('waitingOnApproval') ? 'approval' : waiting ? 'answer' : undefined,
           detail: flags.includes('waitingOnApproval') ? 'Waiting for approval' : waiting ? 'Waiting for your answer' : 'Working' });
         this.completed.delete(thread.id);
       } else if (status?.type === 'systemError') {

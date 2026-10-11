@@ -28,6 +28,8 @@ export interface SidebarChat extends RecentConversation {
   tooltip: string;
   activity?: ChatActivity;
   activityDetail?: string;
+  questionCount?: number;
+  waitingFor?: 'answer' | 'approval';
   completedAt?: number;
   goal?: ChatGoal;
   alertActivity?: ActivitySnapshot;

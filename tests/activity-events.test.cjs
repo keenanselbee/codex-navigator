@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises'), path = require('node:path');
 const { reduceActivity, TranscriptActivity, combineActivity, ActivityDiagnostics } = require('../dist/activity-events');
+const { unansweredQuestions } = require('../dist/chat-questions');
 const now = Date.now(), initial = { status: 'unknown', workedAt: 0 };
 const event = (type, id = 'a', time = now) => ({ timestamp: new Date(time).toISOString(), type: 'event_msg', payload: { type, turn_id: id } });
 
@@ -14,16 +15,16 @@ test('structured async replies retain only matching IDs and times across complet
    let state=reduceActivity(initial,event('task_complete'),now);
    state=reduceActivity(state,{...record,timestamp:new Date(now+1).toISOString()},now+1);
    assert.equal(state.status,'ready','answer does not change completion');
-   assert.deepEqual(state.questionReplies,[{id:'q',answeredAt:now+1}]);
+   assert.deepEqual(state.questions?.replies,[{id:'q',index:0,answeredAt:now+1}]);
    assert.equal(JSON.stringify(state).includes('private answer'),false);
    state=reduceActivity(state,event('task_started','b',now+2),now+2);
    state=reduceActivity(state,{type:'turn_context',payload:{turn_id:'c'},timestamp:new Date(now+3).toISOString()},now+3);
-   assert.deepEqual(combineActivity({status:'working',turnId:'c',workedAt:now+4},state).questionReplies,[{id:'q',answeredAt:now+1}]);
+   assert.deepEqual(combineActivity({status:'working',turnId:'c',workedAt:now+4},state).questions?.replies,[{id:'q',index:0,answeredAt:now+1}]);
  }
  for(const bad of ['ordinary answer',text.replace('request_user_input_async','unknown'),text.replace('questionItemId','other'),text.replace('[{','{'), 'quoted '+text]) {
-   assert.equal(reduceActivity(initial,{timestamp:new Date(now).toISOString(),type:'event_msg',payload:{type:'user_message',message:bad}},now).questionReplies,undefined);
+   assert.equal(reduceActivity(initial,{timestamp:new Date(now).toISOString(),type:'event_msg',payload:{type:'user_message',message:bad}},now).questions?.replies,undefined);
  }
- assert.equal(reduceActivity(initial,{timestamp:new Date(now).toISOString(),type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'input_text',text}]}},now).questionReplies,undefined);
+ assert.equal(reduceActivity(initial,{timestamp:new Date(now).toISOString(),type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'input_text',text}]}},now).questions?.replies,undefined);
 });
 test('explicit lifecycle completes older chats and ignores stale other-turn completions', () => {
  let s = reduceActivity(initial, event('task_started'), now);
@@ -49,28 +50,28 @@ test('accepted async prompts survive tool acknowledgement, ongoing work and comp
  for (const name of ['request_user_input_async', 'functions.request_user_input_async']) {
    const item=(payload,time=now)=>({timestamp:new Date(time).toISOString(),type:'response_item',payload});
    let s=reduceActivity(initial,event('task_started'),now);
-   s=reduceActivity(s,item({type:'function_call',name,call_id:'q'}),now);
-   assert.equal(s.status,'working'); assert.equal(s.asyncQuestion,undefined);
+   s=reduceActivity(s,item({type:'function_call',name,call_id:'q',arguments:JSON.stringify({questions:[{title:'Fixture question'}]})}),now);
+   assert.equal(s.status,'working'); assert.deepEqual(unansweredQuestions(s.questions,now),[]);
    s=reduceActivity(s,item({type:'function_call_output',call_id:'q',output:'{"accepted":true}'},now+1),now+1);
-   assert.deepEqual(s.asyncQuestion,{id:'q',askedAt:now}); assert.equal(s.pendingInput,undefined);
+   assert.deepEqual(unansweredQuestions(s.questions,now),[{id:'q',askedAt:now,count:1,accepted:true}]); assert.equal(s.pendingInput,undefined);
    s=reduceActivity(s,item({type:'function_call',name:'sleep',call_id:'sleep'},now+2),now+2);
-   assert.equal(s.status,'working'); assert.equal(s.asyncQuestion.id,'q');
+   assert.equal(s.status,'working'); assert.equal(unansweredQuestions(s.questions,now)[0].id,'q');
    const hook={status:'idle',turnId:'a',observedAt:now+3,workedAt:now+3};
-   assert.equal(combineActivity(hook,s).asyncQuestion.id,'q');
-   assert.equal(combineActivity({...hook,turnId:'new'},s).asyncQuestion,undefined);
+   assert.equal(unansweredQuestions(combineActivity(hook,s).questions,now)[0].id,'q');
+   assert.equal(unansweredQuestions(combineActivity({...hook,turnId:'new'},s).questions,now)[0].id,'q');
    s=reduceActivity(s,event('task_complete','a',now+4),now+4);
-   assert.equal(s.status,'ready'); assert.equal(s.asyncQuestion.id,'q');
-   assert.equal(reduceActivity(s,event('task_started','new',now+5),now+5).asyncQuestion,undefined);
+   assert.equal(s.status,'ready'); assert.equal(unansweredQuestions(s.questions,now)[0].id,'q');
+   assert.equal(unansweredQuestions(reduceActivity(s,event('task_started','new',now+5),now+5).questions,now+5)[0].id,'q');
  }
 });
 
 test('rejected, malformed and unmatched async acknowledgements do not announce a question', () => {
  const item=payload=>({timestamp:new Date(now).toISOString(),type:'response_item',payload});
- const called=reduceActivity(initial,item({type:'function_call',name:'request_user_input_async',call_id:'q'}),now);
+ const called=reduceActivity(initial,item({type:'function_call',name:'request_user_input_async',call_id:'q',arguments:JSON.stringify({questions:[{title:'Fixture question'}]})}),now);
  for (const output of ['{"accepted":false}','error','{}']) {
-   assert.equal(reduceActivity(called,item({type:'function_call_output',call_id:'q',output}),now).asyncQuestion,undefined);
+   assert.deepEqual(unansweredQuestions(reduceActivity(called,item({type:'function_call_output',call_id:'q',output}),now).questions,now),[]);
  }
- assert.equal(reduceActivity(called,item({type:'function_call_output',call_id:'other',output:'{"accepted":true}'}),now).asyncQuestion,undefined);
+ assert.deepEqual(unansweredQuestions(reduceActivity(called,item({type:'function_call_output',call_id:'other',output:'{"accepted":true}'}),now).questions,now),[]);
 });
 test('tail reader handles partial writes, truncation and stale working signals', async () => {
  const folder=await fs.mkdtemp(path.resolve('.codex-temp/activity-reader-')), file=path.join(folder,'chat.jsonl');
@@ -257,5 +258,29 @@ test('compaction completion and large tool results keep activity through cold an
    assert.equal((await new TranscriptActivity().read(file,now+2)).status,'ready');
    await fs.writeFile(file,line('event_msg',{type:'item_completed',turn_id:'a',item:{type:'ContextCompaction'}}));
    assert.equal((await new TranscriptActivity().read(file,now+3600000)).status,'unknown','abandoned activity still expires');
+ } finally { await fs.rm(folder,{recursive:true,force:true}); }
+});
+
+test('question evidence survives reload and partial records, but unread history gaps discard it', async () => {
+ const folder=await fs.mkdtemp(path.resolve('.codex-temp/question-reader-')),file=path.join(folder,'chat.jsonl');
+ const line=(type,payload,time=now)=>JSON.stringify({timestamp:new Date(time).toISOString(),type,payload})+'\n';
+ const { pendingQuestionIndices }=require('../dist/chat-questions');
+ const remaining=snapshot=>unansweredQuestions(snapshot.questions,now+20).reduce((n,q)=>n+pendingQuestionIndices(q,snapshot.questions.replies).length,0);
+ try {
+   const reader=new TranscriptActivity();
+   await fs.writeFile(file,line('response_item',{type:'function_call',name:'request_user_input_async',call_id:'q',arguments:JSON.stringify({questions:[{title:'One'},{title:'Two'}]})})
+     +line('response_item',{type:'function_call_output',call_id:'q',output:'{"accepted":true}'}));
+   assert.equal(remaining(await reader.read(file,now)),2);
+   const text='<send_user_message_question_reply>'+JSON.stringify([{questionItemId:JSON.stringify(['request_user_input_async','q',0]),answer:'Private'}])+'</send_user_message_question_reply>';
+   const answer=line('event_msg',{type:'user_message',message:text},now+1);
+   await fs.appendFile(file,answer.slice(0,-2));
+   assert.equal(remaining(await reader.read(file,now+1)),2,'incomplete answer is retried');
+   await fs.appendFile(file,answer.slice(-2));
+   const samples=await Promise.all([reader.read(file,now+2),reader.read(file,now+2),new TranscriptActivity().read(file,now+2)]);
+   samples.forEach(snapshot=>assert.equal(remaining(snapshot),1));
+   await fs.appendFile(file,line('response_item',{type:'custom_tool_call_output',output:'x'.repeat(2*1024*1024)},now+3));
+   assert.equal(remaining(await reader.read(file,now+3)),0,'unread gap must not retain the old question');
+   await fs.writeFile(file,line('event_msg',{type:'task_started',turn_id:'next'},now+4));
+   assert.equal(remaining(await reader.read(file,now+4)),0,'replacement cannot inherit questions');
  } finally { await fs.rm(folder,{recursive:true,force:true}); }
 });

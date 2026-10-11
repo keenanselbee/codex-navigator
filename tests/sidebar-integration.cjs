@@ -109,7 +109,7 @@ exports.run = async function (context, fixtureVscode) {
             starOpacity:document.querySelector('.star')?getComputedStyle(document.querySelector('.star')).opacity:null,
             pinOpacity:document.querySelector('.pin')?getComputedStyle(document.querySelector('.pin')).opacity:null,
             controlHeights:[...document.querySelectorAll('.chat:first-child .star,.chat:first-child .pin')].map(n=>n.getBoundingClientRect().height),
-            spinnerStroke:document.querySelector('.spinner')?getComputedStyle(document.querySelector('.spinner')).borderTopWidth:null,readyDots:document.querySelectorAll('.activity-dot.ready').length,
+            spinnerStroke:document.querySelector('.spinner')?getComputedStyle(document.querySelector('.spinner')).borderTopWidth:null,readyDots:document.querySelectorAll('.activity-dot.ready').length,waitingDots:document.querySelectorAll('.activity-dot.waiting').length,
             rowColours:Object.fromEntries([...document.querySelectorAll('.chat')].map(row=>[JSON.parse(row.dataset.vscodeContext).navigatorChatId,getComputedStyle(row.querySelector('.label')).color])),
             activityNotice:el('activityNoticeText').textContent,activityNoticeHidden:el('activityNotice').hidden,
             pickerHidden:document.getElementById('colourPage').hidden,pickerHex:document.getElementById('colour-hex')?.value,
@@ -120,6 +120,7 @@ exports.run = async function (context, fixtureVscode) {
             actions:document.querySelectorAll('.actions').length,spinners:document.querySelectorAll('.spinner').length,
             nameOrder:[...document.querySelector('.name')?.querySelectorAll('.open,.star,.goal,.spinner')||[]].map(item=>item.className),
             goalStatus:document.querySelector('.goal')?.dataset.status,goalTitle:document.querySelector('.goal')?.title,
+            questionIndicators:[...document.querySelectorAll('.question-indicator')].map(n=>({label:n.getAttribute('aria-label'),spinning:!!n.querySelector('.spinner'),markAnimation:getComputedStyle(n.querySelector('.question-mark')).animationName,ringAnimation:getComputedStyle(n.firstElementChild).animationName})),
             spinnerWidth:document.querySelector('.spinner')?parseFloat(getComputedStyle(document.querySelector('.spinner')).width):0,
             iconCentres:[...document.querySelector('.indicators')?.children||[]].map(item=>{const r=item.getBoundingClientRect();return r.top+r.height/2;}),
             separators:[...document.querySelectorAll('.separator-right')].map(item=>({width:getComputedStyle(item,'::after').width,pointer:getComputedStyle(item,'::after').pointerEvents})),
@@ -541,6 +542,10 @@ exports.run = async function (context, fixtureVscode) {
     await until(() => notificationRequests.some(request => request.message === 'Codex needs your answer.'), 'blocking question reaches alert delivery');
     assert.equal(notificationRequests.find(request => request.kind === 'input').desktop, true, 'default question desktop notification is enabled in either focus state');
     assert.equal(notificationRequests.find(request => request.kind === 'input').volume,25,'question uses changed volume');
+    await until(async () => (await probe()).questionIndicators.some(q=>q.label==='Waiting for your answer'&&!q.spinning),'blocking question shows stationary question mark');
+    await companion.webview.postMessage({type:'goals',ids:[id(12)],goals:{[id(12)]:{status:'active',objective:'Question fixture',createdAt:1}}});
+    assert.equal((await probe()).questionIndicators[0].spinning,false,'a waiting answer overrides goal animation');
+    await companion.webview.postMessage({type:'goals',ids:[id(12)],goals:{}});
     await notificationConfig.update('notificationVolume',undefined,vscode.ConfigurationTarget.Global);
     const inputAlerts = notificationRequests.length;
     await companionProvider.refresh();
@@ -553,30 +558,43 @@ exports.run = async function (context, fixtureVscode) {
     RuntimeActivity.prototype.read = async () => new Map([[id(12), { status: 'working', workedAt: 0 }]]);
     try {
       fs.appendFileSync(activityTranscript,
-        activityLine('response_item', { type: 'function_call', name: 'request_user_input_async', call_id: 'async-q1' })
+        activityLine('response_item', { type: 'function_call', name: 'request_user_input_async', call_id: 'async-q1', arguments: JSON.stringify({questions:[{title:'First fixture question'},{title:'Second fixture question'}]}) })
         + activityLine('response_item', { type: 'function_call_output', call_id: 'async-q1', output: '{"accepted":true}' })
         + activityLine('response_item', { type: 'function_call', name: 'sleep', call_id: 'async-sleep' }));
       await companionProvider.refresh();
       await until(() => notificationRequests.some(request => request.message === 'Codex has a question for you.'), 'async prompt survives acknowledgement and live working status');
       assert.equal(companionProvider.rows.find(row => row.id === id(12)).activity, 'working');
+      await until(async () => (await probe()).questionIndicators.some(q=>q.label==='Working \u00b7 2 unanswered questions'&&q.spinning&&q.markAnimation==='none'),'stationary question mark overlays rotating ring');
+      await companion.webview.postMessage({type:'fixture:click',selector:'.chat .open'});
+      await companionProvider.refresh();
+      assert.equal(companionProvider.rows.find(row=>row.id===id(12)).questionCount,2,'opening the chat does not answer questions');
       const asyncAlerts = notificationRequests.length;
       await companionProvider.refresh();
       assert.equal(notificationRequests.length, asyncAlerts, 'async question alerts once while work continues');
       const queuedQuestion=notificationRequests.find(request=>request.questionId==='async-q1');
       assert.ok(queuedQuestion.canDeliver('sound'),'unanswered question remains deliverable');
-      const replyText=call=>'<send_user_message_question_reply>\n'+JSON.stringify([{
-        questionItemId:JSON.stringify(['request_user_input_async',call,0]),answer:'Fixture answer'
+      const replyText=(call,index=0)=>'<send_user_message_question_reply>\n'+JSON.stringify([{
+        questionItemId:JSON.stringify(['request_user_input_async',call,index]),answer:'Fixture answer'
       }])+'\n</send_user_message_question_reply>';
       fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'user_message',message:replyText('async-q1')}));
       await companionProvider.refresh();
-      assert.equal(queuedQuestion.canDeliver('sound'),false,'answer cancels queued sound through live runtime overlay');
+      assert.equal(queuedQuestion.canDeliver('sound'),true,'partial answer retains the remaining question');
+      await until(async () => (await probe()).questionIndicators.some(q=>q.label==='Working \u00b7 1 unanswered question'),'partial answer updates the badge');
+      fs.appendFileSync(activityTranscript,activityLine('event_msg',{type:'user_message',message:replyText('async-q1',1)}));
+      await companionProvider.refresh();
+      await until(async () => (await probe()).questionIndicators.length===0,'all answers clear question badge');
+      assert.equal(queuedQuestion.canDeliver('sound'),false,'all answers cancel queued sound through live runtime overlay');
       assert.equal(queuedQuestion.canDeliver('desktop'),false,'answer cancels queued popup');
       fs.appendFileSync(activityTranscript,
-        activityLine('response_item',{type:'function_call',name:'request_user_input_async',call_id:'async-q2'})
+        activityLine('response_item',{type:'function_call',name:'request_user_input_async',call_id:'async-q2',arguments:JSON.stringify({questions:[{title:'Fixture question'}]})})
         +activityLine('response_item',{type:'function_call_output',call_id:'async-q2',output:'{"accepted":true}'})
         +activityLine('event_msg',{type:'user_message',message:replyText('async-q2')}));
       await companionProvider.refresh();
       assert.equal(notificationRequests.length,asyncAlerts,'answer before refresh suppresses question notification');
+      RuntimeActivity.prototype.read=async()=>new Map([[id(12),{status:'waiting',waitingFor:'approval',detail:'Waiting for approval',workedAt:0}]]);
+      await companionProvider.refresh();
+      await until(async()=>{const p=await probe();return p.waitingDots===1&&p.questionIndicators.length===0;},'approval retains its distinct dot');
+      RuntimeActivity.prototype.read=async()=>new Map([[id(12),{status:'working',workedAt:0}]]);
     } finally { RuntimeActivity.prototype.read = readRuntime; }
     fs.appendFileSync(activityTranscript, activityLine('event_msg', { type: 'turn_aborted', turn_id: 'fixture-async-question' }));
     await companionProvider.refresh();
@@ -849,6 +867,7 @@ exports.run = async function (context, fixtureVscode) {
     result.verified.push('explicit trial admission', 'protected trial record', 'expiry blocks host and webview actions', 'pending label and repository pickers cannot apply after expiry', 'expiry stops polling without pausing goals', 'saved data survives expiry');
     result.verified.push('completion, blocking input and acknowledged async questions reach notification delivery once');
     result.verified.push('structured replies cancel pending question channels through runtime overlay; answered-before-refresh prompts stay quiet');
+    result.verified.push('blocking questions stop goal animation; async questions overlay a stationary mark on a rotating ring; partial answers preserve remaining questions; opening a chat does not clear its question badge');
     result.verified.push('legacy notification preferences migrate and clearing overrides restores four new policy defaults');
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));
   } catch (error) {
