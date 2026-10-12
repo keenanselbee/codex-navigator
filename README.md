@@ -32,15 +32,12 @@ Recent chat highlights fade over time, showing which conversations you visited m
 Features
 --------
 
-- **Keep your Codex accounts ready:** Save sign-ins securely on your device, give accounts recognisable names, and switch with a click and window reload. See last known usage, plan and reset details before choosing an account. Track banked resets and their expiry dates, and use a reset directly from the accounts UI. [Supported environments and limits](https://github.com/keenanselbee/codex-navigator/blob/main/docs/advanced.md#account-switching).
-- **Recognise each project:** Give chats repository labels or custom labels. Projects get distinct, repeatable automatic colours, and you can choose your own.
-- **Switch conversations quickly:** Browse and search saved chats from a sidebar that adapts to your available space. The order stays steady while you interact with the list.
-- **Keep favourites close:** Star chats to filter favourites. Pin a chat to hold its position and keep it visible beyond the default 24-hour recency filter.
-- **Keep your organisation across workspaces:** Use the shared Default chat profile, or choose separate profiles for work, school or personal projects. Optionally show only chats associated with the current workspace, plus unassigned chats.
-- **Make the list yours:** Rename chats while keeping the original Codex name available. Hide conversations you no longer need and restore them without deleting anything.
-- **See activity and goals:** See working, ready, waiting and error states where Codex supplies them. Pause or resume goals from Navigator, where supported.
-- **Hear when Codex needs you:** Get sounds when responses finish or chats need an answer or approval, even while working in VS Code. Question notifications appear by default; completion banners appear when VS Code is unfocused. On Windows, click a notification to open its chat. Keep Navigator visible for monitoring.
-- **Spot recent visits:** Chats opened through Navigator briefly glow in their label colour. Adjust the fade, highlight only the last visited chat, or turn highlights off.
+- **Switch accounts:** Securely save and name your Codex sign-ins. Check last known usage, plan and reset details, manage banked resets, and switch accounts with a click and window reload.
+- **Find chats faster:** Browse and search conversations in a sidebar that adapts to your space. Recognise projects through automatic repository labels, custom labels and colours.
+- **Keep chats organised:** Rename conversations, star favourites and pin important chats. Hide and restore chats without deleting them, and highlight recent visits.
+- **Separate your work:** Keep your chat organisation across workspaces with the shared Default profile, or create separate profiles for work, school and personal projects. Optionally filter chats to the current workspace.
+- **Follow activity and goals:** See working, ready, waiting and error states, plus a question mark for detected unanswered questions. Pause or resume goals where supported.
+- **Get notified:** Choose separate sound and desktop alerts for finished responses, questions and approvals. On Windows, click a notification to open its chat. Keep Navigator visible for monitoring.
 
 ---
 
