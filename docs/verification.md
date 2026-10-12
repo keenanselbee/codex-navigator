@@ -1,12 +1,41 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.7**, hardening project instruction routing.
+Current verified Desktop release: **2.0.8**, aligning routing readiness with live windows.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.8
+-------------------------------
+
+Public build revision: `0cf5b8f1d68927e79d343c300ece1615a695fbc9`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `cb8e0b9091bd19e0969b167a5f063f61419365750d9e7e5e30863477f6547361`.
+
+All 329 public tests and 24 commercial tests pass. New regression coverage checks
+Setup and resolver agreement after an invalid scope edit leaves an overlapping
+live window, conflicting live policies, unavailable live-selected shared files,
+and recovery when the conflicting windows close. Release metadata, unchanged
+dependencies, seven local documentation links and whitespace checks pass.
+
+Isolated VS Code 1.139.1 initial/restart and second-window integration passes in
+`integration-uu45Qa`. The exact production VSIX passes installation and
+reinstallation in `installed-acceptance-MVGtDX`, verifying 74 installed payload
+hashes, the manifest and retained trial expiry. All 77 archive entries match the
+production allowlist and recorded hashes. Desktop VSIX and receipt hashes match
+their source files. The disposable extension was removed; the normal profile
+and private checkout were unchanged.
+
+After installing, choose Save Project Instructions to refresh the separately
+installed Codex-home helpers. Readiness is a point-in-time check. These checks use
+synthetic fixtures, with no authenticated conversation or paid provider request.
+No Git push or Marketplace publication occurred. Native macOS/Linux acceptance
+remains outstanding. This evidence is excluded from the immutable VSIX and
+preserves its original build revisions and payload.
 
 
 Verified Desktop package: 2.0.7
