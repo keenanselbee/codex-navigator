@@ -44,6 +44,74 @@ test('explicit targets use durable routing after disposal and ignore stale chat 
   await assert.rejects(resolveRouting(['--target', repo], home, 'not-a-thread'), /verified/);
 });
 
+test('invalid unrelated profiles do not block a known target but remain errors for their own scope', async t => {
+  const { home, repo, other, profile } = await fixture(t);
+  await saveProfile(home, { ...profile, scopes: [repo] });
+  const invalid = { ...profile, workspace: path.join(home, 'other.code-workspace'), scopes: [other], fallbackNames: ['../invalid'] };
+  await assert.rejects(saveProfile(home, invalid), /plain filenames/);
+  assert.deepEqual((await readProfiles(home, [repo])).map(p => p.workspace), [profile.workspace]);
+  assert.equal((await resolveRouting(['--target', repo], home, id)).status, 'enabled');
+  await assert.rejects(resolveRouting(['--target', other], home, id), /invalid saved routing/);
+  await assert.rejects(readProfiles(home), /invalid saved routing/);
+  await assert.rejects(readProfiles(home, [repo, other]), /invalid saved routing/);
+  await assert.rejects(readProfiles(home, [repo], [{ ...profile, workspace: invalid.workspace, scopes: [repo] }]), /invalid saved routing/,
+    'an overlapping live window means the invalid record is not safely unrelated');
+  installAgentHelper(prepareAgentHelper(home));
+  const plan = prepareAgentHelper(home);
+  const { routingStatus } = require('../dist/routing-status');
+  assert.equal((await routingStatus(plan, { ...profile, enabled: true }, profile.workspace, [repo], [repo])).label, 'Ready');
+});
+
+test('unknown, overlapping and mismatched profile damage cannot be skipped', async t => {
+  const { home, repo, other, profile } = await fixture(t);
+  await saveProfile(home, profile);
+  const workspace = path.join(home, 'damaged.code-workspace'), filename = profileFilename(home, workspace);
+  for (const value of [
+    { version: 1, workspace, error: 'Legacy unscoped invalidation' },
+    { version: 1, workspace, scopes: [repo], error: 'Overlapping invalidation' },
+    { version: 1, workspace, scopes: ['relative'], error: 'Unknown scope' },
+    { version: 1, workspace: profile.workspace, scopes: [other], error: 'Wrong file identity' },
+    { version: 2, workspace, scopes: [other], error: 'Unknown version' },
+  ]) {
+    await fs.writeFile(filename, JSON.stringify(value));
+    await assert.rejects(readProfiles(home, [repo]));
+  }
+  await fs.writeFile(filename, '{broken');
+  await assert.rejects(readProfiles(home, [repo]), SyntaxError);
+  await assert.rejects(readProfiles(home, ['relative']), /absolute/);
+});
+
+test('invalid scopes are never saved as a misleading complete scope list', async t => {
+  const { home, repo, profile } = await fixture(t);
+  await assert.rejects(saveProfile(home, { ...profile, scopes: ['relative'] }), /Invalid saved/);
+  const saved = JSON.parse(await fs.readFile(profileFilename(home, profile.workspace), 'utf8'));
+  assert.equal(saved.scopes, undefined);
+  await assert.rejects(readProfiles(home, [repo]), /invalid saved routing/);
+});
+
+test('readiness detects changed helpers and managed guidance and saving repairs them', async t => {
+  const { home, repo, main, profile } = await fixture(t);
+  await saveProfile(home, profile);
+  installAgentHelper(prepareAgentHelper(home));
+  const { routingStatus } = require('../dist/routing-status');
+  const status = () => routingStatus(prepareAgentHelper(home), { ...profile, main }, profile.workspace, profile.scopes, [repo]);
+  assert.equal((await status()).label, 'Ready');
+  for (const name of ['routing.js', 'scope-store.js', 'fallback.md']) {
+    await fs.writeFile(path.join(home, 'codex-navigator', name), '// Valid syntax with no implementation\n');
+    assert.match((await status()).detail, /helper needs updating/);
+    installAgentHelper(prepareAgentHelper(home));
+    assert.equal((await status()).label, 'Ready');
+  }
+  const instructions = prepareAgentHelper(home).instructions;
+  await fs.appendFile(instructions, '\nMy unrelated user rules.\n');
+  assert.equal((await status()).label, 'Ready', 'unmanaged user text is preserved');
+  await fs.writeFile(instructions, (await fs.readFile(instructions, 'utf8')).replace('Explicit user focus', 'Old focus'));
+  assert.match((await status()).detail, /guidance needs updating/);
+  installAgentHelper(prepareAgentHelper(home));
+  assert.equal((await status()).label, 'Ready');
+  assert.match(await fs.readFile(instructions, 'utf8'), /My unrelated user rules/);
+});
+
 test('disabled state survives closing a window and remains distinct from missing configuration', async t => {
   const { home, repo, main, profile } = await fixture(t);
   assert.equal((await resolveRouting(['--target', repo], home, id)).status, 'unavailable');

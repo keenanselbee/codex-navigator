@@ -139,8 +139,10 @@ export async function openSetupPage(context: vscode.ExtensionContext, canUse?: (
         if (message.type === 'saveRouting') {
           if (!plan) { throw new Error('Your global instructions need attention. Refresh to check them again.'); }
           await saveRoutingChoices(message.choices, choices, plan);
+          await vscode.commands.executeCommand('codexNavigator.refreshInstructionRouting');
         } else if (message.type === 'disableRouting') {
           await vscode.workspace.getConfiguration('codexNavigator').update('instructionRouting', false, vscode.ConfigurationTarget.Workspace);
+          await vscode.commands.executeCommand('codexNavigator.refreshInstructionRouting');
         }
         const routing = await refresh(message.type === 'saveRouting' || message.type === 'disableRouting');
         if (message.type === 'saveRouting' && routing?.label !== 'Ready') {

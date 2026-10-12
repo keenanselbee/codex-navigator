@@ -378,6 +378,11 @@ and updates only its marked block in global `AGENTS.md`, with a backup. It does
 not edit shared or project instruction files. Automatic labels have their own
 setup; enable them separately if wanted.
 
+After an extension update, setup reports **Needs attention** if its installed
+routing helpers or managed guidance are outdated. Choose **Save Project
+Instructions** to refresh them, then start a new chat if the guidance changed.
+Disabling routing saves the disabled state even after licence expiry.
+
 Explicit task focus takes precedence over chat labels. Routing discovers shared,
 project and nested instructions in order, but does not change working directories
 or permissions or prove the agent read them. Disabled routing leaves ordinary

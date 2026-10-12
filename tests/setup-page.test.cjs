@@ -32,6 +32,16 @@ test('expired access blocks enabling features but preserves hook and guidance re
  assert.ok(f.writes.some(m=>m[0]==='hooks'&&m.at(-1)===false));
  assert.ok(f.writes.some(m=>m[0]==='labels'&&m.at(-1)===false));
  assert.ok(f.writes.some(m=>m[0]==='instructionRouting'&&m[1]===false));
+ assert.ok(f.writes.findIndex(m=>m[0]==='codexNavigator.refreshInstructionRouting')>f.writes.findIndex(m=>m[0]==='instructionRouting'),'persist disabled routing before reporting success, even without access');
+});
+
+test('a failed routing publication reports an error instead of claiming removal succeeded',async()=>{
+ const f=fixture(async()=>false);await f.open();await f.send({type:'ready'});
+ const execute=f.api.commands.executeCommand;
+ f.api.commands.executeCommand=async(...args)=>{if(args[0]==='codexNavigator.refreshInstructionRouting')throw Error('Routing write failed');return execute(...args);};
+ await f.send({type:'disableRouting',revision:1});
+ assert.ok(f.messages.some(m=>m.type==='error'&&m.text.includes('Routing write failed')));
+ assert.ok(!f.messages.some(m=>m.type==='notice'&&m.text.includes('Routing is off')));
 });
 test('setup renders hook steps under CSP without changing files or accepting removed patch actions',async()=>{
  const f=fixture();await f.open();await f.send({type:'ready'});

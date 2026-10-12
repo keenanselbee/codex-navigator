@@ -849,6 +849,12 @@ exports.run = async function (context, fixtureVscode) {
     // Only the disposable profile's real SecretStorage is altered by this test.
     // There is no shipping clock override or access bypass.
     const protectedKey='license.production.v1';
+    const instructionConfig=vscode.workspace.getConfiguration('codexNavigator');
+    const { profileFilename: routingProfileFilename }=require('../dist/routing-config');
+    const routingRecord=routingProfileFilename(process.env.CODEX_HOME,vscode.workspace.workspaceFile.fsPath);
+    await instructionConfig.update('instructionRouting',true,vscode.ConfigurationTarget.Workspace);
+    await vscode.commands.executeCommand('codexNavigator.refreshInstructionRouting');
+    assert.equal(JSON.parse(fs.readFileSync(routingRecord,'utf8')).enabled,true);
     const originalLicense=await companionContext.secrets.get(protectedKey);
     assert.ok(originalLicense,'trial persisted in VS Code SecretStorage');
     const trialRecord=JSON.parse(originalLicense);
@@ -870,6 +876,9 @@ exports.run = async function (context, fixtureVscode) {
     const writesBeforeExpiry=goalWrites;
     await companionContext.secrets.store(protectedKey,JSON.stringify(expired));
     await until(async()=>{const p=await probe();return p.licenseVisible&&p.rows===0&&p.licenseText.includes('trial has ended');},'expired trial replaces the entire Navigator view');
+    await instructionConfig.update('instructionRouting',false,vscode.ConfigurationTarget.Workspace);
+    await vscode.commands.executeCommand('codexNavigator.refreshInstructionRouting');
+    assert.equal(JSON.parse(fs.readFileSync(routingRecord,'utf8')).enabled,false,'disabling after expiry persists without chat refresh');
     try {
       finishLabel();finishRepository();
       await Promise.all([pendingLabel,pendingRepository]);
@@ -902,6 +911,7 @@ exports.run = async function (context, fixtureVscode) {
     result.verified.push('structured replies cancel pending question channels through runtime overlay; answered-before-refresh prompts stay quiet');
     result.verified.push('blocking questions stop goal animation; async questions overlay a stationary mark on a rotating ring; partial answers preserve remaining questions; opening a chat does not clear its question badge');
     result.verified.push('legacy notification preferences migrate and clearing overrides restores four new policy defaults');
+    result.verified.push('routing disablement persists after licence expiry independently of chat refresh');
     result.verified.push('layout menu selects each fixed presentation live; width still adapts, cancellation preserves settings and Auto resumes height selection');
     await vscode.workspace.getConfiguration('codexNavigator').update('chatLayout', 'columns', vscode.ConfigurationTarget.Global);
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));

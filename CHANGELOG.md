@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+2.0.7
+-----
+
+- Persist disabled project instruction routing even after licence expiry.
+- Keep clearly unrelated invalid routing profiles from blocking healthy projects;
+  unknown or overlapping invalid records still report errors.
+- Detect outdated or changed instruction helpers in setup. Choose Save Project
+  Instructions after updating to refresh installed helpers.
+
 2.0.6
 -----
 

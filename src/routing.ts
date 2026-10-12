@@ -147,7 +147,8 @@ export async function resolveRouting(args: string[], home = codexHome(), id = pr
       }
     }
   }
-  const saved = await readProfiles(home);
+  const targets = target ? exactGitRoots([target]) : candidates.flatMap(candidate => candidate.roots);
+  const saved = await readProfiles(home, targets, live);
   if (target || candidates.length && candidates.every(item => item.profile)) {
     const roots = target ? exactGitRoots([target]) : candidates[0].roots.length ? exactGitRoots(candidates[0].roots) : [];
     if (!target && candidates.some(item => item.roots.length !== roots.length || item.roots.some((root, index) => !sameRoot(root, roots[index])))) {

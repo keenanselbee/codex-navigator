@@ -21,6 +21,10 @@ export function containsPath(scope: string, target: string): boolean {
   return !path.isAbsolute(relative) && relative !== '..' && !relative.startsWith('..' + path.sep);
 }
 
+function validScopes(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length <= 64 && value.every(absolutePath);
+}
+
 export function validateFallbackNames(value: unknown): asserts value is string[] {
   if (!Array.isArray(value) || value.length > 16 || !value.every(name => typeof name === 'string'
     && name.length > 0 && name.length <= 255 && !/[\\/:<>"|?*\x00-\x1f]/.test(name)
@@ -35,7 +39,7 @@ export function validateProfile(value: unknown): asserts value is RoutingProfile
   }
   const profile = value as RoutingProfile;
   if (!profile || profile.version !== 1 || !absolutePath(profile.workspace) || typeof profile.enabled !== 'boolean'
-    || !Array.isArray(profile.scopes) || profile.scopes.length > 64 || !profile.scopes.every(absolutePath)
+    || !validScopes(profile.scopes)
     || !(profile.main === '' || absolutePath(profile.main))) {
     throw new Error('Invalid saved routing configuration. Check the workspace, scope directories and main instructions path.');
   }
@@ -55,7 +59,8 @@ export async function saveProfile(home: string, profile: RoutingProfile): Promis
   try { validateProfile(profile); } catch (error) { invalid = error as Error; }
   const filename = profileFilename(home, profile.workspace);
   // Persist invalidation too, so a rejected edit cannot silently retain old enabled rules.
-  const contents = JSON.stringify(invalid ? { version: 1, workspace: profile.workspace, error: invalid.message } : profile, null, 2) + '\n';
+  const contents = JSON.stringify(invalid ? { version: 1, workspace: profile.workspace,
+    ...(validScopes(profile.scopes) ? { scopes: profile.scopes } : {}), error: invalid.message } : profile, null, 2) + '\n';
   try {
     const file = await open(filename, 'r');
     try {
@@ -75,7 +80,8 @@ export async function saveProfile(home: string, profile: RoutingProfile): Promis
   if (invalid) { throw invalid; }
 }
 
-export async function readProfiles(home: string): Promise<RoutingProfile[]> {
+export async function readProfiles(home: string, targets?: string[], live: RoutingProfile[] = []): Promise<RoutingProfile[]> {
+  if (targets && !targets.every(absolutePath)) throw new Error('Routing targets must be absolute paths.');
   let directory;
   try { directory = await opendir(path.join(home, 'codex-navigator', 'routing-config')); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { return []; } throw error; }
@@ -89,6 +95,14 @@ export async function readProfiles(home: string): Promise<RoutingProfile[]> {
     try {
       if ((await file.stat()).size > 1024 * 1024) { throw new Error('Saved routing configuration is too large.'); }
       const value: unknown = JSON.parse(await file.readFile('utf8'));
+      // Skip only records whose identity and complete scope list establish that
+      // they cannot apply. Unreadable, unscoped and overlapping damage still fails.
+      const envelope = value as Partial<RoutingProfile> | null;
+      if (targets?.length && envelope?.version === 1 && absolutePath(envelope.workspace)
+        && sameRoot(filename, profileFilename(home, envelope.workspace)) && validScopes(envelope.scopes)
+        && !envelope.scopes.some(scope => targets.some(target => containsPath(scope, target)))
+        && !live.some(profile => sameRoot(profile.workspace, envelope.workspace!)
+          && profile.scopes.some(scope => targets.some(target => containsPath(scope, target))))) continue;
       validateProfile(value);
       if (!sameRoot(filename, profileFilename(home, value.workspace))) { throw new Error('Saved routing workspace does not match its record.'); }
       profiles.push(value);

@@ -1,6 +1,5 @@
 import { readFileSync, accessSync, statSync, constants } from 'node:fs';
 import * as path from 'node:path';
-import { Script } from 'node:vm';
 import { prepareAgentHelper } from './agent-helper';
 import { readProfiles, selectProfile, containsPath } from './routing-config';
 import { sameRoot } from './model';
@@ -15,13 +14,14 @@ export async function routingStatus(plan: ReturnType<typeof prepareAgentHelper> 
     return { label: 'Needs setup', detail: 'Save project instructions to install routing. ' + independent };
   }
   try {
+    if (plan.before !== plan.after) throw new Error('Navigator routing guidance needs updating.');
     for (const source of plan.sources) {
-      const text = readFileSync(path.join(plan.destination, source.name), 'utf8');
-      if (!text.trim()) { throw new Error('A routing helper file is empty.'); }
-      if (source.name.endsWith('.js')) { new Script(text, { filename: source.name }); }
+      if (!readFileSync(path.join(plan.destination, source.name)).equals(source.bytes)) {
+        throw new Error('Navigator routing helper needs updating: ' + source.name);
+      }
     }
     const sharedFiles = new Set([choices.main]);
-    const saved = await readProfiles(plan.home);
+    const saved = await readProfiles(plan.home, [...scopes, ...targets]);
     const own = saved.find(profile => sameRoot(profile.workspace, workspace));
     if (!own || !own.enabled || !sameRoot(own.main, choices.main)
       || JSON.stringify(own.scopes) !== JSON.stringify(scopes)

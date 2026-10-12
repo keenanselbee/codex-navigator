@@ -231,6 +231,14 @@ nested instructions in order, and reject conflicts. Overrides and fallback filen
 retain their precedence. Disabling routing is explicit and durable. The generated
 fallback is consulted only when enabled helper discovery fails.
 
+Instruction settings publish separately from chat refresh. Setup waits for that
+publication before reporting success, including disablement after licence expiry.
+Readiness compares installed helper bytes and managed guidance with the current
+extension. Saved invalid records retain a complete valid scope list when available;
+targeted reads skip them only when their workspace identity and scopes establish
+non-overlap, including any applicable live-window scope. Unknown identity, invalid
+JSON, unknown scopes and overlapping damage remain errors.
+
 Routing is a consistency aid over native Codex discovery, not enforcement or proof
 that an agent read instructions. Explicit discussion-only focus reports are allowed;
 explicit no-write restrictions remain authoritative.

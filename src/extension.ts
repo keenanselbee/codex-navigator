@@ -455,7 +455,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       automaticColours = nextColours;
       await context.globalState.update('automaticRepositoryColours.v1', automaticColours);
     }
-    const config = vscode.workspace.getConfiguration('codexNavigator');
     try {
       const workspace = vscode.workspace.workspaceFile?.scheme === 'file' ? vscode.workspace.workspaceFile.fsPath
         : vscode.workspace.workspaceFolders?.find(folder => folder.uri.scheme === 'file')?.uri.fsPath;
@@ -469,15 +468,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
         await profiles.updateShared('routingScopes.v1', chats, previous);
         routingBaseline = next;
-        const scopes = config.get<string[]>('instructionScope', []);
-        const main = config.get('mainInstructionsFile', '');
-        await routing.publish({ version: 2, pid: process.pid, main, chats, profile: {
-          version: 1, workspace, enabled: config.get('instructionRouting', false), main,
-          scopes: scopes.length ? scopes : (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath),
-          fallbackNames: config.get<string[]>('instructionFallbackNames', []),
-        } });
+        await publishRouting();
       } else { await routing.publish(); }
     } catch (error) { report(error); }
+  }
+
+  async function publishRouting(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('codexNavigator');
+    const enabled = config.get('instructionRouting', false);
+    const workspace = vscode.workspace.workspaceFile?.scheme === 'file' ? vscode.workspace.workspaceFile.fsPath
+      : vscode.workspace.workspaceFolders?.find(folder => folder.uri.scheme === 'file')?.uri.fsPath;
+    if (!workspace || vscode.env.remoteName || !vscode.workspace.isTrusted || enabled && !license.allowed()) {
+      await routing.publish(); return;
+    }
+    const scopes = config.get<string[]>('instructionScope', []), main = config.get('mainInstructionsFile', '');
+    await routing.publish({ version: 2, pid: process.pid, main,
+      chats: profiles.shared<Record<string, string[]>>('routingScopes.v1', {}), profile: {
+        version: 1, workspace, enabled, main,
+        scopes: scopes.length ? scopes : (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath),
+        fallbackNames: config.get<string[]>('instructionFallbackNames', []),
+      } });
   }
 
   function automaticRepositoryColours(custom: Record<string, string>) {
@@ -928,10 +938,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }).catch(error => report(error, true))));
   }
   context.subscriptions.push(
+    vscode.commands.registerCommand('codexNavigator.refreshInstructionRouting', publishRouting),
     vscode.window.tabGroups.onDidChangeTabs(() => refresh()),
     vscode.window.tabGroups.onDidChangeTabGroups(() => refresh()),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => { scheduleScopeRefresh(); refresh(); }),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => { void publishRouting().catch(error => report(error)); scheduleScopeRefresh(); refresh(); }),
     vscode.workspace.onDidChangeConfiguration(event => {
+      if (['instructionRouting', 'mainInstructionsFile', 'instructionScope', 'instructionFallbackNames'].some(key => event.affectsConfiguration('codexNavigator.' + key))) {
+        void publishRouting().catch(error => report(error));
+      }
       if (event.affectsConfiguration('codexNavigator')) { refresh(); }
     }),
     git.onDidChangeState(() => refresh(true)),
@@ -987,6 +1001,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   try { if (license.allowed()) for (const item of await readRecentConversations(home)) { knownKeys.add('local/' + item.id); } }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { report(error); } }
   scheduleScopeRefresh();
+  await publishRouting().catch(error => report(error));
   refresh(true);
 
 }
