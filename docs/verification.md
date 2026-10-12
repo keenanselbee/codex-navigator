@@ -1,12 +1,52 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.6**, adding persistent chat layout choices.
+Current verified Desktop release: **2.0.7**, hardening project instruction routing.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.7
+-------------------------------
+
+Public build revision: `5211e7534b9f9c8443d9a0659095324b8d4dac67`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `a3534d93e97988e0dbabbb1a6a2cb8a368d9a5dd069adbc27cd8472ec1ffdcd6`.
+
+All 327 public tests and 24 commercial tests pass. New routing coverage verifies
+isolation of invalid records with provably unrelated scopes, rejection of unknown
+or overlapping damage (including applicable live windows), retention of valid
+scope evidence in invalidation records, helper/guidance drift detection and repair,
+preservation of unrelated global rules, and reporting failed publication before
+claiming disablement succeeded. Release metadata, dependency consistency, local
+documentation links and whitespace checks pass.
+
+An initial new error-message assertion was corrected for the VM fixture's error
+prefix. A later public run encountered an existing reset fixture's changing expiry
+timestamp; its 40-test account suite and the complete public suite then passed
+without account-code changes. The first isolated integration run failed an
+existing resize keyboard-focus assertion; the complete unchanged rerun passed.
+
+Isolated VS Code 1.139.1 initial/restart and second-window integration passes in
+`integration-rhp0qj`, including persistence of disabled routing after trial expiry
+without chat refresh. The exact production VSIX passes installation and
+reinstallation in `installed-acceptance-jNXSWP`, checking 74 installed payload
+hashes, the manifest and retained trial expiry. All 77 archive entries match the
+production allowlist and recorded hashes. Desktop VSIX and receipt hashes match
+their source files. The disposable extension was removed; the normal profile
+was unchanged.
+
+After installing this update, Save Project Instructions refreshes the separately
+installed Codex-home helpers. Unknown or unscoped damaged routing records still
+require attention; they are not silently ignored. Routing remains a discovery aid
+and does not prove agent adherence. These checks use synthetic fixtures, with no
+authenticated conversation or paid provider request. No Git push or Marketplace
+publication occurred. Native macOS/Linux acceptance remains outstanding.
+This evidence is excluded from the immutable VSIX and preserves its original
+build revisions and payload.
 
 
 Verified Desktop package: 2.0.6
