@@ -1,12 +1,36 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.4**, hardening question reply persistence.
+Current verified Desktop release: **2.0.5**, shortening the README feature list.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.5
+-------------------------------
+
+Public build revision: `74c2060df247a84c54795e582d64ad45a5c54e9f`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `9943c1bea63e3aa450041bd89aa01734c72864bba2ed68fd1df8f47936a0ee81`.
+
+This documentation-only release condenses the README features into six bullets.
+Release metadata, unchanged dependency versions, documentation links and
+whitespace checks pass. All runtime and asset payload hashes match verified
+2.0.4; only README, CHANGELOG, package.json and the VSIX manifest differ.
+The 2.0.4 public, commercial and sidebar integration results are reused, not
+reported as newly run.
+
+All 77 archive entries match the production allowlist and recorded hashes.
+The exact VSIX passes isolated VS Code 1.139.1 installation and reinstallation
+in `installed-acceptance-Deyy2o`, checking 74 installed payload hashes, the
+manifest and retained trial expiry. Desktop VSIX and receipt hashes match their
+source files. The disposable extension was removed; the normal profile was
+unchanged. No paid provider request, Git push or Marketplace publication occurred.
+Native macOS/Linux acceptance remains outstanding. This evidence is excluded
+from the immutable VSIX and preserves its original build revisions and payload.
 
 
 Verified Desktop package: 2.0.4
