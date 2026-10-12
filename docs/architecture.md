@@ -234,7 +234,11 @@ fallback is consulted only when enabled helper discovery fails.
 Instruction settings publish separately from chat refresh. Setup waits for that
 publication before reporting success, including disablement after licence expiry.
 Readiness compares installed helper bytes and managed guidance with the current
-extension. Saved invalid records retain a complete valid scope list when available;
+extension. Setup and the resolver share bounded live-window discovery and use the
+same live profiles for saved-record filtering and policy selection. Readiness
+reports live conflicts and unavailable selected shared files; it is a point-in-time
+check, not a guarantee against subsequent window changes.
+Saved invalid records retain a complete valid scope list when available;
 targeted reads skip them only when their workspace identity and scopes establish
 non-overlap, including any applicable live-window scope. Unknown identity, invalid
 JSON, unknown scopes and overlapping damage remain errors.

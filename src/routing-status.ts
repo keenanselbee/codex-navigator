@@ -1,8 +1,9 @@
 import { readFileSync, accessSync, statSync, constants } from 'node:fs';
 import * as path from 'node:path';
 import { prepareAgentHelper } from './agent-helper';
-import { readProfiles, selectProfile, containsPath } from './routing-config';
+import { RoutingProfile, readProfiles, selectProfile, containsPath } from './routing-config';
 import { sameRoot } from './model';
+import { readRoutingSnapshots } from './routing';
 
 // These are file/configuration checks, independent of chat display and activity hooks.
 export async function routingStatus(plan: ReturnType<typeof prepareAgentHelper> | undefined,
@@ -21,7 +22,11 @@ export async function routingStatus(plan: ReturnType<typeof prepareAgentHelper> 
       }
     }
     const sharedFiles = new Set([choices.main]);
-    const saved = await readProfiles(plan.home, [...scopes, ...targets]);
+    const live: RoutingProfile[] = [];
+    for await (const record of readRoutingSnapshots(plan.home)) {
+      if (record.profile) { live.push(record.profile); }
+    }
+    const saved = await readProfiles(plan.home, [...scopes, ...targets], live);
     const own = saved.find(profile => sameRoot(profile.workspace, workspace));
     if (!own || !own.enabled || !sameRoot(own.main, choices.main)
       || JSON.stringify(own.scopes) !== JSON.stringify(scopes)
@@ -31,7 +36,7 @@ export async function routingStatus(plan: ReturnType<typeof prepareAgentHelper> 
     for (const target of targets.length ? targets : scopes) {
       // Custom scope choices can intentionally exclude repositories in this window.
       if (own.scopes.some(scope => containsPath(scope, target))) {
-        const selected = selectProfile(target, saved);
+        const selected = selectProfile(target, saved, live);
         if (!selected?.enabled) { throw new Error('Routing is off for one of the selected projects.'); }
         sharedFiles.add(selected.main);
       }

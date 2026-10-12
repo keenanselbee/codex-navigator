@@ -67,6 +67,24 @@ async function readSnapshot(filename: string): Promise<RoutingSnapshot | undefin
   } finally { await file.close(); }
 }
 
+// Setup and the resolver must inspect the same live windows and reject the same damage.
+export async function* readRoutingSnapshots(home: string): AsyncGenerator<RoutingSnapshot> {
+  let directory;
+  try { directory = await opendir(path.join(home, 'codex-navigator', 'routing')); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { return; } throw error; }
+  let count = 0;
+  for await (const entry of directory) {
+    if (++count > 256) { throw new Error('Too many routing records; routing was not inferred.'); }
+    if (!entry.isFile() || !entry.name.endsWith('.json')) { continue; }
+    try {
+      const record = await readSnapshot(path.join(home, 'codex-navigator', 'routing', entry.name));
+      if (record) { yield record; }
+    } catch (error) {
+      if (!(error instanceof SyntaxError) && (error as NodeJS.ErrnoException).code !== 'ENOENT') { throw error; }
+    }
+  }
+}
+
 // Paths only: the agent reads the files and follows the configured main file's
 // routing rules. Never interpret arbitrary Markdown links as automatic includes.
 export async function instructionPaths(main: string, roots: string[], files: string[] = [], fallbackNames: string[] = []): Promise<string[]> {
@@ -129,23 +147,10 @@ export async function resolveRouting(args: string[], home = codexHome(), id = pr
   }
   const candidates: { main: string; roots: string[]; profile?: RoutingProfile }[] = [];
   const live: RoutingProfile[] = [];
-  let directory;
-  try { directory = await opendir(path.join(home, 'codex-navigator', 'routing')); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { throw error; } }
-  if (directory) {
-    let count = 0;
-    for await (const entry of directory) {
-      if (++count > 256) { throw new Error('Too many routing records; routing was not inferred.'); }
-      if (!entry.isFile() || !entry.name.endsWith('.json')) { continue; }
-      try {
-        const record = await readSnapshot(path.join(home, 'codex-navigator', 'routing', entry.name));
-        if (record?.profile) { live.push(record.profile); }
-        const roots = record?.chats['local/' + id];
-        if (record && Array.isArray(roots) && roots.length <= 16 && roots.every(absolute)) { candidates.push({ main: record.main, roots: target ? exactGitRoots([target]) : roots, profile: record.profile }); }
-      } catch (error) {
-        if (!(error instanceof SyntaxError) && (error as NodeJS.ErrnoException).code !== 'ENOENT') { throw error; }
-      }
-    }
+  for await (const record of readRoutingSnapshots(home)) {
+    if (record.profile) { live.push(record.profile); }
+    const roots = record.chats['local/' + id];
+    if (Array.isArray(roots) && roots.length <= 16 && roots.every(absolute)) { candidates.push({ main: record.main, roots: target ? exactGitRoots([target]) : roots, profile: record.profile }); }
   }
   const targets = target ? exactGitRoots([target]) : candidates.flatMap(candidate => candidate.roots);
   const saved = await readProfiles(home, targets, live);

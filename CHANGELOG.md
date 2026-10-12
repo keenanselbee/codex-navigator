@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+2.0.8
+-----
+
+- Check live workspace routing in Setup so conflicting windows and invalid edits
+  report Needs attention instead of a misleading Ready status.
+- Choose Save Project Instructions after updating to refresh installed helpers.
+
 2.0.7
 -----
 

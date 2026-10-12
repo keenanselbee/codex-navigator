@@ -62,6 +62,54 @@ test('invalid unrelated profiles do not block a known target but remain errors f
   assert.equal((await routingStatus(plan, { ...profile, enabled: true }, profile.workspace, [repo], [repo])).label, 'Ready');
 });
 
+test('readiness and routing agree when an invalid scope edit leaves an overlapping live window', async t => {
+  const { home, repo, other, main, profile } = await fixture(t);
+  const own = { ...profile, scopes: [repo] };
+  await saveProfile(home, own);
+  installAgentHelper(prepareAgentHelper(home));
+  const { routingStatus } = require('../dist/routing-status');
+  const status = () => routingStatus(prepareAgentHelper(home), own, own.workspace, own.scopes, [repo]);
+  const publisher = new RoutingPublisher(home);
+  t.after(() => publisher.dispose());
+  const otherProfile = { ...own, workspace: path.join(home, 'other.code-workspace') };
+  const snapshot = { version: 2, pid: process.pid, main, chats: {}, profile: otherProfile };
+  await publisher.publish(snapshot);
+  assert.equal((await status()).label, 'Ready');
+  await assert.rejects(publisher.publish({ ...snapshot, profile: { ...otherProfile, scopes: [other], fallbackNames: ['../invalid'] } }), /plain filenames/);
+  assert.match((await status()).detail, /invalid saved routing/);
+  assert.equal((await status()).label, 'Needs attention');
+  await assert.rejects(resolveRouting(['--target', repo], home, id), /invalid saved routing/);
+  await publisher.dispose();
+  assert.equal((await status()).label, 'Ready', 'closing the overlapping window makes the damaged record provably unrelated');
+  assert.equal((await resolveRouting(['--target', repo], home, id)).status, 'enabled');
+});
+
+test('readiness checks live policy conflicts and selected shared files just like routing', async t => {
+  const { home, repo, main, profile } = await fixture(t);
+  await saveProfile(home, profile);
+  installAgentHelper(prepareAgentHelper(home));
+  const { routingStatus } = require('../dist/routing-status');
+  const status = () => routingStatus(prepareAgentHelper(home), profile, profile.workspace, profile.scopes, [repo]);
+  const publisher = new RoutingPublisher(home), second = new RoutingPublisher(home);
+  t.after(() => publisher.dispose()); t.after(() => second.dispose());
+  const snapshot = { version: 2, pid: process.pid, main, chats: {}, profile };
+  await publisher.publish(snapshot);
+  await second.publish({ ...snapshot, profile: { ...profile, main: '' } });
+  // Restore the matching durable record; the conflicting second window is still live.
+  await saveProfile(home, profile);
+  assert.match((await status()).detail, /disagree/);
+  await assert.rejects(resolveRouting(['--target', repo], home, id), /disagree/);
+  await second.dispose();
+  const missing = path.join(home, 'missing.md');
+  await publisher.publish({ ...snapshot, main: missing, profile: { ...profile, main: missing } });
+  await saveProfile(home, profile);
+  assert.equal((await status()).label, 'Needs attention');
+  await assert.rejects(resolveRouting(['--target', repo], home, id), /ENOENT/);
+  await publisher.dispose();
+  assert.equal((await status()).label, 'Ready');
+  assert.equal((await resolveRouting(['--target', repo], home, id)).status, 'enabled');
+});
+
 test('unknown, overlapping and mismatched profile damage cannot be skipped', async t => {
   const { home, repo, other, profile } = await fixture(t);
   await saveProfile(home, profile);
