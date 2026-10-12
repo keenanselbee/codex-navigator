@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+2.0.6
+-----
+
+- Choose Auto, Columns, List or Compact from Navigator's Layout menu. Fixed
+  styles keep their presentation as the panel height changes while fitting
+  columns to the available width. The choice persists across restarts.
+
 2.0.5
 -----
 

@@ -147,7 +147,13 @@ The recency reader uses persisted VS Code threads from `thread/list` with
 `vscode://openai.chatgpt/local/<chat-id>`, an existing handler rather than a stable
 public API guarantee. Pin snapshots are stored under `pinnedChats.v1`.
 
-At default text size, heights below 180px use compact layout, 180-339px use columns,
+The `chatLayout` setting defaults to Auto; the Layout picker also exposes fixed
+Columns, List and Compact presentations. Fixed modes bypass height selection but
+retain width, font scaling and row fitting. Returning to Auto discards forced-mode
+hysteresis and saved threshold state. Settings changes update the webview even
+when its rows and dimensions are unchanged. Account layouts remain automatic.
+
+In Auto at default text size, heights below 180px use compact layout, 180-339px use columns,
 and 340px or more use a list. A 12px boundary buffer prevents resize flicker; larger
 fonts scale the thresholds. Complete rows fit the rendered frame and share spare
 height up to 1.5 times their natural height. Sparse lists can retain blank space.

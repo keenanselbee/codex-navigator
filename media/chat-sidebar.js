@@ -33,6 +33,7 @@ let highlightDurationMs = 3600000;
 let emptyMessage = 'No saved local chats yet.';
 let highlightRecentlyViewedChats = true, highlightOnlyLastViewedChat = false;
 let showChatTooltips = false;
+let chatLayout = 'auto';
 let repositories = [], repositoryPageActive = false, welcome = false;
 let licenseVisible = false;
 let heldOrder = null, pointerInside = false, visibleSignature = '';
@@ -194,7 +195,7 @@ function resize() {
   sizeSignature = size;
   const rgb = style.backgroundColor.match(/^rgb\((\d+), (\d+), (\d+)\)$/);
   if (rgb) send('theme', { background: '#' + rgb.slice(1).map(value => Number(value).toString(16).padStart(2, '0')).join('') });
-  const next = chooseLayout(el('viewport').clientWidth, document.body.clientHeight, fontSize);
+  const next = chooseLayout(el('viewport').clientWidth, document.body.clientHeight, fontSize, chatLayout);
   layout = next; document.body.dataset.layout = layout.mode;
   document.body.style.setProperty('--columns', layout.columns);
   document.body.style.setProperty('--row-height', layout.rowHeight + 'px');
@@ -284,8 +285,9 @@ window.addEventListener('message', event => {
   highlightRecentlyViewedChats = message.highlightRecentlyViewedChats !== false;
   highlightOnlyLastViewedChat = message.highlightOnlyLastViewedChat === true;
   showChatTooltips = message.showChatTooltips === true;
+  chatLayout = ['compact', 'columns', 'list'].includes(message.chatLayout) ? message.chatLayout : 'auto';
   highlightDurationMs = (Number.isInteger(message.highlightDurationSeconds) ? Math.max(1, Math.min(3600, message.highlightDurationSeconds)) : 180) * 1000;
-  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, showChatTooltips, message.welcome, message.activityNotice, message.workspaceOnly]);
+  const next = JSON.stringify([message.rows, emptyMessage, highlightRecentlyViewedChats, highlightOnlyLastViewedChat, highlightDurationMs, showChatTooltips, chatLayout, message.welcome, message.activityNotice, message.workspaceOnly]);
   if (next === signature) return;
   signature = next; rows = message.rows;
   sizeSignature = ''; resize();

@@ -238,6 +238,9 @@ exports.run = async function (context, fixtureVscode) {
       probe: async () => { const result=new Promise(resolve=>{probeResolve=resolve;}); await companion.webview.postMessage({type:'fixture:accountProbe'}); return result; }, until });
     if (process.env.REPO_COMPANION_TEST_PHASE === 'restart') {
       await checkAccountMenu();
+      assert.equal(vscode.workspace.getConfiguration('codexNavigator').get('chatLayout'), 'columns', 'layout setting survives a full host restart');
+      await companion.webview.postMessage({ type: 'fixture:size', width: 780, height: 600 });
+      await until(async () => (await probe()).layout === 'columns', 'forced columns restored in a tall view after restart');
       const expected = JSON.parse(fs.readFileSync(path.join(root, 'trial-persistence.json'), 'utf8'));
       const persisted = JSON.parse(await companionContext.secrets.get('license.production.v1'));
       assert.equal(persisted.installationId, expected.installationId, 'restart retains the installation identity');
@@ -341,6 +344,36 @@ exports.run = async function (context, fixtureVscode) {
     await companion.webview.postMessage({type:'fixture:size',width:700,height:500});
     await companion.webview.postMessage({type:'fixture:size',width:700,height:185});
     await until(async () => {const p=await probe();return p.columns===3&&p.rows===restoredRowCount&&p.fits;}, 'column and fitted row counts restored after webview reload');
+    const layoutConfig = vscode.workspace.getConfiguration('codexNavigator');
+    assert.equal(layoutConfig.get('chatLayout'), 'auto', 'layout defaults to Auto');
+    const layoutUi = require.cache[require.resolve('../dist/extension')].require('vscode');
+    const layoutPicker = layoutUi.window.showQuickPick;
+    const manifest = require('../package.json');
+    assert.ok(manifest.contributes.menus['codexNavigator.navigatorMenu'].some(item => item.command === 'codexNavigator.chooseChatLayout'));
+    try {
+      for (const selected of ['columns', 'list', 'compact']) {
+        layoutUi.window.showQuickPick = async choices => choices.find(choice => choice.value === selected);
+        await vscode.commands.executeCommand('codexNavigator.chooseChatLayout');
+        await until(async () => (await probe()).layout === selected, 'layout command updates unchanged dimensions');
+        assert.equal(vscode.workspace.getConfiguration('codexNavigator').inspect('chatLayout').globalValue, selected);
+        for (const [width, height] of [[780, 100], [780, 600], [210, 240]]) {
+          await companion.webview.postMessage({ type: 'fixture:size', width, height });
+          await until(async () => { const p = await probe(); return p.layout === selected && p.fits && (width !== 210 || p.columns === 1); }, 'fixed ' + selected + ' fits ' + width + 'x' + height);
+        }
+      }
+      layoutUi.window.showQuickPick = async () => undefined;
+      await vscode.commands.executeCommand('codexNavigator.chooseChatLayout');
+      assert.equal(vscode.workspace.getConfiguration('codexNavigator').get('chatLayout'), 'compact', 'cancelling leaves the setting unchanged');
+      await layoutConfig.update('chatLayout', 'list', vscode.ConfigurationTarget.Workspace);
+      layoutUi.window.showQuickPick = async choices => choices.find(choice => choice.value === 'columns');
+      await vscode.commands.executeCommand('codexNavigator.chooseChatLayout');
+      assert.equal(vscode.workspace.getConfiguration('codexNavigator').inspect('chatLayout').workspaceValue, 'columns', 'menu updates an existing workspace override');
+      await layoutConfig.update('chatLayout', undefined, vscode.ConfigurationTarget.Workspace);
+      layoutUi.window.showQuickPick = async choices => choices.find(choice => choice.value === 'auto');
+      await vscode.commands.executeCommand('codexNavigator.chooseChatLayout');
+      await companion.webview.postMessage({ type: 'fixture:size', width: 780, height: 400 });
+      await until(async () => (await probe()).layout === 'list', 'Auto resumes height selection');
+    } finally { layoutUi.window.showQuickPick = layoutPicker; }
     await companion.webview.postMessage({type:'fixture:size',width:320,height:100});
     await until(async () => (await probe()).columns===1,'narrow width prevents squeezed columns');
     for(const width of [210,280,350]) {
@@ -869,6 +902,8 @@ exports.run = async function (context, fixtureVscode) {
     result.verified.push('structured replies cancel pending question channels through runtime overlay; answered-before-refresh prompts stay quiet');
     result.verified.push('blocking questions stop goal animation; async questions overlay a stationary mark on a rotating ring; partial answers preserve remaining questions; opening a chat does not clear its question badge');
     result.verified.push('legacy notification preferences migrate and clearing overrides restores four new policy defaults');
+    result.verified.push('layout menu selects each fixed presentation live; width still adapts, cancellation preserves settings and Auto resumes height selection');
+    await vscode.workspace.getConfiguration('codexNavigator').update('chatLayout', 'columns', vscode.ConfigurationTarget.Global);
     fs.writeFileSync(path.join(root, 'result-initial.json'), JSON.stringify(result, null, 2));
   } catch (error) {
     fs.writeFileSync(path.join(root, 'failure.txt'), error.stack || String(error)); throw error;

@@ -233,7 +233,7 @@ export class ChatSidebar implements vscode.WebviewViewProvider, vscode.Disposabl
     const settings = vscode.workspace.getConfiguration('codexNavigator');
     const highlights = highlightMode(settings);
     if (!this.disposed && (!this.license || this.license.allowed())) { await this.view?.webview.postMessage({ type: 'state', welcome, profileId: profileToken, profileChanged, profileView: this.profiles?.get('profileView.v1', {}), workspaceOnly: !!preferences.workspaceOnly,
-      setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message, activityNotice: notice,
+      setupMessage: (setupStarted && welcome ? 'Setup needs attention. ' : '') + readiness.message, activityNotice: notice, chatLayout: settings.get('chatLayout', 'auto'),
       rows: welcome ? [] : visible, repositories: welcome ? [] : this.readRepositories(), showChatTooltips: settings.get('showChatTooltips', false), highlightDurationSeconds: settings.get('highlightDurationSeconds', 180), highlightRecentlyViewedChats: highlights !== 'off', highlightOnlyLastViewedChat: highlights === 'last', emptyMessage: this.rows.length ? 'No chats to show. Check Chat Profile, workspace filtering, hidden chats or Recent Chats Only.' : 'No saved local chats yet.' }); }
     if (this.visible && !welcome) this.onActivities?.(visible);
   }

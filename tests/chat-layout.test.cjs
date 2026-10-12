@@ -3,6 +3,41 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { navigatorLayout, createNavigatorLayout } = require('../media/chat-layout');
 
+test('fixed presentations survive height changes while columns and capacity fit width and font size', () => {
+  for (const mode of ['columns', 'list', 'compact']) {
+    const choose = createNavigatorLayout();
+    for (const height of [100, 185, 240, 346, 600]) {
+      const narrow = choose(180, height, 13, mode), wide = choose(1800, height, 13, mode);
+      assert.equal(narrow.mode, mode); assert.equal(wide.mode, mode);
+      assert.equal(narrow.columns, 1); assert.ok(wide.columns > 1);
+      const large = choose(1800, height, 26, mode);
+      assert.equal(large.mode, mode);
+      assert.ok(large.columns < wide.columns);
+      assert.ok(large.capacity <= wide.capacity);
+      assert.equal(choose(180, 10, 26, mode).capacity, 0);
+    }
+  }
+});
+
+test('returning to Auto discards forced hysteresis and old restored choices', () => {
+  const choose = createNavigatorLayout({ mode: 'compact', height: 185 });
+  assert.equal(choose(780, 185, 13, 'compact').mode, 'compact');
+  assert.equal(choose(780, 185, 13, 'auto').mode, 'columns');
+  assert.equal(choose(780, 346, 13, 'columns').mode, 'columns');
+  assert.equal(choose(780, 346, 13, 'auto').mode, 'list');
+  assert.equal(choose(780, 100, 13, 'list').mode, 'list');
+  assert.equal(choose(780, 100, 13, 'invalid').mode, 'compact');
+});
+
+test('reloaded fixed layouts use the setting at new dimensions and Auto ignores a saved forced mode', () => {
+  const saved = createNavigatorLayout()(780, 346, 13, 'columns');
+  const restored = createNavigatorLayout(JSON.parse(JSON.stringify(saved)));
+  assert.equal(restored(0, 0, 13, 'columns'), undefined);
+  assert.equal(restored(320, 600, 13, 'columns').mode, 'columns');
+  assert.equal(restored(320, 600, 13, 'columns').columns, 1);
+  assert.equal(createNavigatorLayout(saved)(780, 346, 13, 'auto').mode, 'list');
+});
+
 test('reload restores three columns at the same threshold height after transient startup sizes', () => {
   const before = createNavigatorLayout();
   before(700, 150);

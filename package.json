@@ -2,7 +2,7 @@
   "name": "codex-navigator",
   "displayName": "Codex Navigator",
   "description": "Organise Codex chats, switch saved accounts and get completion alerts in one compact sidebar.",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "publisher": "keenanselbee",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
@@ -216,6 +216,11 @@
         "category": "Codex Navigator"
       },
       {
+        "command": "codexNavigator.chooseChatLayout",
+        "title": "Layout...",
+        "category": "Codex Navigator"
+      },
+      {
         "command": "codexNavigator.workspaceChats",
         "title": "Show Chats Relevant to This Workspace",
         "category": "Codex Navigator"
@@ -410,6 +415,10 @@
           "group": "1_navigator@6"
         },
         {
+          "command": "codexNavigator.chooseChatLayout",
+          "group": "1_navigator@5"
+        },
+        {
           "command": "codexNavigator.chatProfiles",
           "group": "1_profiles@1"
         },
@@ -425,6 +434,15 @@
         "title": "Chat list",
         "order": 1,
         "properties": {
+          "codexNavigator.chatLayout": {
+            "type": "string",
+            "enum": ["auto", "columns", "list", "compact"],
+            "enumItemLabels": ["Auto", "Columns", "List", "Compact"],
+            "default": "auto",
+            "scope": "window",
+            "description": "Choose the chat list presentation. Auto adapts to panel height; fixed layouts keep their style while the number of columns adapts to width. Does not affect the accounts panel.",
+            "order": 0
+          },
           "codexNavigator.recentChatsOnly": {
             "type": "boolean",
             "default": true,

@@ -71,8 +71,14 @@ Organising chats
 
 ### Sidebar layout and ordering
 
-Navigator adapts between a compact grid, two-line columns and a list as you resize
-the view. Larger fonts affect how much fits. Names stay on one line; enable
+Choose **Layout...** from Navigator's **...** menu, or change **Chat Layout** in
+Settings. **Auto** (the default) adapts between a compact grid, two-line columns
+and a list as you resize the view. **Columns**, **List** and **Compact** keep their
+presentation regardless of height; the number of columns still fits the available
+width. The choice persists across restarts. The menu saves it in user settings,
+or updates an existing workspace override. The accounts panel remains automatic.
+
+Larger fonts affect how much fits. Names stay on one line; enable
 **Show Chat Tooltips** for full text on hover. Very small views may need enlarging
 before an entry fits. VS Code controls the outer divider and minimum view height.
 

@@ -754,6 +754,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await notificationDelivery.deliver({ title: 'Codex Navigator', message: 'Notification preview: a response finished or needs your attention.', sound: true, desktop: true, volume: vscode.workspace.getConfiguration('codexNavigator').get<number>('notificationVolume', 50) });
     }],
     ['chatProfiles', () => manageProfiles()],
+    ['chooseChatLayout', async () => {
+      const settings = vscode.workspace.getConfiguration('codexNavigator');
+      const current = settings.get('chatLayout', 'auto');
+      const choices = [
+        { label: 'Auto', value: 'auto', detail: 'Adapt the presentation to the panel height.' },
+        { label: 'Columns', value: 'columns', detail: 'Keep labels above chat names in two-line columns.' },
+        { label: 'List', value: 'list', detail: 'Keep labels beside chat names.' },
+        { label: 'Compact', value: 'compact', detail: 'Keep the compact grid presentation.' },
+      ].map(choice => ({ ...choice, description: choice.value === current ? 'Current' : undefined }));
+      const picked = await vscode.window.showQuickPick(choices, { title: 'Chat Layout', placeHolder: 'Columns still adapt to the available width.' });
+      if (!picked || !license.allowed()) return;
+      const target = settings.inspect('chatLayout')?.workspaceValue !== undefined
+        ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+      await settings.update('chatLayout', picked.value, target);
+      await sidebar.refresh();
+    }],
     ['workspaceChats', () => sidebar.toggleWorkspaceFilter()],
     ['showChats', () => vscode.commands.executeCommand('codexNavigator.chats.focus')],
     ['refreshChats', () => sidebar.refresh()],
