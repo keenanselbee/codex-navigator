@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+2.0.5
+-----
+
+- Shorten the feature list into six clear summaries of accounts, chats,
+  organisation, profiles, activity and notifications.
+
 2.0.4
 -----
 
