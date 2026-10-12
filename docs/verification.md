@@ -1,12 +1,47 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.5**, shortening the README feature list.
+Current verified Desktop release: **2.0.6**, adding persistent chat layout choices.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.6
+-------------------------------
+
+Public build revision: `18b60d171f0867ff4556745d4ae69dffabda0f5c`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `31971029d9601b97b9e6750b253c0e56d56f0c1a539f8f17abe8846ec14b6087`.
+
+All 322 public tests pass. All 24 commercial tests pass on the full rerun;
+the first run's existing crash/lock concurrency fixture returned one failed
+subprocess result. That test then passed in isolation and in the full suite
+without licensing changes. Release metadata, dependency consistency, local
+documentation links and whitespace checks pass.
+
+Isolated VS Code 1.139.1 initial/restart and second-window integration passes in
+`integration-pTWXym`. The layout picker applies Columns, List and Compact at
+unchanged dimensions; fixed styles survive resizing while column count adapts
+to width. Cancellation preserves the setting, an existing workspace override
+is updated, Auto resumes height selection, and forced Columns survives a full
+host restart in a tall view. Pure layout tests also cover larger fonts, very
+small views, invalid preferences and resetting forced-mode hysteresis.
+An initial integration assertion read a stale configuration snapshot; the test
+was corrected to read current settings before the passing complete run.
+
+All 77 production archive entries match the allowlist and recorded hashes.
+The exact VSIX passes installation and reinstallation in
+`installed-acceptance-yoWmyH`, checking 74 installed payload hashes, the manifest
+and retained trial expiry. Desktop VSIX and receipt hashes match their source
+files. The disposable extension was removed; the normal profile was unchanged.
+These checks use fixture data and picker selections, with no authenticated
+Codex conversation or paid provider request. No Git push or Marketplace
+publication occurred. Native macOS/Linux acceptance remains outstanding.
+This evidence is excluded from the immutable VSIX and preserves its original
+build revisions and payload.
 
 
 Verified Desktop package: 2.0.5
