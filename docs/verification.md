@@ -1,12 +1,45 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.9**, linking directly to the interactive demo.
+Current verified Desktop release: **2.1.0**, correcting the Marketplace icon dimensions.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.1.0
+-------------------------------
+
+Public build revision: `aa53b23c537d237877f952ab949506ba9c202035`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `54660a5e71b1728f8beea7d0924ccd482555bdb65f02a965f286e2fd9fb49025`.
+
+The owner reported Marketplace rejecting 2.0.9 because its 1192 x 1192 icon
+exceeded the 1024-pixel limit. Local archive and installation checks had not
+covered this Marketplace requirement. This release uses the existing 300 x 300
+listing artwork and adds a PNG dimension check to release payload validation.
+The patch-version rollover has no breaking runtime changes.
+
+All five release evidence and metadata tests pass, including rejection of
+oversized, undersized and non-PNG icons. Changed documentation links and
+whitespace checks pass. All 77 archive entries match the production allowlist
+and recorded hashes. The packaged icon exactly matches the 300-pixel source.
+Only the icon, CHANGELOG, package.json and VSIX manifest differ from 2.0.9;
+runtime hashes are unchanged. Prior runtime tests are reused, not newly run.
+
+The exact production VSIX passes installation and reinstallation in VS Code
+1.139.1 under `installed-acceptance-N9XQ2d`, verifying 74 installed payload
+hashes, the manifest and retained trial expiry. Desktop VSIX and receipt hashes
+match their source files. The disposable extension was removed; the normal
+profile and private checkout were unchanged. These checks use synthetic fixtures,
+with no authenticated conversation or paid provider request.
+
+Marketplace acceptance of 2.1.0 remains unverified. No Git push or Marketplace
+publication occurred. Native macOS/Linux acceptance remains outstanding.
+This evidence is excluded from the immutable VSIX and preserves its original
+build revisions and payload.
 
 
 Verified Desktop package: 2.0.9
