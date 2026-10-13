@@ -5,8 +5,28 @@ const fs = require('node:fs'), path = require('node:path');
 const { pipeline } = require('node:stream/promises');
 const { execFileSync } = require('node:child_process');
 const { ZipFile } = require('yazl');
-const { hash, revision, testSourceState, inspectVsix } = require('../tools/release-evidence.cjs');
+const { hash, revision, testSourceState, verifyMarketplaceIcon, payload, inspectVsix } = require('../tools/release-evidence.cjs');
 const scratch = path.resolve(__dirname, '../.codex-temp');
+
+test('release payload rejects Marketplace icons outside the supported PNG dimensions', t => {
+  fs.mkdirSync(scratch, { recursive: true });
+  const root = fs.mkdtempSync(path.join(scratch, 'marketplace-icon-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ icon: 'icon.png' }));
+  const icon = fs.readFileSync(path.resolve(__dirname, '../media/icon.png'));
+  fs.writeFileSync(path.join(root, 'icon.png'), icon);
+  verifyMarketplaceIcon(root);
+  for (const [width, height] of [[1192, 1192], [1025, 300], [300, 1025], [127, 300], [300, 127]]) {
+    const oversized = Buffer.from(icon);
+    oversized.writeUInt32BE(width, 16); oversized.writeUInt32BE(height, 20);
+    fs.writeFileSync(path.join(root, 'icon.png'), oversized);
+    assert.throws(() => payload(root), /Marketplace icon must be between 128 and 1024/);
+  }
+  for (const data of [Buffer.from('not a PNG'), Buffer.alloc(24)]) {
+    fs.writeFileSync(path.join(root, 'icon.png'), data);
+    assert.throws(() => verifyMarketplaceIcon(root), /must be a PNG/);
+  }
+});
 
 test('VSIX inspection requires exact runtime bytes and rejects source leaks, stale output and duplicates', async t => {
   fs.mkdirSync(scratch, { recursive: true });

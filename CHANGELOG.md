@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+2.1.0
+-----
+
+- Use the existing 300-pixel icon to meet Marketplace upload limits and reject
+  oversized icons during packaging. This patch rollover has no breaking changes.
+
 2.0.9
 -----
 

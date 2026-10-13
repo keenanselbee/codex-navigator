@@ -23,7 +23,21 @@ function revision(root) {
   return git(['rev-parse', 'HEAD']);
 }
 
+function verifyMarketplaceIcon(root) {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const icon = fs.readFileSync(path.join(root, manifest.icon));
+  if (icon.length < 24 || !icon.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))
+      || icon.toString('ascii', 12, 16) !== 'IHDR') {
+    throw new Error('Marketplace icon must be a PNG image.');
+  }
+  const width = icon.readUInt32BE(16), height = icon.readUInt32BE(20);
+  if (width < 128 || height < 128 || width > 1024 || height > 1024) {
+    throw new Error(`Marketplace icon must be between 128 and 1024 pixels per side; found ${width} x ${height}.`);
+  }
+}
+
 function payload(root) {
+  verifyMarketplaceIcon(root);
   const files = new Map();
   const include = relative => {
     const filename = path.join(root, relative);
@@ -85,4 +99,4 @@ function inspectVsix(filename, expected, { universal = false } = {}) {
     zip.readEntry();
   }));
 }
-module.exports = { hash, revision, testSourceState, payload, inspectVsix };
+module.exports = { hash, revision, testSourceState, verifyMarketplaceIcon, payload, inspectVsix };

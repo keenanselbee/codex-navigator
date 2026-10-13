@@ -1,7 +1,7 @@
 Release preparation
 ===================
 
-Product: Codex Navigator 2.0.9
+Product: Codex Navigator 2.1.0
 Extension identity: keenanselbee.codex-navigator
 License: proprietary, with selected source available for inspection; see [licence terms](../LICENSE.md).
 
@@ -21,6 +21,8 @@ Prepare and verify
 3. Check documentation links, setup wording, support limits, privacy and licensing.
    README links must use full URLs because packaging disables relative-link
    rewriting. Confirm GitHub-hosted listing images are available before upload.
+   The packaged PNG icon must be between 128 and 1024 pixels per side; packaging
+   checks these dimensions before creating the archive.
 4. Run checks appropriate to the changes. Runtime changes require the relevant
    unit, commercial and isolated VS Code integration checks. For documentation-only
    releases, validate links, whitespace and release metadata, then compare runtime
