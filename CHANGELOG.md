@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+2.0.9
+-----
+
+- Link directly to the interactive Codex Navigator demo from the README.
+
 2.0.8
 -----
 

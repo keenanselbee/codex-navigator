@@ -6,7 +6,7 @@
 
 <p align="center">An independent extension. Not affiliated with or endorsed by OpenAI.</p>
 
-<p align="center">Explore more of my work at <a href="https://keenanselbee.com">keenanselbee.com</a>.</p>
+<p align="center">Try the interactive demo at <a href="https://keenanselbee.com/codex-navigator/">keenanselbee.com</a>.</p>
 
 ---
 
