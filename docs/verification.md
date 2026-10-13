@@ -1,12 +1,40 @@
 Verification
 ============
 
-Current verified Desktop release: **2.0.8**, aligning routing readiness with live windows.
+Current verified Desktop release: **2.0.9**, linking directly to the interactive demo.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
+
+
+Verified Desktop package: 2.0.9
+-------------------------------
+
+Public build revision: `9d67f441710d5191bf87b94c22ca5897c797be98`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `2e8f7af48fc5f8cd74dddcd75ee8cecd796ae40c1158c0dbedead6b5f4979f94`.
+
+This documentation-only release changes the README invitation to "Try the
+interactive demo at keenanselbee.com" and links to the Codex Navigator page.
+Both release metadata tests, seven local documentation links and whitespace
+checks pass. The demo link and three GitHub-hosted listing images return HTTP
+200. All runtime and asset payload hashes match verified 2.0.8; only README,
+CHANGELOG, package.json and the VSIX manifest differ. The 2.0.8 public,
+commercial and integration results are reused, not reported as newly run.
+
+All 77 archive entries match the production allowlist and recorded hashes.
+The exact production VSIX passes installation and reinstallation in VS Code
+1.139.1 under `installed-acceptance-AfwOvF`, verifying 74 installed payload
+hashes, the manifest and retained trial expiry. Desktop VSIX and receipt hashes
+match their source files. The disposable extension was removed; the normal
+profile and private checkout were unchanged.
+
+These checks use synthetic fixtures, with no authenticated conversation or paid
+provider request. No Git push or Marketplace publication occurred. Native
+macOS/Linux acceptance remains outstanding. This evidence is excluded from the
+immutable VSIX and preserves its original build revisions and payload.
 
 
 Verified Desktop package: 2.0.8
