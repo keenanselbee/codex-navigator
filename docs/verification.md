@@ -1,13 +1,44 @@
 Verification
 ============
 
-Current verified Desktop release: **2.1.0**, correcting the Marketplace icon dimensions.
+Current verified Desktop release: **2.1.1**, refreshing the Navigator compass artwork.
 Native macOS/Linux acceptance remains outstanding.
 
 Use [Release preparation](marketplace-release.md) for the current procedure and
 [Development](development.md) for build commands. Record each release result here
 once; packaging receipts remain the authority for archive and payload hashes.
 
+
+Verified Desktop package: 2.1.1
+-------------------------------
+
+Public build revision: `f28af71c3e4b78f21503a99c27a4af1082247cb6`.
+Private build revision: `279a6513450a108980544c6291bfad7f47343a65`.
+SHA-256: `c7dc76966a3c923884fdc09d46657f433f9618d1923f3685531b96d2abf9beb4`.
+
+The sidebar and Marketplace tile use the updated 300 x 300 compass PNG, copied
+exactly from images/icon-small.png. The icon sync script preserves that approved
+artwork. Both source PNGs are committed; other working artwork remains untouched.
+
+All five release evidence and metadata tests, ten local documentation links and
+scoped whitespace checks pass. Production packaging from a clean detached
+checkout validates all 77 archive entries against the allowlist and hashes.
+Compared with 2.1.0, the icon, changelog and version metadata changed; eleven
+additional text files differ only in CRLF/LF line endings from the clean checkout.
+No runtime content changed after normalizing line endings. Prior runtime test
+evidence is reused, not reported as newly executed.
+
+The exact VSIX passes installation and reinstallation under VS Code 1.139.1
+in `installed-acceptance-wVb5Fe`, verifying 74 installed payload
+hashes, the manifest and retained trial expiry. Desktop VSIX and receipt hashes
+match the preserved dist artifacts. The disposable extension was removed; the
+normal profile and original private checkout were unchanged. Synthetic fixtures
+do not exercise authenticated conversations or paid provider requests.
+
+No Git push or Marketplace publication occurred. The README uses GitHub-hosted
+artwork; push the committed image updates before Marketplace publication.
+Marketplace and native macOS/Linux acceptance remain unverified. This evidence
+is excluded from the immutable VSIX and preserves its original build revisions.
 
 Verified Desktop package: 2.1.0
 -------------------------------
