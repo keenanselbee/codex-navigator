@@ -30,8 +30,9 @@ location, set `VSCODE_EXECUTABLE` to the absolute Electron executable, not the
 `code` shell script. Installed-package tests also accept `VSCODE_CLI` for that
 installation's `resources/app/out/cli.js`. Test profiles remain under
 `.codex-temp`; the normal installation is not changed. A desktop session is
-required. Icon regeneration via `tools/render-icon.ps1` remains Windows-only;
-the checked-in PNG is used by builds and packaging on every OS.
+required. Run `tools/render-icon.ps1` to copy the approved
+`images/icon-small.png` artwork into `media/icon.png`. The checked-in PNG is
+used by builds and packaging on every OS.
 
 `package.json` owns the release version; root lockfile metadata must match.
 `npm run package` requires clean, committed public and private checkouts and

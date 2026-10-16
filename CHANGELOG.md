@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+2.1.1
+-----
+
+- Refresh the Navigator and Marketplace icons with the new compass artwork.
+
 2.1.0
 -----
 
